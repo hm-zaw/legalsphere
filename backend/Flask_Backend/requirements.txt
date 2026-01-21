@@ -6,3 +6,5 @@ supabase
 postgrest
 pydantic
 werkzeug
+kafka-python
+confluent-kafka

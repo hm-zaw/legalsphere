@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { EtheralShadow } from "../../components/ui/shadcn-io/etheral-shadow";
 
 // Simple, trusted palette
@@ -143,9 +144,19 @@ function Stepper({ current }) {
 }
 
 export default function ApplyNewPage() {
+  const router = useRouter();
   const [stepIndex, setStepIndex] = useState(0);
   const [attempted, setAttempted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  // Check if user is logged in
+  useEffect(() => {
+    const storedUser = localStorage.getItem('userData');
+    if (!storedUser) {
+      router.push('/login');
+      return;
+    }
+  }, [router]);
   const [form, setForm] = useState(() => {
     if (typeof window !== "undefined") {
       try {
