@@ -70,8 +70,8 @@ export default function LoginPage() {
             <div className="absolute inset-0 bg-gradient-to-tr from-black/50 via-black/10 to-transparent" />
         </div>
 
-        <div className="relative z-10 flex items-center justify-center bg-white px-8 py-10 md:-ml-10 md:rounded-tl-[36px] md:px-16 md:shadow-xl">
-          <div className="w-full max-w-sm">
+        <div className="relative z-10 flex items-center justify-center bg-white px-8 py-10 md:-ml-10 md:rounded-tl-[36px] md:px-12 md:shadow-xl">
+          <div className="w-full max-w-lg">
             <h1 className="heading-font text-3xl font-semibold tracking-tight text-zinc-900">
               Welcome Back!
             </h1>

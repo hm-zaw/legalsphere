@@ -69,8 +69,8 @@ export default function SignupPage() {
             <div className="absolute inset-0 bg-gradient-to-tr from-black/50 via-black/10 to-transparent" />
         </div>
 
-        <div className="relative z-10 flex items-center justify-center bg-white px-8 md:-ml-10 md:rounded-tl-[36px] md:px-16 md:shadow-xl">
-          <div className="w-full max-w-sm">
+        <div className="relative z-10 flex items-center justify-center bg-white px-8 md:-ml-10 md:rounded-tl-[36px] md:px-12 md:shadow-xl">
+          <div className="w-full max-w-lg">
             <form className="mt-10" onSubmit={handleSubmit}>
               <h1 className="heading-font text-3xl font-semibold tracking-tight text-zinc-900">
                 Sign Up Account

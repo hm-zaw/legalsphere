@@ -8,3 +8,5 @@ pydantic
 werkzeug
 kafka-python
 confluent-kafka
+pymongo
+requests
