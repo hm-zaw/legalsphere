@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import path from "path";
 import fs from "fs/promises";
+import { InferenceClient } from "@huggingface/inference";
 
 // Load lawyers from CSV (same parser assumptions as main route)
 async function loadLawyers() {
   try {
-    const csvPath = path.join(process.cwd(), "..", "JURIX", "data", "lawyers.csv");
+    const envPath = process.env.LAWYERS_CSV_PATH;
+    const csvPath = envPath && envPath.trim().length > 0
+      ? envPath
+      : path.join(process.cwd(), "app", "data", "lawyers.csv");
     const raw = await fs.readFile(csvPath, "utf8");
     const lines = raw.trim().split(/\r?\n/);
     const header = lines[0].split(",").map((h) => h.trim());
@@ -29,7 +33,12 @@ async function loadLawyers() {
     }
     return out;
   } catch (e) {
-    console.error("Failed to load lawyers.csv:", e);
+    // Graceful fallback: no lawyers data available (ranking disabled)
+    if (e?.code === 'ENOENT') {
+      console.warn("lawyers.csv not found; set LAWYERS_CSV_PATH or place CSV to enable lawyer ranking");
+    } else {
+      console.error("Failed to load lawyers.csv:", e);
+    }
     return [];
   }
 }
@@ -94,27 +103,69 @@ function keywordCategories(text, allCategories) {
   return ranked;
 }
 
-async function classifyCaseWithHF(text) {
-  const apiKey = process.env.HUGGINGFACE_API_KEY;
-  const model = process.env.HF_MODEL_ID || "bachminion/vi-legal-bert-finetuned";
-  if (!apiKey) return null;
+async function classifyCaseWithHF(text, allCategories) {
+  const apiKey = process.env.HF_TOKEN || process.env.HUGGINGFACE_API_KEY;
+  const model = process.env.HF_MODEL_ID || "facebook/bart-large-mnli";
+  
+  if (!apiKey || !allCategories || allCategories.length === 0) {
+    return null;
+  }
+  
   try {
-    const res = await fetch(`https://api-inference.huggingface.co/models/${model}`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ inputs: text })
-    });
-    if (!res.ok) throw new Error(`HF API error ${res.status}`);
-    const data = await res.json();
-    const arr = Array.isArray(data) ? data : [];
-    const preds = Array.isArray(arr[0]) ? arr[0] : arr;
-    if (!Array.isArray(preds) || preds.length === 0 || !preds[0].label) return null;
-    return preds.map((p) => ({ label: p.label, score: p.score }));
+    const response = await fetch(
+      `https://router.huggingface.co/hf-inference/models/${model}`,
+      {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+        body: JSON.stringify({
+          inputs: text,
+          parameters: { 
+            candidate_labels: allCategories.slice(0, 20) // Increased to get more categories
+          }
+        }),
+      }
+    );
+    
+    if (!response.ok) {
+      throw new Error(`HF API error ${response.status}`);
+    }
+    
+    const result = await response.json();
+    
+    // Handle direct array format (what BART actually returns)
+    if (Array.isArray(result) && result.length > 0) {
+      const firstItem = result[0];
+      
+      // Check if it's the simple format: [{label, score}, ...]
+      if (firstItem.label && typeof firstItem.score === 'number') {
+        return result;
+      }
+      
+      // Check if it's the complex format: [{labels: [...], scores: [...]}]
+      if (firstItem.labels && firstItem.scores) {
+        const mapped = firstItem.labels.map((label, index) => ({
+          label: label,
+          score: firstItem.scores[index] || 0
+        }));
+        return mapped;
+      }
+    }
+    
+    // Handle direct object format
+    if (result.labels && result.scores) {
+      const mapped = result.labels.map((label, index) => ({
+        label: label,
+        score: result.scores[index] || 0
+      }));
+      return mapped;
+    }
+    
+    return null;
   } catch (e) {
-    console.warn("HF classification failed, falling back to keywords:", e.message);
+    console.warn("HF classification failed:", e.message);
     return null;
   }
 }
@@ -133,9 +184,9 @@ export async function POST(req) {
     const lawyers = await loadLawyers();
     const allCategories = [...new Set(lawyers.flatMap((l) => l.case_types))];
 
-    let predictions = await classifyCaseWithHF(text);
+    let predictions = await classifyCaseWithHF(text, allCategories);
     if (!predictions || predictions.length === 0) {
-      predictions = keywordCategories(text, allCategories).slice(0, 5);
+      return NextResponse.json({ error: "Classification failed - no results from BART model" }, { status: 500 });
     }
     const topLabels = predictions.slice(0, 5).map((p) => p.label);
 
@@ -144,7 +195,7 @@ export async function POST(req) {
       const matchScore = matchCount > 0 ? 1 + 0.5 * (matchCount - 1) : 0;
       const perf = 0.5 * (l.success_rate || 0) + 0.2 * (1 - (l.complex_case_ratio || 0)) + 0.2 * (l.availability_score || 0) + 0.1 * Math.min(1, (l.years_experience || 0) / 30);
       const total = 0.6 * matchScore + 0.4 * perf;
-      return { lawyer_id: l.lawyer_id, case_types: l.case_types, specializations: l.specializations, success_rate: l.success_rate, availability_score: l.availability_score, years_experience: l.years_experience, total };
+      return { lawyer_id: l.lawyer_id, lawyer_name: l.lawyer_name, case_types: l.case_types, specializations: l.specializations, success_rate: l.success_rate, availability_score: l.availability_score, years_experience: l.years_experience, total };
     });
     scored.sort((a, b) => b.total - a.total);
     const topLawyers = scored.slice(0, 5);

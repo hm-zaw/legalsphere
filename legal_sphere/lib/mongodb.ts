@@ -1,13 +1,10 @@
 import { MongoClient, Db } from "mongodb";
 
 const uri = process.env.MONGODB_URI as string;
-const dbName = process.env.DB_NAME as string;
+const dbName = "legal_sphere";
 
 if (!uri) {
   throw new Error("MONGODB_URI is not set. Please add it to your environment.");
-}
-if (!dbName) {
-  throw new Error("DB_NAME is not set. Please add it to your environment.");
 }
 
 let client: MongoClient | null = null;
