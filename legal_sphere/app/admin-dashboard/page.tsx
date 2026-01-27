@@ -1,166 +1,437 @@
 "use client";
-import { Activity, BarChart3, Briefcase, FileText, LayoutDashboard, Settings, Users } from "lucide-react";
-import { useState } from "react";
+import { Activity, BarChart3, Briefcase, FileText, LayoutDashboard, Search, Settings, Users, Command } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useState, useEffect } from "react";
 import CasesView from "./CasesView";
+import LegalTeamView from "./LegalTeamView";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
+import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 export default function AdminDashboardPage() {
-  const [active, setActive] = useState<"overview" | "cases">("overview");
+  const [active, setActive] = useState<"overview" | "cases" | "legal-team">("overview");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setCommandPaletteOpen(true);
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   return (
-    <div className="h-screen bg-white text-gray-900">
-      <div className="flex h-screen overflow-hidden">
-        {/* Sidebar */}
-        <aside className="hidden md:flex md:w-64 lg:w-72 border-r border-gray-200 bg-gray-50/50 sticky top-0 h-screen shrink-0">
-          <div className="flex h-screen flex-col">
-            <div className="px-6 py-5 border-b border-gray-200">
-              <p className="text-xs text-gray-500">Welcome back</p>
-              <h1 className="text-lg font-semibold text-gray-900">Admin Dashboard</h1>
+    <div className="min-h-screen bg-slate-50/50">
+      {/* Simple Sidebar Layout */}
+      <div className="flex">
+        {/* Desktop Sidebar */}
+        <aside className="hidden md:flex md:w-64 h-screen border-r border-slate-200 bg-white flex-col fixed left-0 top-0">
+          <div className="p-6 border-b border-slate-200">
+            <p className="text-xs text-muted-foreground">Welcome back</p>
+            <h1 className="text-lg font-semibold">Admin Dashboard</h1>
+          </div>
+          
+          <nav className="flex-1 overflow-y-auto p-3">
+            <div className="space-y-1">
+              <SidebarButton 
+                icon={<LayoutDashboard className="h-4 w-4" />}
+                label="Overview"
+                active={active === "overview"}
+                onClick={() => setActive("overview")}
+              />
+              <SidebarButton 
+                icon={<Briefcase className="h-4 w-4" />}
+                label="Cases"
+                active={active === "cases"}
+                onClick={() => setActive("cases")}
+              />
+              <SidebarButton 
+                icon={<Users className="h-4 w-4" />}
+                label="Legal Team"
+                active={active === "legal-team"}
+                onClick={() => setActive("legal-team")}
+              />
+              <SidebarButton 
+                icon={<Users className="h-4 w-4" />}
+                label="Clients"
+              />
+              <SidebarButton 
+                icon={<Activity className="h-4 w-4" />}
+                label="Documents"
+              />
+              <SidebarButton 
+                icon={<BarChart3 className="h-4 w-4" />}
+                label="Billing"
+              />
+              <SidebarButton 
+                icon={<Settings className="h-4 w-4" />}
+                label="Settings"
+              />
             </div>
-            <nav className="flex-1 overflow-y-auto p-3 space-y-1">
-              <SidebarLink icon={<LayoutDashboard className="h-4 w-4" />} label="Overview" active={active === "overview"} onClick={() => setActive("overview")} />
-              <SidebarLink icon={<Briefcase className="h-4 w-4" />} label="Cases" active={active === "cases"} onClick={() => setActive("cases")} />
-              <SidebarLink icon={<Users className="h-4 w-4" />} label="Users" />
-              <SidebarLink icon={<Activity className="h-4 w-4" />} label="Applications" />
-              <SidebarLink icon={<BarChart3 className="h-4 w-4" />} label="Analytics & Reports" />
-              <SidebarLink icon={<Settings className="h-4 w-4" />} label="Settings" />
 
-              <div className="pt-4">
-                <p className="px-3 mb-2 text-xs font-medium text-gray-500">Projects</p>
+            <Separator className="my-4" />
+            
+            <div className="px-3">
+              <p className="mb-2 text-xs font-medium text-muted-foreground">Projects</p>
+              <div className="space-y-2">
                 <ProjectPill name="Website Redesign" />
                 <ProjectPill name="Mobile App Development" />
                 <ProjectPill name="Database Migration" />
               </div>
-            </nav>
-
-            <div className="mt-auto border-t border-gray-200 p-4 text-xs text-gray-500">
-              <div className="flex items-center gap-3">
-                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-xs font-medium text-gray-700">N</span>
-                <div className="leading-tight">
-                  <p className="font-medium text-gray-900">Next Solutions Inc</p>
-                  <p className="text-gray-500">admin@techsolutions.com</p>
-                </div>
+            </div>
+          </nav>
+          
+          <div className="border-t border-slate-200 p-4">
+            <div className="flex items-center gap-3">
+              <Avatar>
+                <AvatarFallback className="bg-slate-100 text-slate-700">N</AvatarFallback>
+              </Avatar>
+              <div className="leading-tight">
+                <p className="font-medium text-sm">Next Solutions Inc</p>
+                <p className="text-xs text-muted-foreground">admin@techsolutions.com</p>
               </div>
             </div>
           </div>
         </aside>
 
-        {/* Main content */}
-        <main className="flex-1 h-screen overflow-y-auto bg-gray-50">
-          <div className="border-b border-gray-200 bg-white">
-            <div className="mx-auto max-w-7xl px-6 py-4">
-              <div className="flex items-center gap-2 text-sm text-gray-500">
-                <span>Organization Dashboard</span>
-                <span>/</span>
-                <span className="text-gray-900">{active === "overview" ? "Overview" : active === "cases" ? "Cases" : "Overview"}</span>
+        {/* Mobile Menu Trigger */}
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="md:hidden fixed top-4 left-4 z-50"
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+        >
+          <LayoutDashboard className="h-4 w-4" />
+        </Button>
+
+        {/* Main Content */}
+        <div className="flex-1 md:ml-64">
+          {/* Header */}
+          <header className="border-b border-slate-200 bg-white px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <Breadcrumb>
+                  <BreadcrumbList className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <BreadcrumbItem>Organization Dashboard</BreadcrumbItem>
+                    <BreadcrumbSeparator />
+                    <BreadcrumbItem className="text-foreground">
+                      {active === "overview" ? "Overview" : active === "cases" ? "Cases" : "Legal Team"}
+                    </BreadcrumbItem>
+                  </BreadcrumbList>
+                </Breadcrumb>
+                <h2 className="mt-1 text-2xl font-semibold tracking-tight">
+                  {active === "overview" ? "Organization Overview" : active === "cases" ? "Cases" : "Legal Team"}
+                </h2>
               </div>
-              <h2 className="mt-1 text-2xl font-semibold tracking-tight text-gray-900">{active === "overview" ? "Organization Overview" : active === "cases" ? "Cases" : "Organization Overview"}</h2>
+              
+              {/* Command Palette Trigger */}
+              <Button
+                variant="outline"
+                className="relative w-64 justify-start text-sm text-muted-foreground"
+                onClick={() => setCommandPaletteOpen(true)}
+              >
+                <Search className="mr-2 h-4 w-4" />
+                Search... (Ctrl+K)
+              </Button>
             </div>
-          </div>
+          </header>
 
-          <div className="mx-auto max-w-7xl px-6 py-6 space-y-6">
+          {/* Content Area */}
+          <main className="p-6">
             {active === "overview" && (
-              <>
-                {/* Stat cards */}
+              <div className="space-y-6">
+                {/* Stats Cards */}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                  <StatCard title="Total Job Posts" value="23" badge="23" />
-                  <StatCard title="Active Job Posts" value="8" badge="8" />
-                  <StatCard title="Pending Applications" value="15" badge="15" badgeColor="bg-red-500" />
-                  <StatCard title="Organization Members" value="12" badge="12" badgeColor="bg-indigo-500" />
+                  <StatCard title="Active Cases" value="42" badge="+12%" />
+                  <StatCard title="New Clients" value="8" badge="+3" />
+                  <StatCard title="Pending Reviews" value="15" badge="15" badgeColor="destructive" />
+                  <StatCard title="Total Lawyers" value="12" badge="12" badgeColor="default" />
                 </div>
 
-                {/* Charts row */}
+                {/* Charts Row */}
                 <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                  <Panel title="Organization Activity Overview">
-                    <div className="aspect-[16/9] rounded-md bg-gradient-to-br from-indigo-500/10 to-emerald-500/10 border-dashed border border-gray-300 flex items-center justify-center text-sm text-gray-500">
-                      Chart placeholder
+                  <Panel title="Case Activity Overview">
+                    <div className="aspect-[16/9] rounded-md bg-gradient-to-br from-blue-500/10 to-emerald-500/10 border border-dashed border-slate-300 flex items-center justify-center text-sm text-muted-foreground">
+                      Case filing trends chart
                     </div>
                   </Panel>
-                  <Panel title="Job Posting Trends">
-                    <div className="aspect-[16/9] rounded-md bg-gradient-to-t from-indigo-500/10 to-transparent border-dashed border border-gray-300 flex items-center justify-center text-sm text-gray-500">
-                      Area chart placeholder
+                  <Panel title="Revenue Trends">
+                    <div className="aspect-[16/9] rounded-md bg-gradient-to-t from-blue-500/10 to-transparent border border-dashed border-slate-300 flex items-center justify-center text-sm text-muted-foreground">
+                      Monthly revenue chart
                     </div>
                   </Panel>
                 </div>
 
-                {/* Lists row */}
+                {/* Lists Row */}
                 <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-                  <Panel title="Recent Job Posts" className="lg:col-span-2">
+                  <Panel title="Recent Cases" className="lg:col-span-2">
                     <div className="space-y-3">
-                      <ListRow primary="Senior Software Engineer" secondary="Senior · Full-time" meta="Posted Jun 15, 2024" />
-                      <ListRow primary="Product Manager" secondary="Mid-level · Full-time" meta="Posted Jun 10, 2024" />
-                      <ListRow primary="UI/UX Designer" secondary="Junior · Part-time" meta="Posted Jun 5, 2024" />
+                      <ListRow primary="Smith vs. Johnson" secondary="Corporate Law · High Priority" meta="Filed Jun 15, 2024" />
+                      <ListRow primary="Estate Planning - Williams Family" secondary="Estate Law · Medium" meta="Filed Jun 10, 2024" />
+                      <ListRow primary="IP Patent Application" secondary="Intellectual Property · Low" meta="Filed Jun 5, 2024" />
                     </div>
                   </Panel>
-                  <Panel title="Application Statistics">
-                    <div className="text-sm">
-                      <div className="flex items-center justify-between py-2">
-                        <span className="text-gray-600">Total Applications</span>
-                        <span className="font-semibold text-gray-900">45</span>
+                  <Panel title="Practice Areas">
+                    <div className="text-sm space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Corporate Law</span>
+                        <span className="font-semibold">18</span>
                       </div>
-                      <div className="flex items-center justify-between py-2">
-                        <span className="text-gray-600">Pending Review</span>
-                        <span className="font-semibold text-amber-600">15</span>
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Family Law</span>
+                        <span className="font-semibold text-blue-600">12</span>
                       </div>
-                      <div className="flex items-center justify-between py-2">
-                        <span className="text-gray-600">Reviewed</span>
-                        <span className="font-semibold text-blue-600">20</span>
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Intellectual Property</span>
+                        <span className="font-semibold text-emerald-600">8</span>
                       </div>
-                      <div className="flex items-center justify-between py-2">
-                        <span className="text-gray-600">Hired</span>
-                        <span className="font-semibold text-emerald-600">10</span>
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Estate Planning</span>
+                        <span className="font-semibold text-amber-600">4</span>
                       </div>
                     </div>
                   </Panel>
                 </div>
 
-                {/* Table like list */}
-                <Panel title="Job Posts">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-gray-50 text-gray-600">
-                        <tr className="text-left">
-                          <Th>Job Title</Th>
-                          <Th>Level</Th>
-                          <Th>Type</Th>
-                          <Th>Salary</Th>
-                          <Th>Due Date</Th>
-                          <Th>Status</Th>
-                          <Th>Actions</Th>
+                {/* Active Cases Table */}
+                <Panel title="Active Cases">
+                  <div className="rounded-md border">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b bg-slate-50/50">
+                          <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground text-sm">Case Name</th>
+                          <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground text-sm">Client</th>
+                          <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground text-sm">Practice Area</th>
+                          <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground text-sm">Status</th>
+                          <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground text-sm">Next Hearing</th>
+                          <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground text-sm">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {jobPosts.map((r) => (
-                          <tr key={r.id} className="border-b border-gray-200 last:border-0 hover:bg-gray-50 transition-colors">
-                            <Td className="font-medium">{r.title}</Td>
-                            <Td>{r.level}</Td>
-                            <Td>{r.type}</Td>
-                            <Td>{r.salary}</Td>
-                            <Td>{r.due}</Td>
-                            <Td>
-                              <span className="inline-flex items-center rounded-full bg-indigo-100 text-indigo-700 px-2 py-0.5 text-xs font-medium">
-                                Active
-                              </span>
-                            </Td>
-                            <Td>
-                              <div className="flex items-center gap-2 text-gray-500">
-                                <button className="hover:text-gray-700" aria-label="edit">✎</button>
-                                <button className="hover:text-gray-700" aria-label="duplicate">⧉</button>
-                                <button className="hover:text-red-600" aria-label="delete">🗑</button>
+                        {[
+                          { id: 1, name: "Smith vs. Johnson", client: "John Smith", area: "Corporate Law", status: "Active", hearing: "Jun 28, 2024" },
+                          { id: 2, name: "Williams Estate", client: "Mary Williams", area: "Estate Law", status: "Review", hearing: "Jul 2, 2024" },
+                          { id: 3, name: "TechCorp IP", client: "TechCorp Inc", area: "Intellectual Property", status: "Active", hearing: "Jun 25, 2024" },
+                          { id: 4, name: "Johnson Divorce", client: "Sarah Johnson", area: "Family Law", status: "Mediation", hearing: "Jul 5, 2024" },
+                          { id: 5, name: "Brown Partnership", client: "Brown & Co", area: "Corporate Law", status: "Active", hearing: "Jun 30, 2024" },
+                        ].map((case_) => (
+                          <tr key={case_.id} className="border-b transition-colors hover:bg-slate-50/50">
+                            <td className="p-4 align-middle font-medium">{case_.name}</td>
+                            <td className="p-4 align-middle">{case_.client}</td>
+                            <td className="p-4 align-middle">{case_.area}</td>
+                            <td className="p-4 align-middle">
+                              <Badge variant={case_.status === "Active" ? "default" : "secondary"}>
+                                {case_.status}
+                              </Badge>
+                            </td>
+                            <td className="p-4 align-middle">{case_.hearing}</td>
+                            <td className="p-4 align-middle">
+                              <div className="flex items-center gap-2">
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <FileText className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <Activity className="h-4 w-4" />
+                                </Button>
                               </div>
-                            </Td>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
                 </Panel>
-              </>
+              </div>
             )}
-
+            
             {active === "cases" && <CasesView />}
-          </div>
-        </main>
+            
+            {active === "legal-team" && <LegalTeamView />}
+          </main>
+        </div>
       </div>
+
+      {/* Command Palette */}
+      <Dialog open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Command className="h-4 w-4" />
+              Search
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Input 
+              placeholder="Type to search..." 
+              className="w-full" 
+              autoFocus
+            />
+            <div className="mt-4 text-sm text-muted-foreground">
+              Search functionality coming soon... (Ctrl+K)
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Mobile Menu */}
+      {mobileMenuOpen && (
+        <div className="md:hidden fixed inset-0 z-50 bg-black/50" onClick={() => setMobileMenuOpen(false)}>
+          <div className="fixed left-0 top-0 h-full w-64 bg-white border-r border-slate-200" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 border-b border-slate-200">
+              <p className="text-xs text-muted-foreground">Welcome back</p>
+              <h1 className="text-lg font-semibold">Admin Dashboard</h1>
+            </div>
+            
+            <nav className="flex-1 overflow-y-auto p-3">
+              <div className="space-y-1">
+                <SidebarButton 
+                  icon={<LayoutDashboard className="h-4 w-4" />}
+                  label="Overview"
+                  active={active === "overview"}
+                  onClick={() => {
+                    setActive("overview");
+                    setMobileMenuOpen(false);
+                  }}
+                />
+                <SidebarButton 
+                  icon={<Briefcase className="h-4 w-4" />}
+                  label="Cases"
+                  active={active === "cases"}
+                  onClick={() => {
+                    setActive("cases");
+                    setMobileMenuOpen(false);
+                  }}
+                />
+                <SidebarButton 
+                  icon={<Users className="h-4 w-4" />}
+                  label="Legal Team"
+                  active={active === "legal-team"}
+                  onClick={() => {
+                    setActive("legal-team");
+                    setMobileMenuOpen(false);
+                  }}
+                />
+                <SidebarButton 
+                  icon={<Users className="h-4 w-4" />}
+                  label="Clients"
+                />
+                <SidebarButton 
+                  icon={<Activity className="h-4 w-4" />}
+                  label="Documents"
+                />
+                <SidebarButton 
+                  icon={<BarChart3 className="h-4 w-4" />}
+                  label="Billing"
+                />
+                <SidebarButton 
+                  icon={<Settings className="h-4 w-4" />}
+                  label="Settings"
+                />
+              </div>
+
+              <Separator className="my-4" />
+              
+              <div className="px-3">
+                <p className="mb-2 text-xs font-medium text-muted-foreground">Projects</p>
+                <div className="space-y-2">
+                  <ProjectPill name="Website Redesign" />
+                  <ProjectPill name="Mobile App Development" />
+                  <ProjectPill name="Database Migration" />
+                </div>
+              </div>
+            </nav>
+            
+            <div className="border-t border-slate-200 p-4">
+              <div className="flex items-center gap-3">
+                <Avatar>
+                  <AvatarFallback className="bg-slate-100 text-slate-700">N</AvatarFallback>
+                </Avatar>
+                <div className="leading-tight">
+                  <p className="font-medium text-sm">Next Solutions Inc</p>
+                  <p className="text-xs text-muted-foreground">admin@techsolutions.com</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SidebarButton({ icon, label, active, onClick }: { icon: React.ReactNode; label: string; active?: boolean; onClick?: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors w-full text-left ${
+        active 
+          ? "bg-slate-100 text-slate-900 font-medium" 
+          : "text-muted-foreground hover:bg-slate-100 hover:text-slate-900"
+      }`}
+    >
+      {icon}
+      <span>{label}</span>
+    </button>
+  );
+}
+
+function ProjectPill({ name }: { name: string }) {
+  return (
+    <div className="rounded-md border border-slate-200 px-3 py-2 text-xs text-muted-foreground hover:bg-slate-50 cursor-default transition-colors">
+      {name}
+    </div>
+  );
+}
+
+function StatCard({ title, value, badge, badgeColor }: { title: string; value: string; badge?: string; badgeColor?: string }) {
+  return (
+    <Card className="flex flex-col gap-6 rounded-xl border py-6 shadow-sm">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+        {badge && (
+          <Badge variant={badgeColor === "destructive" ? "destructive" : "secondary"}>
+            {badge}
+          </Badge>
+        )}
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold">{value}</div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function Panel({ title, children, className = "" }: { title: string; children: React.ReactNode; className?: string }) {
+  return (
+    <Card className={className}>
+      <CardHeader>
+        <CardTitle className="text-base font-semibold">{title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {children}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ListRow({ primary, secondary, meta }: { primary: string; secondary: string; meta: string }) {
+  return (
+    <div className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2 hover:bg-slate-50 transition-colors">
+      <div>
+        <p className="font-medium leading-tight">{primary}</p>
+        <p className="text-xs text-muted-foreground">{secondary}</p>
+      </div>
+      <p className="text-xs text-muted-foreground">{meta}</p>
     </div>
   );
 }
@@ -172,76 +443,3 @@ const jobPosts = [
   { id: 4, title: "AI Research Engineer", level: "Mid-Senior", type: "Full-time", salary: "3500000", due: "Oct 2, 2025" },
   { id: 5, title: "Backend Developer", level: "Mid-Senior", type: "Full-Time", salary: "1500000", due: "Sep 16, 2025" },
 ];
-
-function SidebarLink({ icon, label, active, onClick }: { icon: React.ReactNode; label: string; active?: boolean; onClick?: () => void }) {
-  return (
-    <a
-      href="#"
-      onClick={(e) => { e.preventDefault(); onClick?.(); }}
-      className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm hover:bg-gray-100 transition-colors ${
-        active ? "bg-gray-100 text-gray-900 font-medium" : "text-gray-600"
-      }`}
-    >
-      {icon}
-      <span>{label}</span>
-    </a>
-  );
-}
-
-function ProjectPill({ name }: { name: string }) {
-  return (
-    <div className="mx-3 mb-2 rounded-md border border-gray-200 px-3 py-2 text-xs text-gray-600 hover:bg-gray-50 cursor-default transition-colors">
-      {name}
-    </div>
-  );
-}
-
-function StatCard({ title, value, badge, badgeColor }: { title: string; value: string; badge?: string; badgeColor?: string }) {
-  return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-600">{title}</p>
-        {badge && (
-          <span className={`ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium text-white ${badgeColor ?? "bg-gray-400"}`}>
-            {badge}
-          </span>
-        )}
-      </div>
-      <p className="mt-3 text-3xl font-semibold leading-none tracking-tight text-gray-900">{value}</p>
-    </div>
-  );
-}
-
-function Panel({ title, children, className = "" }: { title: string; children: React.ReactNode; className?: string }) {
-  return (
-    <section className={`rounded-xl border border-gray-200 bg-white p-4 shadow-sm ${className}`}>
-      <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-base font-semibold text-gray-900">{title}</h3>
-      </div>
-      {children}
-    </section>
-  );
-}
-
-function ListRow({ primary, secondary, meta }: { primary: string; secondary: string; meta: string }) {
-  return (
-    <div className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2 hover:bg-gray-50 transition-colors">
-      <div>
-        <p className="font-medium leading-tight text-gray-900">{primary}</p>
-        <p className="text-xs text-gray-500">{secondary}</p>
-      </div>
-      <p className="text-xs text-gray-500">{meta}</p>
-    </div>
-  );
-}
-
-function Th({ children }: { children: React.ReactNode }) {
-  return <th className="px-3 py-2 text-xs font-medium uppercase tracking-wide text-gray-600">{children}</th>;
-}
-function Td({ children, className = "", ...rest }: { children: React.ReactNode; className?: string } & React.TdHTMLAttributes<HTMLTableCellElement>) {
-  return (
-    <td className={`px-3 py-3 align-middle text-gray-900 ${className}`} {...rest}>
-      {children}
-    </td>
-  );
-}

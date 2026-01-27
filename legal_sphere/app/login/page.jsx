@@ -40,10 +40,38 @@ export default function LoginPage() {
       // Store user data in localStorage for dashboard
       if (data["User Data"]) {
         localStorage.setItem('userData', JSON.stringify(data["User Data"]));
+        
+        // Store authentication token
+        if (data.adminToken) {
+          localStorage.setItem('adminToken', data.adminToken);
+        } else if (data.userToken) {
+          localStorage.setItem('userToken', data.userToken);
+        } else if (data.token) {
+          // Fallback to generic token
+          localStorage.setItem('adminToken', data.token);
+          localStorage.setItem('userToken', data.token);
+        }
+        
+        // Role-based redirection
+        const userRole = data["User Data"].role;
+        let redirectPath = "/dashboard"; // default for client/user
+        
+        if (userRole === "admin") {
+          redirectPath = "/admin-dashboard";
+        } else if (userRole === "lawyer") {
+          redirectPath = "/lawyer-dashboard";
+        } else if (userRole === "client" || userRole === "user") {
+          redirectPath = "/dashboard";
+        }
+        
+        setTimeout(() => {
+          router.push(redirectPath);
+        }, 800);
+      } else {
+        setTimeout(() => {
+          router.push("/dashboard");
+        }, 800);
       }
-      setTimeout(() => {
-        router.push("/dashboard");
-      }, 800);
     } catch (err) {
       setError(err.message || "Something went wrong");
     } finally {

@@ -1,7 +1,12 @@
 "use client";
 import React, { useEffect, useState, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Activity, BarChart3, Briefcase, FileText, LayoutDashboard, Settings, Users, User, UsersRound, ChevronLeft } from "lucide-react";
+import { Activity, BarChart3, Briefcase, FileText, LayoutDashboard, Settings, Users, User, UsersRound, ChevronLeft, MoreHorizontal } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 export default function CasesView() {
   const [apps, setApps] = useState([]);
@@ -10,8 +15,6 @@ export default function CasesView() {
   const [classifyResults, setClassifyResults] = useState({});
   
   // Drawer state
-  const [openMenu, setOpenMenu] = useState(null);
-  const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
   const [classifyOpen, setClassifyOpen] = useState(false);
   const [classifyFullscreen, setClassifyFullscreen] = useState(false);
   const [drawerAnim, setDrawerAnim] = useState("none");
@@ -28,25 +31,10 @@ export default function CasesView() {
   const [showLawyerDetails, setShowLawyerDetails] = useState(false);
   const [isRightColumnCollapsed, setIsRightColumnCollapsed] = useState(false);
 
-  function handleToggleMenu(id, e, app) {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const top = rect.bottom + window.scrollY + 8;
-    const left = Math.max(8, rect.right + window.scrollX - 160);
-    setMenuPos({ top, left });
-    setOpenMenu(openMenu === id ? null : id);
-    setSelectedAppId(id);
-    if (app) setSelectedApp(app);
-  }
-  
-  function handleCloseMenu() {
-    setOpenMenu(null);
-    setMenuPos(null);
-  }
-  
   function handleClassify(id) {
-    setOpenMenu(null);
-    setMenuPos(null);
+    const app = apps.find(a => String(a.id || a._id) === id);
     setSelectedAppId(id);
+    setSelectedApp(app);
     setOverrideCategory("");
     setSelectedLawyerId("");
     setExpandedLawyerId("");
@@ -225,29 +213,32 @@ export default function CasesView() {
 
   return (
     <>
-      <Panel title="Recent Case Applications">
-        {loadingApps && <div className="text-sm text-gray-500">Loading...</div>}
-        {appsError && <div className="text-sm text-red-600">{appsError}</div>}
-        {!loadingApps && !appsError && (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 text-gray-600">
-                <tr className="text-left">
-                  <Th>Client</Th>
-                  <Th>Case Title</Th>
-                  <Th>Submitted</Th>
-                  <Th>Documents</Th>
-                  <Th>Status</Th>
-                  <Th>Actions</Th>
-                </tr>
-              </thead>
-              <tbody>
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Case Applications</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loadingApps && <div className="text-sm text-muted-foreground">Loading...</div>}
+          {appsError && <div className="text-sm text-destructive">{appsError}</div>}
+          {!loadingApps && !appsError && (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Client</TableHead>
+                  <TableHead>Case Title</TableHead>
+                  <TableHead>Submitted</TableHead>
+                  <TableHead>Documents</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {apps.map((a) => (
-                  <tr key={a.id || a._id} className="border-b border-gray-200 last:border-0 hover:bg-gray-50 transition-colors">
-                    <Td className="font-medium">{a?.client?.fullName || "-"}</Td>
-                    <Td>{a?.case?.title || "-"}</Td>
-                    <Td>{a?.createdAt ? new Date(a.createdAt).toLocaleString() : "-"}</Td>
-                    <Td>
+                  <TableRow key={a.id || a._id}>
+                    <TableCell className="font-medium">{a?.client?.fullName || "-"}</TableCell>
+                    <TableCell>{a?.case?.title || "-"}</TableCell>
+                    <TableCell>{a?.createdAt ? new Date(a.createdAt).toLocaleString() : "-"}</TableCell>
+                    <TableCell>
                       <div className="flex flex-wrap gap-2">
                         {(a?.documents || []).map((d, idx) => (
                           <a
@@ -255,7 +246,7 @@ export default function CasesView() {
                             href={d.url || "#"}
                             target="_blank"
                             rel="noreferrer"
-                            className="underline text-indigo-600 hover:text-indigo-800"
+                            className="underline text-primary hover:text-primary/80"
                             onClick={(e) => { if (!d.url) e.preventDefault(); }}
                             title={d.key}
                           >
@@ -263,65 +254,39 @@ export default function CasesView() {
                           </a>
                         ))}
                       </div>
-                    </Td>
-                    <Td>
-                      <span className="inline-flex items-center rounded-full bg-zinc-100 text-zinc-700 px-2 py-0.5 text-xs font-medium">
-                        {a?.status || "-"}
-                      </span>
-                    </Td>
-                    <Td className="relative">
-                      <button
-                        type="button"
-                        aria-label="row actions"
-                        className="h-8 w-8 inline-flex items-center justify-center rounded hover:bg-gray-100 transition-colors"
-                        onClick={(e) => handleToggleMenu(String(a.id || a._id), e, a)}
-                      >
-                        ⋯
-                      </button>
-                      {/* menu is rendered via parent portal */}
-                    </Td>
-                  </tr>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{a?.status || "-"}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleClassify(String(a.id || a._id))}>
+                            Classify
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
                 ))}
                 {apps.length === 0 && (
-                  <tr>
-                    <Td className="text-gray-500" colSpan={6}>No applications yet.</Td>
-                  </tr>
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center text-muted-foreground">
+                      No applications yet.
+                    </TableCell>
+                  </TableRow>
                 )}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Panel>
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
       
-      {/* Portal for row actions menu */}
-      {openMenu && menuPos && typeof document !== "undefined"
-        ? createPortal(
-            <>
-              <div className="fixed inset-0 z-40" onClick={handleCloseMenu} />
-              <div
-                className="fixed z-50 w-40 rounded-md border border-gray-200 bg-white shadow-lg p-2 space-y-2"
-                style={{ top: menuPos.top, left: menuPos.left }}
-              >
-                <button
-                  type="button"
-                  className="w-full text-left rounded px-3 py-2 text-sm hover:bg-gray-100 transition-colors"
-                  onClick={() => handleClassify(openMenu)}
-                >
-                  Classify
-                </button>
-                <button
-                  type="button"
-                  className="w-full text-left rounded px-3 py-2 text-sm hover:bg-gray-100 transition-colors"
-                  onClick={handleCloseMenu}
-                >
-                  Close
-                </button>
-              </div>
-            </>,
-            document.body
-          )
-        : null}
-        
       {/* Portal: AI-Assisted Case Review Drawer */}
       {classifyOpen && typeof document !== "undefined"
         ? createPortal(
