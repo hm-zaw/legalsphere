@@ -40,6 +40,7 @@ export default function CasesView() {
     setExpandedLawyerId("");
     setShowLawyerDetails(false);
     setAiResult(null);
+    setAiLoading(true); // Set loading state immediately
     setClassifyOpen(true);
     setClassifyFullscreen(false);
     setIsLeftColumnCollapsed(true);
@@ -75,7 +76,8 @@ export default function CasesView() {
   async function startAILoad() {
     if (!selectedApp) return;
     
-    setAiLoading(true);
+    // aiLoading is already set to true in handleClassify
+    // setAiLoading(true);
     setAiPhaseIdx(0);
     setAiProgress(0);
     setAiResult(null);
@@ -170,9 +172,11 @@ export default function CasesView() {
     setClassifyFullscreen(false);
     setSelectedAppId(null);
     setAiLoading(false);
+    setAiResult(null);
   }
 
   async function onReanalyze() {
+    setAiLoading(true);
     startAILoad();
   }
 
@@ -855,7 +859,7 @@ function AILoadingScene({ phaseIdx, progress }) {
   const canvasRef = useRef(null);
   // lightweight parallax nodes via CSS transforms
   return (
-    <div className="relative h-full min-h-[420px] rounded-xl bg-[rgb(8,8,8)] ring-1 ring-zinc-800 overflow-hidden">
+    <div className="relative h-full min-h-[575px] rounded-xl bg-[rgb(8,8,8)] ring-1 ring-zinc-800 overflow-hidden">
       {/* abstract gold geometry */}
       <div className="absolute inset-0" aria-hidden>
         <div className="absolute -left-20 top-10 h-72 w-72 rounded-full opacity-20 blur-2xl" style={{ background: "radial-gradient(closest-side,#d4af37,transparent)" }} />

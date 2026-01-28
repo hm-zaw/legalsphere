@@ -126,11 +126,18 @@ async function classifyCaseWithHF(text, allCategories) {
             candidate_labels: allCategories.slice(0, 20) // Increased to get more categories
           }
         }),
+        signal: AbortSignal.timeout(60000) // 60 second timeout
       }
     );
     
     if (!response.ok) {
-      throw new Error(`HF API error ${response.status}`);
+      if (response.status === 504) {
+        throw new Error(`HF API timeout - server took too long to respond`);
+      } else if (response.status === 429) {
+        throw new Error(`HF API rate limit exceeded`);
+      } else {
+        throw new Error(`HF API error ${response.status}: ${response.statusText}`);
+      }
     }
     
     const result = await response.json();
@@ -186,7 +193,11 @@ export async function POST(req) {
 
     let predictions = await classifyCaseWithHF(text, allCategories);
     if (!predictions || predictions.length === 0) {
-      return NextResponse.json({ error: "Classification failed - no results from BART model" }, { status: 500 });
+      console.warn("HF classification failed, falling back to keyword-based classification");
+      predictions = keywordCategories(text, allCategories);
+    }
+    if (!predictions || predictions.length === 0) {
+      return NextResponse.json({ error: "Classification failed - no results from HF API or keyword fallback" }, { status: 500 });
     }
     const topLabels = predictions.slice(0, 5).map((p) => p.label);
 
