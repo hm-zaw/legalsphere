@@ -214,6 +214,7 @@ export default function LegalTeamView() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Corporate Law">Corporate Law</SelectItem>
+                        <SelectItem value="Civil Law">Civil Law</SelectItem>
                         <SelectItem value="Criminal Law">Criminal Law</SelectItem>
                         <SelectItem value="Cyber Law">Cyber Law</SelectItem>
                         <SelectItem value="Family Law">Family Law</SelectItem>
