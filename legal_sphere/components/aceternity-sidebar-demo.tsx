@@ -11,6 +11,7 @@ import {
   IconUsers,
   IconFileText,
   IconHome,
+  IconPlus,
 } from "@tabler/icons-react";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
@@ -26,6 +27,13 @@ export function AceternitySidebarDemo({ children }: { children: React.ReactNode 
       href: "/dashboard",
       icon: (
         <IconHome className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+      ),
+    },
+    {
+      label: "Apply New",
+      href: "/dashboard?section=apply-new",
+      icon: (
+        <IconPlus className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
       ),
     },
     {

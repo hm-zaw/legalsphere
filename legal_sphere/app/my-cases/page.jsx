@@ -117,7 +117,7 @@ export default function AlexaAIPage() {
                 <Component className="w-6 h-6" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">#57 - Contract Dispute Resolution</h1>
+                <h2 className="text-xl font-bold text-gray-900">#57 - Contract Dispute Resolution</h2>
                 <p className="text-sm text-gray-500 mt-1">Your legal case for breach of contract seeking damages and resolution.</p>
               </div>
             </div>
