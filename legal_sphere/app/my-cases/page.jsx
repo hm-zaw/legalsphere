@@ -105,7 +105,14 @@ export default function AlexaAIPage() {
 
   return (
     <AceternitySidebarDemo>
-      <main className="flex-1 bg-white flex flex-col h-screen overflow-y-auto rounded-tl-3xl">
+      <main
+        className="flex-1 bg-white flex flex-col h-screen overflow-y-auto rounded-tl-3xl"
+        style={{
+          fontFamily:
+            'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial',
+          color: "var(--foreground)",
+        }}
+      >
         {/* --- Header Section (Unchanged) --- */}
         <header className="p-6 pb-2">
           <div className="flex justify-between items-start mb-6">

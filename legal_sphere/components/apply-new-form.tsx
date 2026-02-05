@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 // Refined Professional Palette
@@ -47,7 +47,8 @@ export function ApplyNewForm() {
   const STEPS = ["Client Details", "Case Information", "Documents", "Consultation", "Review & Submit"];
   const [stepIndex, setStepIndex] = useState(0);
   const [attempted, setAttempted] = useState(false);
-  const [docFiles, setDocFiles] = useState([]);
+  const [docFiles, setDocFiles] = useState<File[]>([]);
+  const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
     client: {
       fullName: "",
@@ -148,15 +149,124 @@ export function ApplyNewForm() {
     "15:00 - 16:00",
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    console.log("Form submitted:", form);
-  };
+
+    setAttempted(true);
+    if (Object.keys(errors).length > 0) return;
+
+    try {
+      setSubmitting(true);
+
+      const uploadedDocs: { key: string; name: string; size: number; type: string }[] = [];
+      for (const f of docFiles) {
+        const presignRes = await fetch("/api/uploads/presign", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            filename: f.name,
+            contentType: f.type || "application/pdf",
+          }),
+        });
+
+        if (!presignRes.ok) {
+          throw new Error("Failed to prepare upload");
+        }
+
+        const { url, key, contentType } = await presignRes.json();
+
+        const uploadRes = await fetch(url, {
+          method: "PUT",
+          headers: {
+            "Content-Type": contentType,
+          },
+          body: f,
+        });
+
+        if (!uploadRes.ok) {
+          throw new Error(`Upload failed for ${f.name}`);
+        }
+
+        uploadedDocs.push({
+          key,
+          name: f.name,
+          size: f.size,
+          type: contentType,
+        });
+      }
+
+      const res = await fetch("/api/case-requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client: form.client,
+          case: form.case,
+          consultation: form.consultation,
+          acknowledgements: form.acknowledgements,
+          documents: uploadedDocs,
+        }),
+      });
+
+      if (!res.ok) {
+        let msg = "Failed to submit";
+        try {
+          const j = await res.json();
+          if (j?.error) msg = j.error;
+        } catch {}
+        throw new Error(msg);
+      }
+
+      const data = await res.json();
+      setDocFiles([]);
+      setForm({
+        client: {
+          fullName: "",
+          idNumber: "",
+          email: "",
+          phone: "",
+          address: "",
+          dob: "",
+        },
+        case: {
+          title: "",
+          category: "",
+          description: "",
+          incidentDate: "",
+          urgency: "",
+        },
+        consultation: {
+          type: "",
+          date: "",
+          timeSlot: "",
+          notes: "",
+        },
+        acknowledgements: {
+          accurate: false,
+          privacy: false,
+        },
+      });
+      setStepIndex(0);
+      setAttempted(false);
+      alert("Case request submitted. Reference ID: " + (data.id || "N/A"));
+    } catch (err: any) {
+      alert(
+        err?.message ||
+          "Sorry, there was a problem submitting your request. Please try again."
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <div
       className="flex-1 w-full min-w-0 min-h-screen bg-[#efefec] py-12 px-4 selection:bg-slate-200 overflow-y-scroll"
-      style={{ scrollbarGutter: "stable" }}
+      style={{
+        scrollbarGutter: "stable",
+        fontFamily:
+          'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial',
+        color: "var(--foreground)",
+      }}
     >
       <div className="w-full max-w-none min-w-0">
         
@@ -594,11 +704,16 @@ export function ApplyNewForm() {
                   </button>
                   
                   <button
-                    type="button"
+                    type={stepIndex === STEPS.length - 1 ? "submit" : "button"}
                     onClick={stepIndex === STEPS.length - 1 ? undefined : next}
+                    disabled={submitting}
                     className="bg-slate-900 px-10 py-4 text-xs font-bold uppercase tracking-[0.2em] text-white hover:bg-amber-700 transition-all shadow-lg active:scale-95"
                   >
-                    {stepIndex === STEPS.length - 1 ? "Execute Submission" : "Continue to Next Section"}
+                    {submitting
+                      ? "Submitting..."
+                      : stepIndex === STEPS.length - 1
+                        ? "Execute Submission"
+                        : "Continue to Next Section"}
                   </button>
                 </div>
 

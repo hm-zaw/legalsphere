@@ -71,7 +71,14 @@ export default function CaseDetailsPage() {
   return (
     <AceternitySidebarDemo>
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto">
+      <main
+        className="flex-1 overflow-y-auto"
+        style={{
+          fontFamily:
+            'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial',
+          color: "var(--foreground)",
+        }}
+      >
         {/* Top Navigation Bar */}
         <div className="sticky top-0 z-50 bg-white border-b border-gray-200 px-6 py-4">
           <div className="flex justify-between items-center">
