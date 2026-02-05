@@ -3,11 +3,9 @@ import React, { useState } from "react";
 import { AceternitySidebar, AceternitySidebarBody, AceternitySidebarLink } from "@/components/ui/aceternity-sidebar";
 import {
   IconArrowLeft,
-  IconBrandTabler,
   IconSettings,
   IconUserBolt,
   IconScale,
-  IconBriefcase,
   IconUsers,
   IconFileText,
   IconHome,
@@ -17,65 +15,70 @@ import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 
+// Design Tokens
+const LEGAL_NAVY = "#1a2238";
+const ACCENT_GOLD = "#af9164";
+
 export function AceternitySidebarDemo({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   
+  // UPDATED: Icons are now dark gray (neutral-500) and turn Gold/Navy on hover
   const links = [
     {
       label: "Dashboard",
       href: "/dashboard",
       icon: (
-        <IconHome className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+        <IconHome className="h-5 w-5 shrink-0 text-neutral-500 group-hover/sidebar:text-[#af9164] transition-colors" />
       ),
     },
     {
-      label: "Apply New",
+      label: "New Filing",
       href: "/dashboard?section=apply-new",
       icon: (
-        <IconPlus className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+        <IconPlus className="h-5 w-5 shrink-0 text-neutral-500 group-hover/sidebar:text-[#af9164] transition-colors" />
       ),
     },
     {
-      label: "My Cases",
+      label: "My Dossiers",
       href: "/my-cases",
       icon: (
-        <IconFileText className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+        <IconFileText className="h-5 w-5 shrink-0 text-neutral-500 group-hover/sidebar:text-[#af9164] transition-colors" />
       ),
     },
     {
-      label: "Lawyers",
+      label: "Counsel Directory",
       href: "/lawyers",
       icon: (
-        <IconUsers className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+        <IconUsers className="h-5 w-5 shrink-0 text-neutral-500 group-hover/sidebar:text-[#af9164] transition-colors" />
       ),
     },
     {
-      label: "Services",
+      label: "Legal Services",
       href: "/services",
       icon: (
-        <IconScale className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+        <IconScale className="h-5 w-5 shrink-0 text-neutral-500 group-hover/sidebar:text-[#af9164] transition-colors" />
       ),
     },
     {
       label: "Profile",
       href: "/profile",
       icon: (
-        <IconUserBolt className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+        <IconUserBolt className="h-5 w-5 shrink-0 text-neutral-500 group-hover/sidebar:text-[#af9164] transition-colors" />
       ),
     },
     {
       label: "Settings",
       href: "/settings",
       icon: (
-        <IconSettings className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+        <IconSettings className="h-5 w-5 shrink-0 text-neutral-500 group-hover/sidebar:text-[#af9164] transition-colors" />
       ),
     },
     {
       label: "Logout",
       href: "#",
       icon: (
-        <IconArrowLeft className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+        <IconArrowLeft className="h-5 w-5 shrink-0 text-neutral-500 group-hover/sidebar:text-[#af9164] transition-colors" />
       ),
     },
   ];
@@ -94,8 +97,8 @@ export function AceternitySidebarDemo({ children }: { children: React.ReactNode 
   return (
     <div
       className={cn(
-        "flex w-full flex-1 flex-col overflow-hidden bg-neutral-100 md:flex-row",
-        "h-screen"
+        "flex w-full flex-1 flex-col overflow-hidden md:flex-row",
+        "h-screen bg-[#efefec]" // Keeps the paper background for the main content area
       )}>
       <AceternitySidebar open={open} setOpen={setOpen}>
         <AceternitySidebarBody className="justify-between gap-10">
@@ -117,7 +120,7 @@ export function AceternitySidebarDemo({ children }: { children: React.ReactNode 
                 label: "LegalSphere User",
                 href: "/profile",
                 icon: (
-                  <div className="h-7 w-7 shrink-0 rounded-full bg-yellow-600 flex items-center justify-center">
+                  <div className="h-7 w-7 shrink-0 rounded-full bg-[#1a2238] flex items-center justify-center border border-neutral-200">
                     <IconUserBolt className="h-4 w-4 text-white" />
                   </div>
                 ),
@@ -138,13 +141,17 @@ export const Logo = () => {
   return (
     <a
       href="/dashboard"
-      className="relative z-20 flex items-center space-x-2 py-1 text-sm font-normal text-black">
+      className="relative z-20 flex items-center space-x-3 py-1 text-sm font-normal text-black">
       <div
-        className="h-5 w-6 shrink-0 rounded-tl-lg rounded-tr-sm rounded-br-lg rounded-bl-sm bg-yellow-600" />
+        className="h-6 w-6 shrink-0 rounded bg-[#1a2238] flex items-center justify-center shadow-md"
+      >
+        <IconScale size={16} className="text-white" />
+      </div>
       <motion.span
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="font-medium whitespace-pre text-black dark:text-white">
+        // UPDATED: Text is now Navy to pop against the white sidebar
+        className="font-medium whitespace-pre text-[#1a2238] font-serif text-lg tracking-wide">
         LegalSphere
       </motion.span>
     </a>
@@ -157,7 +164,10 @@ export const LogoIcon = () => {
       href="/dashboard"
       className="relative z-20 flex items-center space-x-2 py-1 text-sm font-normal text-black">
       <div
-        className="h-5 w-6 shrink-0 rounded-tl-lg rounded-tr-sm rounded-br-lg rounded-bl-sm bg-yellow-600" />
+        className="h-6 w-6 shrink-0 rounded bg-[#1a2238] flex items-center justify-center shadow-md"
+      >
+        <IconScale size={16} className="text-white" />
+      </div>
     </a>
   );
 };

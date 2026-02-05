@@ -88,11 +88,12 @@ export const AceternityDesktopSidebar = ({
     <>
       <motion.div
         className={cn(
-          "h-full px-4 py-4 hidden  md:flex md:flex-col bg-neutral-100 dark:bg-neutral-800 w-[300px] shrink-0",
+          // UPDATED: White background, subtle border, no heavy navy
+          "h-full px-4 py-4 hidden md:flex md:flex-col bg-white border-r border-neutral-200 w-[300px] shrink-0",
           className
         )}
         animate={{
-          width: animate ? (open ? "300px" : "60px") : "300px",
+          width: animate ? (open ? "300px" : "70px") : "300px",
         }}
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}
@@ -114,13 +115,17 @@ export const AceternityMobileSidebar = ({
     <>
       <div
         className={cn(
-          "h-10 px-4 py-4 flex flex-row md:hidden items-center justify-between bg-neutral-100 dark:bg-neutral-800 w-full"
+          // UPDATED: White background for mobile header too
+          "h-14 px-4 py-4 flex flex-row md:hidden items-center justify-between bg-white border-b border-neutral-200 w-full"
         )}
         {...props}
       >
+        <div className="flex justify-start z-20 w-full">
+           <span className="text-[#1a2238] font-serif text-lg tracking-wide font-bold">LegalSphere</span>
+        </div>
         <div className="flex justify-end z-20 w-full">
           <IconMenu2
-            className="text-neutral-800 dark:text-neutral-200"
+            className="text-neutral-800"
             onClick={() => setOpen(!open)}
           />
         </div>
@@ -135,12 +140,13 @@ export const AceternityMobileSidebar = ({
                 ease: "easeInOut",
               }}
               className={cn(
-                "fixed h-full w-full inset-0 bg-white dark:bg-neutral-900 p-10 z-[100] flex flex-col justify-between",
+                // UPDATED: Mobile Menu White Background
+                "fixed h-full w-full inset-0 bg-white p-10 z-[100] flex flex-col justify-between",
                 className
               )}
             >
               <div
-                className="absolute right-10 top-10 z-50 text-neutral-800 dark:text-neutral-200"
+                className="absolute right-10 top-10 z-50 text-neutral-800"
                 onClick={() => setOpen(!open)}
               >
                 <IconX />
@@ -169,7 +175,7 @@ export const AceternitySidebarLink = ({
     <a
       href={link.href}
       className={cn(
-        "flex items-center justify-start gap-2  group/sidebar py-2",
+        "flex items-center justify-start gap-2 group/sidebar py-2.5 px-2 rounded-md hover:bg-neutral-100 transition-all",
         className
       )}
       onClick={(e) => {
@@ -185,7 +191,8 @@ export const AceternitySidebarLink = ({
           display: animate ? (open ? "inline-block" : "none") : "inline-block",
           opacity: animate ? (open ? 1 : 0) : 1,
         }}
-        className="text-neutral-700 dark:text-neutral-200 text-sm group-hover/sidebar:translate-x-1 transition duration-150 whitespace-pre inline-block !p-0 !m-0"
+        // UPDATED: Text color is now dark (#1a2238 or neutral-700) for white bg
+        className="text-neutral-600 text-sm font-medium group-hover/sidebar:text-[#1a2238] group-hover/sidebar:translate-x-1 transition-all duration-200 whitespace-pre inline-block !p-0 !m-0"
       >
         {link.label}
       </motion.span>
