@@ -18,64 +18,71 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
     setSuccess("");
+
     if (!email || !password) {
       setError("Please fill in all fields.");
       return;
     }
+
     setLoading(true);
+
     try {
       const res = await fetch("http://127.0.0.1:5000/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
+
       const data = await res.json().catch(() => ({}));
+
       if (!res.ok) {
         throw new Error(data?.Message || data?.message || "Login failed");
       }
       if (!data?.Success) {
         throw new Error(data?.Message || data?.message || "Login failed");
       }
-      setSuccess(data?.Message || "Login successful. Redirecting...");
-      // Store user data in localStorage for dashboard
-      if (data["User Data"]) {
-        const rawUserData = data["User Data"];
-        const normalizedUserData = Array.isArray(rawUserData) ? rawUserData[0] : rawUserData;
-        localStorage.setItem('userData', JSON.stringify(normalizedUserData));
-        
-        // Store authentication token
-        if (data.adminToken) {
-          localStorage.setItem('adminToken', data.adminToken);
-        } else if (data.userToken) {
-          localStorage.setItem('userToken', data.userToken);
-        } else if (data.token) {
-          // Fallback to generic token
-          localStorage.setItem('adminToken', data.token);
-          localStorage.setItem('userToken', data.token);
-        }
-        
-        // Role-based redirection
-        const userRole = data["User Data"].role;
-        let redirectPath = "/dashboard"; // default for client/user
-        
-        if (userRole === "admin") {
-          redirectPath = "/admin-dashboard";
-        } else if (userRole === "lawyer") {
-          redirectPath = "/lawyer-dashboard";
-        } else if (userRole === "client" || userRole === "user") {
-          redirectPath = "/dashboard";
-        }
-        
-        setTimeout(() => {
-          router.push(redirectPath);
-        }, 800);
-      } else {
-        setTimeout(() => {
-          router.push("/dashboard");
-        }, 800);
+
+      // ✅ Normalize and store user data
+      const rawUserData = data["User Data"];
+      const normalizedUserData = Array.isArray(rawUserData) ? rawUserData[0] : rawUserData;
+
+      if (normalizedUserData) {
+        localStorage.setItem("userData", JSON.stringify(normalizedUserData));
       }
+
+      // ✅ Extract role safely from normalized user object
+      const userRole = normalizedUserData?.role;
+
+      // ✅ Store token consistently so apiClient can find it
+      const token = data.adminToken || data.userToken || data.token;
+      if (token) {
+        // always store in userToken (apiClient looks for userToken/adminToken)
+        localStorage.setItem("userToken", token);
+
+        // also store adminToken if admin (optional, kept for compatibility)
+        if (userRole === "admin") {
+          localStorage.setItem("adminToken", token);
+        }
+      }
+
+      // ✅ Role-based redirection
+      let redirectPath = "/dashboard"; // default for client/user
+      if (userRole === "admin") {
+        redirectPath = "/admin-dashboard";
+      } else if (userRole === "lawyer") {
+        redirectPath = "/lawyer-dashboard";
+      } else if (userRole === "client" || userRole === "user") {
+        redirectPath = "/dashboard";
+      }
+
+      setSuccess(data?.Message || "Login successful. Redirecting...");
+
+      // small delay so user can see success text
+      setTimeout(() => {
+        router.push(redirectPath);
+      }, 800);
     } catch (err) {
-      setError(err.message || "Something went wrong");
+      setError(err?.message || "Something went wrong");
     } finally {
       setLoading(false);
     }
@@ -85,19 +92,19 @@ export default function LoginPage() {
     <div className="h-screen w-screen bg-zinc-100">
       <div className="grid h-full w-full grid-cols-1 md:grid-cols-[45%_55%]">
         <div className="relative hidden md:block">
-            <Image
-              src="/login-photo2.png"
-              alt="Building"
-              fill
-              className="object-cover"
-              priority
-            />
-            <div className="absolute left-6 top-6">
-              <div className="rounded-md border border-white/30 bg-white/10 px-3 py-1 text-xs font-medium tracking-wide text-white backdrop-blur">
-                LEGALSPHERE
-              </div>
+          <Image
+            src="/login-photo2.png"
+            alt="Building"
+            fill
+            className="object-cover"
+            priority
+          />
+          <div className="absolute left-6 top-6">
+            <div className="rounded-md border border-white/30 bg-white/10 px-3 py-1 text-xs font-medium tracking-wide text-white backdrop-blur">
+              LEGALSPHERE
             </div>
-            <div className="absolute inset-0 bg-gradient-to-tr from-black/50 via-black/10 to-transparent" />
+          </div>
+          <div className="absolute inset-0 bg-gradient-to-tr from-black/50 via-black/10 to-transparent" />
         </div>
 
         <div className="relative z-10 flex items-center justify-center bg-white px-8 py-10 md:-ml-10 md:rounded-tl-[36px] md:px-12 md:shadow-xl">
@@ -106,12 +113,15 @@ export default function LoginPage() {
               Welcome Back!
             </h1>
             <p className="mt-2 text-sm text-zinc-500">Log in to continue.</p>
+
             {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
             {success && <p className="mt-3 text-sm text-emerald-600">{success}</p>}
 
             <form onSubmit={handleSubmit} className="mt-8 space-y-4">
               <div>
-                <label className="mb-2 block text-xs font-medium text-zinc-600">Email</label>
+                <label className="mb-2 block text-xs font-medium text-zinc-600">
+                  Email
+                </label>
                 <input
                   className="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-400"
                   placeholder="Input your email"
@@ -125,7 +135,9 @@ export default function LoginPage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-xs font-medium text-zinc-600">Password</label>
+                <label className="mb-2 block text-xs font-medium text-zinc-600">
+                  Password
+                </label>
                 <div className="relative">
                   <input
                     className="w-full rounded-lg border border-zinc-200 bg-white px-4 py-3 pr-12 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-400"
@@ -137,6 +149,7 @@ export default function LoginPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                   />
+
                   <button
                     type="button"
                     onClick={() => setShowPassword((v) => !v)}
@@ -144,7 +157,12 @@ export default function LoginPage() {
                     aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? (
-                      <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" xmlns="http://www.w3.org/2000/svg">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        className="h-5 w-5"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
                         <path
                           d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"
                           stroke="currentColor"
@@ -157,7 +175,12 @@ export default function LoginPage() {
                         />
                       </svg>
                     ) : (
-                      <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" xmlns="http://www.w3.org/2000/svg">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        className="h-5 w-5"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
                         <path
                           d="M3 3l18 18"
                           stroke="currentColor"
@@ -187,7 +210,10 @@ export default function LoginPage() {
                   <input type="checkbox" className="h-4 w-4 rounded border-zinc-300" />
                   Remember Me
                 </label>
-                <Link href="#" className="text-xs font-medium text-zinc-600 hover:text-zinc-900">
+                <Link
+                  href="#"
+                  className="text-xs font-medium text-zinc-600 hover:text-zinc-900"
+                >
                   Forgot Password?
                 </Link>
               </div>
