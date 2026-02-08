@@ -12,7 +12,8 @@ class KafkaConfig:
     """Kafka configuration and connection management"""
     
     def __init__(self):
-        self.bootstrap_servers = os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'localhost:9092')
+        self.bootstrap_servers = os.getenv('KAFKA_BOOTSTRAP_SERVERS', '127.0.0.1:9092')
+        logger.info(f"Kafka bootstrap servers: {self.bootstrap_servers}")
         self.case_submissions_topic = os.getenv('KAFKA_CASE_SUBMISSIONS_TOPIC', 'case-submissions')
         self.case_notifications_topic = os.getenv('KAFKA_CASE_NOTIFICATIONS_TOPIC', 'case-notifications')
         self.group_id = os.getenv('KAFKA_CONSUMER_GROUP_ID', 'case-processors')
@@ -41,8 +42,11 @@ class KafkaConfig:
             'auto_offset_reset': 'earliest',
             'enable_auto_commit': True,
             'auto_commit_interval_ms': 1000,
-            'session_timeout_ms': 30000,
+            'session_timeout_ms': 10000,
             'heartbeat_interval_ms': 3000,
+            'request_timeout_ms': 30000,
+            'reconnect_backoff_ms': 1000,
+            'retry_backoff_ms': 100,
         }
 
 class KafkaService:
