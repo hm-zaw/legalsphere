@@ -24,15 +24,6 @@ def create_kafka_topics():
     # Topics to create
     topics = [
         NewTopic(
-            name='case-submissions',
-            num_partitions=3,
-            replication_factor=1,
-            topic_configs={
-                'retention.ms': '604800000',  # 7 days
-                'cleanup.policy': 'delete'
-            }
-        ),
-        NewTopic(
             name='case-notifications',
             num_partitions=2,
             replication_factor=1,
