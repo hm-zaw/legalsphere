@@ -12,10 +12,10 @@ class KafkaConfig:
     """Kafka configuration and connection management"""
     
     def __init__(self):
-        self.bootstrap_servers = os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'localhost:9092')
-        self.case_submissions_topic = os.getenv('KAFKA_CASE_SUBMISSIONS_TOPIC', 'case-submissions')
+        self.bootstrap_servers = os.getenv('KAFKA_BOOTSTRAP_SERVERS', '127.0.0.1:9092')
+        logger.info(f"Kafka bootstrap servers: {self.bootstrap_servers}")
         self.case_notifications_topic = os.getenv('KAFKA_CASE_NOTIFICATIONS_TOPIC', 'case-notifications')
-        self.group_id = os.getenv('KAFKA_CONSUMER_GROUP_ID', 'case-processors')
+        self.group_id = os.getenv('KAFKA_CONSUMER_GROUP_ID', 'notification-processors')
         
     def get_producer_config(self):
         """Get Kafka producer configuration"""
@@ -41,8 +41,11 @@ class KafkaConfig:
             'auto_offset_reset': 'earliest',
             'enable_auto_commit': True,
             'auto_commit_interval_ms': 1000,
-            'session_timeout_ms': 30000,
+            'session_timeout_ms': 10000,
             'heartbeat_interval_ms': 3000,
+            'request_timeout_ms': 30000,
+            'reconnect_backoff_ms': 1000,
+            'retry_backoff_ms': 100,
         }
 
 class KafkaService:
@@ -80,44 +83,6 @@ class KafkaService:
                 logger.error(f"Failed to create Kafka consumer: {e}")
                 raise
         return self.consumer
-    
-    def publish_case_submission(self, case_data):
-        """Publish case submission to Kafka topic"""
-        try:
-            producer = self.get_producer()
-            
-            # Add metadata to the message
-            message = {
-                'event_type': 'case_submission',
-                'timestamp': case_data.get('createdAt'),
-                'data': case_data
-            }
-            
-            # Use case ID as key for partitioning
-            case_id = str(case_data.get('_id', 'unknown'))
-            
-            future = producer.send(
-                topic=self.config.case_submissions_topic,
-                key=case_id,
-                value=message
-            )
-            
-            # Block until message is sent or timeout
-            record_metadata = future.get(timeout=10)
-            
-            logger.info(f"Case submission published to Kafka: "
-                       f"Topic: {record_metadata.topic}, "
-                       f"Partition: {record_metadata.partition}, "
-                       f"Offset: {record_metadata.offset}")
-            
-            return True
-            
-        except KafkaError as e:
-            logger.error(f"Failed to publish case submission: {e}")
-            return False
-        except Exception as e:
-            logger.error(f"Unexpected error publishing case submission: {e}")
-            return False
     
     def publish_notification(self, notification_data):
         """Publish notification to Kafka topic"""

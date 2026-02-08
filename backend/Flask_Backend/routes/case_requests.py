@@ -4,7 +4,6 @@ import uuid
 import os
 import jwt
 from functools import wraps
-from kafka_config import kafka_service
 from mongodb_client import get_db_collection
 
 case_requests_bp = Blueprint('case_requests', __name__)
@@ -64,29 +63,18 @@ def create_case_request():
             'source': 'web_form'
         })
         
-        # Publish to Kafka for async processing
-        success = kafka_service.publish_case_submission(case_data)
-        
-        if not success:
-            # Fallback: store directly in database if Kafka fails
-            try:
-                collection = get_db_collection('case_requests')
-                result = collection.insert_one(case_data)
-                case_data['_id'] = str(result.inserted_id)
-                return jsonify({
-                    'id': case_data['id'],
-                    'message': 'Case submitted successfully (direct storage)',
-                    'status': 'submitted'
-                }), 201
-            except Exception as db_error:
-                return jsonify({'error': f'Failed to process case: {str(db_error)}'}), 500
-        
-        # Return immediate response to client
-        return jsonify({
-            'id': case_data['id'],
-            'message': 'Case submitted successfully',
-            'status': 'submitted'
-        }), 201
+        # Store directly in MongoDB
+        try:
+            collection = get_db_collection('case_requests')
+            result = collection.insert_one(case_data)
+            case_data['_id'] = str(result.inserted_id)
+            return jsonify({
+                'id': case_data['id'],
+                'message': 'Case submitted successfully',
+                'status': 'submitted'
+            }), 201
+        except Exception as db_error:
+            return jsonify({'error': f'Failed to process case: {str(db_error)}'}), 500
         
     except Exception as e:
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500

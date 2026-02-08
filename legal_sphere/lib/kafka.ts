@@ -1,11 +1,5 @@
 import { Kafka, Producer } from "kafkajs";
 
-type CaseSubmissionMessage = {
-  event_type: "case_submission";
-  timestamp: string;
-  data: unknown;
-};
-
 type CaseNotificationMessage = {
   event_type: "case_notification";
   timestamp: string;
@@ -51,33 +45,6 @@ async function getProducer(): Promise<Producer> {
   })();
 
   return global._kafkaProducerConnecting;
-}
-
-export async function publishCaseSubmission(message: CaseSubmissionMessage, key?: string): Promise<void> {
-  const topic = process.env.KAFKA_CASE_SUBMISSIONS_TOPIC || "case-submissions";
-  const producer = await getProducer();
-
-  const payload = JSON.stringify(message);
-  try {
-    const res = await producer.send({
-      topic,
-      messages: [
-        {
-          key,
-          value: payload,
-        },
-      ],
-    });
-    // Basic observability: log topic, key, and return metadata
-    console.info(
-      `Kafka published: topic=${topic}, key=${key ?? ""}, bytes=${payload.length}, result=${JSON.stringify(
-        res
-      )}`
-    );
-  } catch (err) {
-    console.error("Kafka publish error:", err);
-    throw err;
-  }
 }
 
 export async function publishCaseNotification(message: CaseNotificationMessage, key?: string): Promise<void> {
