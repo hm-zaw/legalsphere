@@ -6,6 +6,19 @@ type CaseSubmissionMessage = {
   data: unknown;
 };
 
+type CaseNotificationMessage = {
+  event_type: "case_notification";
+  timestamp: string;
+  data: {
+    clientId: string;
+    caseId: string;
+    notificationType: "case_rejected" | "case_assigned" | "case_updated";
+    title: string;
+    message: string;
+    metadata?: unknown;
+  };
+};
+
 declare global {
   // eslint-disable-next-line no-var
   var _kafkaProducer: Producer | undefined;
@@ -63,6 +76,33 @@ export async function publishCaseSubmission(message: CaseSubmissionMessage, key?
     );
   } catch (err) {
     console.error("Kafka publish error:", err);
+    throw err;
+  }
+}
+
+export async function publishCaseNotification(message: CaseNotificationMessage, key?: string): Promise<void> {
+  const topic = process.env.KAFKA_CASE_NOTIFICATIONS_TOPIC || "case-notifications";
+  const producer = await getProducer();
+
+  const payload = JSON.stringify(message);
+  try {
+    const res = await producer.send({
+      topic,
+      messages: [
+        {
+          key: key || message.data.clientId,
+          value: payload,
+        },
+      ],
+    });
+    // Basic observability: log topic, key, and return metadata
+    console.info(
+      `Kafka notification published: topic=${topic}, key=${key ?? ""}, bytes=${payload.length}, result=${JSON.stringify(
+        res
+      )}`
+    );
+  } catch (err) {
+    console.error("Kafka notification publish error:", err);
     throw err;
   }
 }

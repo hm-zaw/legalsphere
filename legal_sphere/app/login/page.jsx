@@ -39,7 +39,9 @@ export default function LoginPage() {
       setSuccess(data?.Message || "Login successful. Redirecting...");
       // Store user data in localStorage for dashboard
       if (data["User Data"]) {
-        localStorage.setItem('userData', JSON.stringify(data["User Data"]));
+        const rawUserData = data["User Data"];
+        const normalizedUserData = Array.isArray(rawUserData) ? rawUserData[0] : rawUserData;
+        localStorage.setItem('userData', JSON.stringify(normalizedUserData));
         
         // Store authentication token
         if (data.adminToken) {

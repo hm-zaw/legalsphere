@@ -41,39 +41,61 @@ function DashboardContent() {
   const [userData, setUserData] = useState(null);
   const section = searchParams.get("section");
   const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [activeTab, setActiveTab] = useState("Overview"); // Default tab
-  const [selectedCaseId, setSelectedCaseId] = useState("CASE-2024-001");
+  const [selectedCaseId, setSelectedCaseId] = useState(null);
+  const [userCases, setUserCases] = useState([]);
 
-  // Sample Case Data
-  const userCases = [
-    {
-      id: "CASE-2024-001",
-      title: "Business Contract Review",
-      description: "Verification of legal documents and M&A terms.",
-      status: "Lawyer Assigned",
-      progress: 60,
-      lastUpdated: "2h ago",
-      statusColor: "text-blue-700 bg-blue-50 border-blue-200",
-    },
-    {
-      id: "CASE-2024-002",
-      title: "Property Dispute Resolution",
-      description: "Boundary dispute arbitration for Commercial Lot 4B.",
-      status: "AI Analysis",
-      progress: 30,
-      lastUpdated: "1d ago",
-      statusColor: "text-amber-700 bg-amber-50 border-amber-200",
-    },
-    {
-      id: "CASE-2024-003",
-      title: "Employment Agreement",
-      description: "Drafting of executive severance package.",
-      status: "Under Review",
-      progress: 15,
-      lastUpdated: "3d ago",
-      statusColor: "text-slate-600 bg-slate-50 border-slate-200",
-    },
-  ];
+  // Fetch user cases from API
+  useEffect(() => {
+    const storedUser = localStorage.getItem("userData");
+    const parsed = storedUser ? JSON.parse(storedUser) : null;
+    const user = Array.isArray(parsed) ? parsed[0] : parsed;
+    const clientIdentifier = user?.id || user?.clientId || user?.userId || user?._id || user?.email || user?.client?.email;
+
+    if (!clientIdentifier) return;
+
+    const fetchUserCases = async () => {
+      try {
+        const response = await fetch(`/api/case-requests?clientId=${clientIdentifier}`);
+        if (response.ok) {
+          const data = await response.json();
+          const formattedCases = (data.cases || []).map((caseItem) => ({
+            id: caseItem.id,
+            title: caseItem.title || "Untitled Case",
+            description: caseItem.description || "No description available",
+            status: caseItem.status,
+            progress: caseItem.progress || 0,
+            lastUpdated: caseItem.updatedAt ? new Date(caseItem.updatedAt).toLocaleDateString() : "Unknown",
+            statusColor: getStatusColor(caseItem.status),
+          }));
+          setUserCases(formattedCases);
+          
+          // Set first case as selected if none selected
+          if (formattedCases.length > 0 && !selectedCaseId) {
+            setSelectedCaseId(formattedCases[0].id);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching user cases:", error);
+      }
+    };
+
+    fetchUserCases();
+  }, [userData, selectedCaseId]);
+
+  const getStatusColor = (status) => {
+    const statusColors = {
+      'pending_submission': 'text-slate-600 bg-slate-50 border-slate-200',
+      'submitted': 'text-blue-700 bg-blue-50 border-blue-200',
+      'ai_analysis': 'text-amber-700 bg-amber-50 border-amber-200',
+      'lawyer_assigned': 'text-green-700 bg-green-50 border-green-200',
+      'under_review': 'text-purple-700 bg-purple-50 border-purple-200',
+      'approved': 'text-emerald-700 bg-emerald-50 border-emerald-200'
+    };
+    return statusColors[status] || 'text-slate-600 bg-slate-50 border-slate-200';
+  };
 
   // Detailed Data for Tabs
   const timelineEvents = [
@@ -105,6 +127,62 @@ function DashboardContent() {
     }
   }, []);
 
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showNotifications && !event.target.closest('.notification-dropdown')) {
+        setShowNotifications(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showNotifications]);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("userData");
+    const parsed = storedUser ? JSON.parse(storedUser) : null;
+    const user = Array.isArray(parsed) ? parsed[0] : parsed;
+    const clientIdentifier = user?.id || user?.clientId || user?.userId || user?._id || user?.email || user?.client?.email;
+
+    if (!clientIdentifier) return;
+
+    const fetchNotifications = async () => {
+      try {
+        const response = await fetch(`/api/notifications?clientId=${clientIdentifier}&limit=10`);
+        if (response.ok) {
+          const data = await response.json();
+          setNotifications(data.notifications || []);
+          setUnreadCount(data.unreadCount || 0);
+        }
+      } catch (error) {
+        console.error("Error fetching notifications:", error);
+      }
+    };
+
+    fetchNotifications();
+    
+    const interval = setInterval(fetchNotifications, 3000);
+    
+    return () => clearInterval(interval);
+  }, [userData]);
+
+  const handleMarkAsRead = async (notificationId) => {
+    try {
+      const response = await fetch(`/api/notifications/${notificationId}/read`, {
+        method: "POST",
+      });
+      
+      if (response.ok) {
+        setNotifications(prev => 
+          prev.map(n => n._id === notificationId ? { ...n, read: true } : n)
+        );
+        setUnreadCount(prev => Math.max(0, prev - 1));
+      }
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+    }
+  };
+
   const handleStartNewCase = () => router.push("/dashboard?section=apply-new");
   const handleViewCases = () => router.push("/my-cases");
 
@@ -126,14 +204,78 @@ function DashboardContent() {
               <Breadcrumbs className="text-xs font-mono uppercase text-slate-500 tracking-tighter" />
 
               <div className="flex items-center space-x-6">
-                <div className="relative">
+                <div className="relative notification-dropdown">
                   <button
                     onClick={() => setShowNotifications(!showNotifications)}
                     className="relative p-1 text-slate-500 hover:text-[#af9164] transition-colors"
                   >
                     <Bell className="w-5 h-5" />
-                    <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border-2 border-[#efefec]"></span>
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center border-2 border-[#efefec]">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    )}
                   </button>
+                  
+                  {/* Notification Dropdown */}
+                  {showNotifications && (
+                    <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-slate-200 z-50">
+                      <div className="p-4 border-b border-slate-200">
+                        <h3 className="text-sm font-semibold text-slate-900">Notifications</h3>
+                        {unreadCount > 0 && (
+                          <p className="text-xs text-slate-500 mt-1">{unreadCount} unread</p>
+                        )}
+                      </div>
+                      
+                      <div className="max-h-96 overflow-y-auto">
+                        {notifications.length === 0 ? (
+                          <div className="p-4 text-center text-sm text-slate-500">
+                            No notifications
+                          </div>
+                        ) : (
+                          notifications.map((notification) => (
+                            <div
+                              key={notification._id}
+                              className={cn(
+                                "p-4 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors",
+                                !notification.read && "bg-blue-50"
+                              )}
+                              onClick={() => handleMarkAsRead(notification._id)}
+                            >
+                              <div className="flex items-start gap-3">
+                                <div className={cn(
+                                  "w-2 h-2 rounded-full mt-2 flex-shrink-0",
+                                  notification.notificationType === "case_rejected" ? "bg-red-500" : "bg-blue-500"
+                                )} />
+                                <div className="flex-1 min-w-0">
+                                  <p className={cn(
+                                    "text-sm font-medium text-slate-900",
+                                    !notification.read && "font-semibold"
+                                  )}>
+                                    {notification.title}
+                                  </p>
+                                  <p className="text-xs text-slate-600 mt-1 line-clamp-2">
+                                    {notification.message}
+                                  </p>
+                                  <p className="text-[10px] text-slate-400 mt-2">
+                                    {new Date(notification.createdAt).toLocaleDateString()} {new Date(notification.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                      
+                      {notifications.length > 0 && (
+                        <div className="p-3 border-t border-slate-200">
+                          <button className="text-xs text-[#af9164] hover:text-[#9c7f56] font-medium">
+                            View all notifications
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-3 pl-6 border-l border-slate-300">
@@ -276,25 +418,31 @@ function DashboardContent() {
                                     </div>
                                 </div>
                                 <div className="overflow-y-auto flex-1 p-3 space-y-2">
-                                    {userCases.map((c) => (
-                                        <div 
-                                            key={c.id}
-                                            onClick={() => setSelectedCaseId(c.id)}
-                                            className={cn(
-                                                "p-4 rounded-lg cursor-pointer transition-all border",
-                                                selectedCaseId === c.id 
-                                                    ? "bg-white border-[#af9164] shadow-md"
-                                                    : "bg-transparent border-transparent hover:bg-white hover:border-slate-200"
-                                            )}
-                                        >
-                                            <div className="flex justify-between mb-2">
-                                                <span className={cn("text-[9px] font-bold uppercase px-1.5 py-0.5 rounded border", c.statusColor)}>{c.status}</span>
-                                                <span className="text-[10px] text-slate-400 font-mono">{c.lastUpdated}</span>
-                                            </div>
-                                            <h4 className="font-serif font-bold text-slate-800 text-sm mb-1 leading-snug">{c.title}</h4>
-                                            <p className="text-[10px] text-slate-500 line-clamp-2">{c.description}</p>
+                                    {userCases.length === 0 ? (
+                                        <div className="p-4 text-center text-sm text-slate-500">
+                                            No active cases
                                         </div>
-                                    ))}
+                                    ) : (
+                                        userCases.map((c) => (
+                                            <div 
+                                                key={c.id}
+                                                onClick={() => setSelectedCaseId(c.id)}
+                                                className={cn(
+                                                    "p-4 rounded-lg cursor-pointer transition-all border",
+                                                    selectedCaseId === c.id 
+                                                        ? "bg-white border-[#af9164] shadow-md"
+                                                        : "bg-transparent border-transparent hover:bg-white hover:border-slate-200"
+                                                )}
+                                            >
+                                                <div className="flex justify-between mb-2">
+                                                    <span className={cn("text-[9px] font-bold uppercase px-1.5 py-0.5 rounded border", c.statusColor)}>{c.status}</span>
+                                                    <span className="text-[10px] text-slate-400 font-mono">{c.lastUpdated}</span>
+                                                </div>
+                                                <h4 className="font-serif font-bold text-slate-800 text-sm mb-1 leading-snug">{c.title}</h4>
+                                                <p className="text-[10px] text-slate-500 line-clamp-2">{c.description}</p>
+                                            </div>
+                                        ))
+                                    )}
                                 </div>
                             </div>
 

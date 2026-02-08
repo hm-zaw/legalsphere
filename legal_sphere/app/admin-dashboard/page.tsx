@@ -1,445 +1,354 @@
 "use client";
-import { Activity, BarChart3, Briefcase, FileText, LayoutDashboard, Search, Settings, Users, Command } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useState, useEffect } from "react";
+
+import React, { useState } from "react";
+import { 
+  LayoutDashboard, 
+  Briefcase, 
+  Users, 
+  Settings, 
+  Search, 
+  Bell, 
+  BarChart3, 
+  Scale, 
+  ShieldAlert, 
+  Activity,
+  LogOut,
+  TrendingUp,
+  Clock,
+  Plus,
+  ArrowUpRight,
+  MoreHorizontal,
+  ChevronRight,
+  Filter,
+  Download
+} from "lucide-react";
+import { AceternitySidebar, AceternitySidebarBody, AceternitySidebarLink } from "@/components/ui/aceternity-sidebar";
+import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
 import CasesView from "./CasesView";
 import LegalTeamView from "./LegalTeamView";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
-import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
+
+// --- Design Tokens ---
+// We use a "Zinc" palette for a colder, more professional look.
+const THEME = {
+  navy: "#1a2238",
+  gold: "#af9164",
+};
 
 export default function AdminDashboardPage() {
-  const [active, setActive] = useState<"overview" | "cases" | "legal-team">("overview");
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"overview" | "cases" | "legal-team">("overview");
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        setCommandPaletteOpen(true);
-      }
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  const links = [
+    {
+      label: "Dashboard",
+      href: "#",
+      icon: <LayoutDashboard className="h-4 w-4 shrink-0 text-zinc-500 group-hover/sidebar:text-[#1a2238]" />,
+      onClick: () => setActiveTab("overview"),
+    },
+    {
+      label: "Case Intake",
+      href: "#",
+      icon: <Briefcase className="h-4 w-4 shrink-0 text-zinc-500 group-hover/sidebar:text-[#1a2238]" />,
+      onClick: () => setActiveTab("cases"),
+    },
+    {
+      label: "Attorneys",
+      href: "#",
+      icon: <Users className="h-4 w-4 shrink-0 text-zinc-500 group-hover/sidebar:text-[#1a2238]" />,
+      onClick: () => setActiveTab("legal-team"),
+    },
+    {
+      label: "Financials",
+      href: "#",
+      icon: <BarChart3 className="h-4 w-4 shrink-0 text-zinc-500 group-hover/sidebar:text-[#1a2238]" />,
+    },
+    {
+      label: "Settings",
+      href: "#",
+      icon: <Settings className="h-4 w-4 shrink-0 text-zinc-500 group-hover/sidebar:text-[#1a2238]" />,
+    },
+  ];
 
   return (
-    <div className="min-h-screen bg-slate-50/50">
-      {/* Simple Sidebar Layout */}
-      <div className="flex">
-        {/* Desktop Sidebar */}
-        <aside className="hidden md:flex md:w-64 h-screen border-r border-slate-200 bg-white flex-col fixed left-0 top-0">
-          <div className="p-6 border-b border-slate-200">
-            <p className="text-xs text-muted-foreground">Welcome back</p>
-            <h1 className="text-lg font-semibold">Admin Dashboard</h1>
-          </div>
-          
-          <nav className="flex-1 overflow-y-auto p-3">
-            <div className="space-y-1">
-              <SidebarButton 
-                icon={<LayoutDashboard className="h-4 w-4" />}
-                label="Overview"
-                active={active === "overview"}
-                onClick={() => setActive("overview")}
-              />
-              <SidebarButton 
-                icon={<Briefcase className="h-4 w-4" />}
-                label="Cases"
-                active={active === "cases"}
-                onClick={() => setActive("cases")}
-              />
-              <SidebarButton 
-                icon={<Users className="h-4 w-4" />}
-                label="Legal Team"
-                active={active === "legal-team"}
-                onClick={() => setActive("legal-team")}
-              />
-              <SidebarButton 
-                icon={<Users className="h-4 w-4" />}
-                label="Clients"
-              />
-              <SidebarButton 
-                icon={<Activity className="h-4 w-4" />}
-                label="Documents"
-              />
-              <SidebarButton 
-                icon={<BarChart3 className="h-4 w-4" />}
-                label="Billing"
-              />
-              <SidebarButton 
-                icon={<Settings className="h-4 w-4" />}
-                label="Settings"
-              />
-            </div>
-
-            <Separator className="my-4" />
-            
-            <div className="px-3">
-              <p className="mb-2 text-xs font-medium text-muted-foreground">Projects</p>
-              <div className="space-y-2">
-                <ProjectPill name="Website Redesign" />
-                <ProjectPill name="Mobile App Development" />
-                <ProjectPill name="Database Migration" />
-              </div>
-            </div>
-          </nav>
-          
-          <div className="border-t border-slate-200 p-4">
-            <div className="flex items-center gap-3">
-              <Avatar>
-                <AvatarFallback className="bg-slate-100 text-slate-700">N</AvatarFallback>
-              </Avatar>
-              <div className="leading-tight">
-                <p className="font-medium text-sm">Next Solutions Inc</p>
-                <p className="text-xs text-muted-foreground">admin@techsolutions.com</p>
-              </div>
+    <div className={cn("flex w-full flex-1 flex-col overflow-hidden md:flex-row h-screen bg-[#f8f9fa]")}>
+      
+      {/* Sidebar - Compact Mode */}
+      <AceternitySidebar open={open} setOpen={setOpen}>
+        <AceternitySidebarBody className="justify-between gap-6 bg-white border-r border-zinc-200 py-4 w-[60px] md:w-[240px]">
+          <div className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto">
+            {open ? <Logo /> : <LogoIcon />}
+            <div className="mt-8 flex flex-col gap-1">
+              {links.map((link, idx) => (
+                <AceternitySidebarLink 
+                  key={idx} 
+                  link={link} 
+                  onClick={link.onClick}
+                  className={cn(
+                    "hover:bg-zinc-100 transition-colors duration-200 rounded-md p-1.5 h-9",
+                    activeTab === "overview" && link.label === "Dashboard" && "bg-zinc-100 font-medium text-[#1a2238]"
+                  )}
+                />
+              ))}
             </div>
           </div>
-        </aside>
-
-        {/* Mobile Menu Trigger */}
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="md:hidden fixed top-4 left-4 z-50"
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-        >
-          <LayoutDashboard className="h-4 w-4" />
-        </Button>
-
-        {/* Main Content */}
-        <div className="flex-1 md:ml-64">
-          {/* Header */}
-          <header className="border-b border-slate-200 bg-white px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <Breadcrumb>
-                  <BreadcrumbList className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <BreadcrumbItem>Organization Dashboard</BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem className="text-foreground">
-                      {active === "overview" ? "Overview" : active === "cases" ? "Cases" : "Legal Team"}
-                    </BreadcrumbItem>
-                  </BreadcrumbList>
-                </Breadcrumb>
-                <h2 className="mt-1 text-2xl font-semibold tracking-tight">
-                  {active === "overview" ? "Organization Overview" : active === "cases" ? "Cases" : "Legal Team"}
-                </h2>
-              </div>
-              
-              {/* Command Palette Trigger */}
-              <Button
-                variant="outline"
-                className="relative w-64 justify-start text-sm text-muted-foreground"
-                onClick={() => setCommandPaletteOpen(true)}
-              >
-                <Search className="mr-2 h-4 w-4" />
-                Search... (Ctrl+K)
-              </Button>
-            </div>
-          </header>
-
-          {/* Content Area */}
-          <main className="p-6">
-            {active === "overview" && (
-              <div className="space-y-6">
-                {/* Stats Cards */}
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                  <StatCard title="Active Cases" value="42" badge="+12%" />
-                  <StatCard title="New Clients" value="8" badge="+3" />
-                  <StatCard title="Pending Reviews" value="15" badge="15" badgeColor="destructive" />
-                  <StatCard title="Total Lawyers" value="12" badge="12" badgeColor="default" />
-                </div>
-
-                {/* Charts Row */}
-                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                  <Panel title="Case Activity Overview">
-                    <div className="aspect-[16/9] rounded-md bg-gradient-to-br from-blue-500/10 to-emerald-500/10 border border-dashed border-slate-300 flex items-center justify-center text-sm text-muted-foreground">
-                      Case filing trends chart
-                    </div>
-                  </Panel>
-                  <Panel title="Revenue Trends">
-                    <div className="aspect-[16/9] rounded-md bg-gradient-to-t from-blue-500/10 to-transparent border border-dashed border-slate-300 flex items-center justify-center text-sm text-muted-foreground">
-                      Monthly revenue chart
-                    </div>
-                  </Panel>
-                </div>
-
-                {/* Lists Row */}
-                <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-                  <Panel title="Recent Cases" className="lg:col-span-2">
-                    <div className="space-y-3">
-                      <ListRow primary="Smith vs. Johnson" secondary="Corporate Law · High Priority" meta="Filed Jun 15, 2024" />
-                      <ListRow primary="Estate Planning - Williams Family" secondary="Estate Law · Medium" meta="Filed Jun 10, 2024" />
-                      <ListRow primary="IP Patent Application" secondary="Intellectual Property · Low" meta="Filed Jun 5, 2024" />
-                    </div>
-                  </Panel>
-                  <Panel title="Practice Areas">
-                    <div className="text-sm space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Corporate Law</span>
-                        <span className="font-semibold">18</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Family Law</span>
-                        <span className="font-semibold text-blue-600">12</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Intellectual Property</span>
-                        <span className="font-semibold text-emerald-600">8</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Estate Planning</span>
-                        <span className="font-semibold text-amber-600">4</span>
-                      </div>
-                    </div>
-                  </Panel>
-                </div>
-
-                {/* Active Cases Table */}
-                <Panel title="Active Cases">
-                  <div className="rounded-md border">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b bg-slate-50/50">
-                          <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground text-sm">Case Name</th>
-                          <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground text-sm">Client</th>
-                          <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground text-sm">Practice Area</th>
-                          <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground text-sm">Status</th>
-                          <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground text-sm">Next Hearing</th>
-                          <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground text-sm">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {[
-                          { id: 1, name: "Smith vs. Johnson", client: "John Smith", area: "Corporate Law", status: "Active", hearing: "Jun 28, 2024" },
-                          { id: 2, name: "Williams Estate", client: "Mary Williams", area: "Estate Law", status: "Review", hearing: "Jul 2, 2024" },
-                          { id: 3, name: "TechCorp IP", client: "TechCorp Inc", area: "Intellectual Property", status: "Active", hearing: "Jun 25, 2024" },
-                          { id: 4, name: "Johnson Divorce", client: "Sarah Johnson", area: "Family Law", status: "Mediation", hearing: "Jul 5, 2024" },
-                          { id: 5, name: "Brown Partnership", client: "Brown & Co", area: "Corporate Law", status: "Active", hearing: "Jun 30, 2024" },
-                        ].map((case_) => (
-                          <tr key={case_.id} className="border-b transition-colors hover:bg-slate-50/50">
-                            <td className="p-4 align-middle font-medium">{case_.name}</td>
-                            <td className="p-4 align-middle">{case_.client}</td>
-                            <td className="p-4 align-middle">{case_.area}</td>
-                            <td className="p-4 align-middle">
-                              <Badge variant={case_.status === "Active" ? "default" : "secondary"}>
-                                {case_.status}
-                              </Badge>
-                            </td>
-                            <td className="p-4 align-middle">{case_.hearing}</td>
-                            <td className="p-4 align-middle">
-                              <div className="flex items-center gap-2">
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                  <FileText className="h-4 w-4" />
-                                </Button>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                  <Activity className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </Panel>
-              </div>
-            )}
-            
-            {active === "cases" && <CasesView />}
-            
-            {active === "legal-team" && <LegalTeamView />}
-          </main>
-        </div>
-      </div>
-
-      {/* Command Palette */}
-      <Dialog open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Command className="h-4 w-4" />
-              Search
-            </DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <Input 
-              placeholder="Type to search..." 
-              className="w-full" 
-              autoFocus
+          
+          <div className="border-t border-zinc-100 pt-3">
+             <AceternitySidebarLink
+              link={{
+                label: "Log Out",
+                href: "/login",
+                icon: <LogOut className="h-4 w-4 shrink-0 text-zinc-400 group-hover/sidebar:text-red-600 transition-colors" />,
+              }}
+              className="h-9 p-1.5"
             />
-            <div className="mt-4 text-sm text-muted-foreground">
-              Search functionality coming soon... (Ctrl+K)
+          </div>
+        </AceternitySidebarBody>
+      </AceternitySidebar>
+      
+      {/* Main Content */}
+      <div className="relative flex flex-1 flex-col overflow-hidden h-full z-10 bg-[#f8f9fa]">
+        
+        {/* Slim Header */}
+        <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-zinc-200 bg-white/80 px-6 backdrop-blur-sm">
+          <div className="flex items-center gap-3">
+            <h2 className="text-sm font-semibold text-zinc-800 tracking-tight">
+               {activeTab === "overview" && "Executive Dashboard"}
+               {activeTab === "cases" && "Case Management"}
+               {activeTab === "legal-team" && "Directory"}
+            </h2>
+            <div className="h-4 w-[1px] bg-zinc-300 mx-1"></div>
+            <span className="text-xs text-zinc-500 font-medium">
+              {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="relative hidden md:block group">
+              <Search className="absolute left-2.5 top-2 h-3.5 w-3.5 text-zinc-400" />
+              <input 
+                type="search" 
+                placeholder="Search..." 
+                className="h-8 w-64 rounded border border-zinc-200 bg-zinc-50 pl-8 pr-3 text-xs shadow-none transition-all focus:border-[#af9164] focus:bg-white focus:outline-none placeholder:text-zinc-400"
+              />
+            </div>
+            
+            <div className="h-8 w-[1px] bg-zinc-200 mx-1"></div>
+
+            <button className="relative p-1.5 rounded text-zinc-500 hover:text-[#1a2238] hover:bg-zinc-100 transition-all">
+              <Bell className="h-4 w-4" />
+              <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-[#af9164] ring-1 ring-white"></span>
+            </button>
+            
+            <div className="h-7 w-7 rounded bg-[#1a2238] text-white flex items-center justify-center text-[10px] font-bold tracking-wider cursor-pointer hover:opacity-90">
+              AD
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </header>
 
-      {/* Mobile Menu */}
-      {mobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 z-50 bg-black/50" onClick={() => setMobileMenuOpen(false)}>
-          <div className="fixed left-0 top-0 h-full w-64 bg-white border-r border-slate-200" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6 border-b border-slate-200">
-              <p className="text-xs text-muted-foreground">Welcome back</p>
-              <h1 className="text-lg font-semibold">Admin Dashboard</h1>
-            </div>
-            
-            <nav className="flex-1 overflow-y-auto p-3">
-              <div className="space-y-1">
-                <SidebarButton 
-                  icon={<LayoutDashboard className="h-4 w-4" />}
-                  label="Overview"
-                  active={active === "overview"}
-                  onClick={() => {
-                    setActive("overview");
-                    setMobileMenuOpen(false);
-                  }}
-                />
-                <SidebarButton 
-                  icon={<Briefcase className="h-4 w-4" />}
-                  label="Cases"
-                  active={active === "cases"}
-                  onClick={() => {
-                    setActive("cases");
-                    setMobileMenuOpen(false);
-                  }}
-                />
-                <SidebarButton 
-                  icon={<Users className="h-4 w-4" />}
-                  label="Legal Team"
-                  active={active === "legal-team"}
-                  onClick={() => {
-                    setActive("legal-team");
-                    setMobileMenuOpen(false);
-                  }}
-                />
-                <SidebarButton 
-                  icon={<Users className="h-4 w-4" />}
-                  label="Clients"
-                />
-                <SidebarButton 
-                  icon={<Activity className="h-4 w-4" />}
-                  label="Documents"
-                />
-                <SidebarButton 
-                  icon={<BarChart3 className="h-4 w-4" />}
-                  label="Billing"
-                />
-                <SidebarButton 
-                  icon={<Settings className="h-4 w-4" />}
-                  label="Settings"
-                />
-              </div>
+        {/* Dense Content Area */}
+        <main className="flex-1 overflow-y-auto p-5 scroll-smooth">
+          <div className="mx-auto max-w-[1600px]">
+            {activeTab === "overview" && <OverviewContent />}
+            {activeTab === "cases" && <div className="animate-in fade-in duration-300"><CasesView /></div>}
+            {activeTab === "legal-team" && <div className="animate-in fade-in duration-300"><LegalTeamView /></div>}
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
 
-              <Separator className="my-4" />
-              
-              <div className="px-3">
-                <p className="mb-2 text-xs font-medium text-muted-foreground">Projects</p>
-                <div className="space-y-2">
-                  <ProjectPill name="Website Redesign" />
-                  <ProjectPill name="Mobile App Development" />
-                  <ProjectPill name="Database Migration" />
-                </div>
-              </div>
-            </nav>
-            
-            <div className="border-t border-slate-200 p-4">
-              <div className="flex items-center gap-3">
-                <Avatar>
-                  <AvatarFallback className="bg-slate-100 text-slate-700">N</AvatarFallback>
-                </Avatar>
-                <div className="leading-tight">
-                  <p className="font-medium text-sm">Next Solutions Inc</p>
-                  <p className="text-xs text-muted-foreground">admin@techsolutions.com</p>
-                </div>
-              </div>
+// --- Compact Logo ---
+const Logo = () => (
+  <div className="flex items-center space-x-2 py-1 px-1">
+    <div className="h-6 w-6 shrink-0 rounded bg-[#1a2238] flex items-center justify-center">
+      <Scale size={14} className="text-[#af9164]" />
+    </div>
+    <div className="flex flex-col">
+      <span className="font-semibold text-sm text-[#1a2238] leading-none tracking-tight">LegalSphere</span>
+    </div>
+  </div>
+);
+
+const LogoIcon = () => (
+  <div className="py-1 px-1">
+    <div className="h-6 w-6 shrink-0 rounded bg-[#1a2238] flex items-center justify-center">
+      <Scale size={14} className="text-[#af9164]" />
+    </div>
+  </div>
+);
+
+// --- Dense Overview Layout ---
+function OverviewContent() {
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 5 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="space-y-5"
+    >
+      {/* 1. High-Density Metrics Row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <CompactMetric 
+          label="Active Matters" 
+          value="142" 
+          trend="+12%" 
+          trendDir="up"
+          meta="14 pending intake"
+        />
+        <CompactMetric 
+          label="Revenue (MTD)" 
+          value="$1.24M" 
+          trend="+8.4%" 
+          trendDir="up"
+          meta="92% of target"
+        />
+        <CompactMetric 
+          label="Billable Hours" 
+          value="1,240" 
+          trend="-2.1%" 
+          trendDir="down"
+          meta="Avg 6.4/attorney"
+        />
+        <CompactMetric 
+          label="Critical Alerts" 
+          value="8" 
+          isAlert
+          meta="Immediate action req"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 h-full">
+        {/* 2. Main Chart (Spans 8 columns) */}
+        <div className="lg:col-span-8 rounded-lg bg-white border border-zinc-200 shadow-[0_1px_2px_rgba(0,0,0,0.05)] p-4 flex flex-col h-[380px]">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-sm font-semibold text-zinc-800">Case Velocity & Resolution</h3>
+              <p className="text-[11px] text-zinc-500">Intake vs. Closed volume (Trailing 12 Months)</p>
             </div>
+            <div className="flex items-center gap-2">
+               <button className="flex items-center gap-1.5 px-2 py-1 rounded border border-zinc-200 text-[11px] font-medium text-zinc-600 hover:bg-zinc-50 transition-colors">
+                 <Filter size={12} /> Filter
+               </button>
+               <button className="flex items-center gap-1.5 px-2 py-1 rounded border border-zinc-200 text-[11px] font-medium text-zinc-600 hover:bg-zinc-50 transition-colors">
+                 <Download size={12} /> Export
+               </button>
+            </div>
+          </div>
+          
+          {/* Chart Placeholder - keeping it clean */}
+          <div className="flex-1 w-full bg-zinc-50/50 rounded border border-dashed border-zinc-200 flex items-end justify-between px-4 pb-0 relative">
+             <div className="absolute inset-0 flex items-center justify-center text-xs text-zinc-400 font-mono">
+               [ Interactive Data Visualization ]
+             </div>
+             {/* Simple aesthetic bars for visual density */}
+             {[40, 65, 50, 80, 55, 70, 90, 60, 75, 50, 85, 95].map((h, i) => (
+               <div key={i} className="w-[6%] bg-[#1a2238] opacity-90 rounded-t-[2px]" style={{ height: `${h}%` }} />
+             ))}
           </div>
         </div>
-      )}
-    </div>
-  );
-}
 
-function SidebarButton({ icon, label, active, onClick }: { icon: React.ReactNode; label: string; active?: boolean; onClick?: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors w-full text-left ${
-        active 
-          ? "bg-slate-100 text-slate-900 font-medium" 
-          : "text-muted-foreground hover:bg-slate-100 hover:text-slate-900"
-      }`}
-    >
-      {icon}
-      <span>{label}</span>
-    </button>
-  );
-}
+        {/* 3. Feed & Actions (Spans 4 columns) */}
+        <div className="lg:col-span-4 flex flex-col gap-5">
+           
+           {/* Quick Action Strip */}
+           <div className="grid grid-cols-2 gap-3">
+              <ActionButton icon={<Plus size={14} />} label="New Case" shortcut="C" />
+              <ActionButton icon={<Users size={14} />} label="Add Client" shortcut="U" />
+           </div>
 
-function ProjectPill({ name }: { name: string }) {
-  return (
-    <div className="rounded-md border border-slate-200 px-3 py-2 text-xs text-muted-foreground hover:bg-slate-50 cursor-default transition-colors">
-      {name}
-    </div>
-  );
-}
-
-function StatCard({ title, value, badge, badgeColor }: { title: string; value: string; badge?: string; badgeColor?: string }) {
-  return (
-    <Card className="flex flex-col gap-6 rounded-xl border py-6 shadow-sm">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-        {badge && (
-          <Badge variant={badgeColor === "destructive" ? "destructive" : "secondary"}>
-            {badge}
-          </Badge>
-        )}
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function Panel({ title, children, className = "" }: { title: string; children: React.ReactNode; className?: string }) {
-  return (
-    <Card className={className}>
-      <CardHeader>
-        <CardTitle className="text-base font-semibold">{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {children}
-      </CardContent>
-    </Card>
-  );
-}
-
-function ListRow({ primary, secondary, meta }: { primary: string; secondary: string; meta: string }) {
-  return (
-    <div className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2 hover:bg-slate-50 transition-colors">
-      <div>
-        <p className="font-medium leading-tight">{primary}</p>
-        <p className="text-xs text-muted-foreground">{secondary}</p>
+           {/* Dense Activity Feed */}
+           <div className="flex-1 rounded-lg bg-white border border-zinc-200 shadow-[0_1px_2px_rgba(0,0,0,0.05)] p-0 overflow-hidden flex flex-col">
+             <div className="px-4 py-3 border-b border-zinc-100 flex justify-between items-center bg-zinc-50/30">
+               <h3 className="text-xs font-semibold text-zinc-700">Recent Activity</h3>
+               <span className="text-[10px] text-zinc-400 uppercase tracking-wider font-medium">Live Feed</span>
+             </div>
+             <div className="flex-1 overflow-y-auto p-0">
+               {[
+                 { title: "Smith v. Doe Filing", user: "SysAdmin", time: "10m ago", type: "doc" },
+                 { title: "Conflict Check: Acme Corp", user: "S. Chen", time: "32m ago", type: "alert" },
+                 { title: "Invoice #2049 Paid", user: "Billing", time: "1h ago", type: "money" },
+                 { title: "Discovery Uploaded", user: "J. Doe", time: "2h ago", type: "doc" },
+                 { title: "Merger Agreement Draft", user: "AI Bot", time: "3h ago", type: "ai" },
+                 { title: "Client Intake: TechStart", user: "Reception", time: "4h ago", type: "user" },
+               ].map((item, i) => (
+                 <div key={i} className="flex items-center gap-3 px-4 py-2.5 border-b border-zinc-50 last:border-0 hover:bg-zinc-50 group cursor-default transition-colors">
+                   <div className={cn(
+                     "h-6 w-6 rounded flex items-center justify-center shrink-0 border",
+                     item.type === 'doc' && "bg-blue-50 border-blue-100 text-blue-600",
+                     item.type === 'alert' && "bg-amber-50 border-amber-100 text-amber-600",
+                     item.type === 'money' && "bg-emerald-50 border-emerald-100 text-emerald-600",
+                     item.type === 'ai' && "bg-purple-50 border-purple-100 text-purple-600",
+                     item.type === 'user' && "bg-zinc-100 border-zinc-200 text-zinc-500",
+                   )}>
+                      {item.type === 'doc' && <Briefcase size={12} />}
+                      {item.type === 'alert' && <ShieldAlert size={12} />}
+                      {item.type === 'money' && <ArrowUpRight size={12} />}
+                      {item.type === 'ai' && <Activity size={12} />}
+                      {item.type === 'user' && <Users size={12} />}
+                   </div>
+                   <div className="flex-1 min-w-0">
+                     <div className="flex justify-between items-baseline">
+                        <p className="text-xs font-medium text-zinc-800 truncate">{item.title}</p>
+                        <span className="text-[10px] text-zinc-400 whitespace-nowrap ml-2">{item.time}</span>
+                     </div>
+                     <p className="text-[10px] text-zinc-500 truncate">by {item.user}</p>
+                   </div>
+                 </div>
+               ))}
+             </div>
+             <div className="p-2 border-t border-zinc-100 bg-zinc-50/50">
+               <button className="w-full py-1.5 text-[10px] font-medium text-zinc-500 hover:text-zinc-800 hover:bg-white border border-transparent hover:border-zinc-200 rounded transition-all">
+                 View All History
+               </button>
+             </div>
+           </div>
+        </div>
       </div>
-      <p className="text-xs text-muted-foreground">{meta}</p>
+    </motion.div>
+  );
+}
+
+// --- Components: High-Density UI ---
+
+function CompactMetric({ label, value, trend, trendDir, meta, isAlert }: any) {
+  return (
+    <div className={cn(
+      "rounded-lg border bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.05)] hover:border-zinc-300 transition-colors",
+      isAlert ? "border-red-200 bg-red-50/30" : "border-zinc-200"
+    )}>
+      <div className="flex justify-between items-start mb-1">
+        <span className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">{label}</span>
+        {isAlert ? (
+          <ShieldAlert size={14} className="text-red-500" />
+        ) : (
+          <div className={cn(
+            "flex items-center gap-1 text-[11px] font-medium px-1.5 py-0.5 rounded",
+            trendDir === "up" ? "text-emerald-700 bg-emerald-50" : "text-amber-700 bg-amber-50"
+          )}>
+            {trend}
+          </div>
+        )}
+      </div>
+      <div className="flex items-baseline gap-2">
+        <h3 className={cn("text-xl font-semibold tracking-tight", isAlert ? "text-red-700" : "text-zinc-900")}>
+          {value}
+        </h3>
+        <span className="text-[10px] text-zinc-400">{meta}</span>
+      </div>
     </div>
   );
 }
 
-const jobPosts = [
-  { id: 1, title: "AI Prompt Engineer", level: "Mid-Level", type: "Full-time", salary: "2200000", due: "Sep 21, 2025" },
-  { id: 2, title: "Computer Vision Engineer", level: "Senior", type: "Full-time", salary: "3000000", due: "Sep 26, 2025" },
-  { id: 3, title: "AI Ethics & Fairness Analyst", level: "Mid-Senior", type: "Full-time", salary: "2800000", due: "Oct 1, 2025" },
-  { id: 4, title: "AI Research Engineer", level: "Mid-Senior", type: "Full-time", salary: "3500000", due: "Oct 2, 2025" },
-  { id: 5, title: "Backend Developer", level: "Mid-Senior", type: "Full-Time", salary: "1500000", due: "Sep 16, 2025" },
-];
+function ActionButton({ icon, label, shortcut }: any) {
+  return (
+    <button className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-zinc-200 bg-white text-zinc-700 hover:border-[#af9164] hover:text-[#af9164] shadow-sm transition-all group">
+      <div className="flex items-center gap-2">
+        <div className="text-zinc-400 group-hover:text-[#af9164] transition-colors">{icon}</div>
+        <span className="text-xs font-medium">{label}</span>
+      </div>
+      {shortcut && <span className="text-[9px] text-zinc-300 font-mono border border-zinc-100 rounded px-1 group-hover:border-[#af9164]/30 group-hover:text-[#af9164]/70">{shortcut}</span>}
+    </button>
+  )
+}

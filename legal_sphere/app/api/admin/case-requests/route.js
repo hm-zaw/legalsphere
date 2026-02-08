@@ -33,7 +33,7 @@ export async function GET(req) {
     const db = await getDb();
     const col = db.collection("case_requests");
 
-    const query = {};
+    const query = { hidden: { $ne: true } }; // Exclude hidden cases
     if (status) query.status = status;
 
     const total = await col.countDocuments(query);
@@ -74,6 +74,13 @@ export async function GET(req) {
     });
   } catch (err) {
     console.error("Admin GET case-requests error:", err);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    const message = err instanceof Error ? err.message : "Server error";
+    const code = typeof err === "object" && err && "code" in err ? String(err.code) : undefined;
+    return NextResponse.json(
+      process.env.NODE_ENV === "development"
+        ? { error: message, code }
+        : { error: "Server error" },
+      { status: 500 }
+    );
   }
 }

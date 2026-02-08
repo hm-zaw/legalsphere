@@ -1,11 +1,7 @@
 import { MongoClient, Db } from "mongodb";
 
-const uri = process.env.MONGODB_URI as string;
+const uri = process.env.MONGODB_URI as string | undefined;
 const dbName = "legal_sphere";
-
-if (!uri) {
-  throw new Error("MONGODB_URI is not set. Please add it to your environment.");
-}
 
 let client: MongoClient | null = null;
 let clientPromise: Promise<MongoClient> | null = null;
@@ -17,16 +13,27 @@ declare global {
 }
 
 export async function getDb(): Promise<Db> {
+  if (!uri) {
+    throw new Error("MONGODB_URI is not set. Please add it to your environment.");
+  }
   if (process.env.NODE_ENV === "development") {
     if (!global._mongoClientPromise) {
-      const c = new MongoClient(uri);
+      const c = new MongoClient(uri, {
+        serverSelectionTimeoutMS: 5000,
+        connectTimeoutMS: 5000,
+      });
       global._mongoClientPromise = c.connect();
     }
     const connected = await global._mongoClientPromise;
     return connected.db(dbName);
   }
 
-  if (!client) client = new MongoClient(uri);
+  if (!client) {
+    client = new MongoClient(uri, {
+      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 5000,
+    });
+  }
   if (!clientPromise) clientPromise = client.connect();
   const connected = await clientPromise;
   return connected.db(dbName);

@@ -35,7 +35,6 @@ class User_Service:
             if client is None:
                 return {"Success": False, "Message": "User with this eamil not exist"}
             if check_password_hash(client["password"], password):
-                client.pop("id", None)
                 client.pop("password", None)
                 return {"Success": True, "Message": "Login Success", "User Data": client}
             else: 

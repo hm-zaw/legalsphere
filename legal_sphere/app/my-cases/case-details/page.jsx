@@ -4,6 +4,7 @@ import { useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
+  ArrowUpRight,
   Filter,
   FileText,
   Gavel,
@@ -129,68 +130,41 @@ const MetadataField = ({ icon: Icon, label, value, subValue }) => (
   </div>
 );
 
-// A reusable card component for consistency across views
 const TaskCard = ({ task, className }) => (
-  <div
-    className={cn(
-      `bg-white border-y border-r border-slate-200 border-l-[4px] ${task.border}`,
-      "rounded-r-sm p-4 shadow-sm",
-      "relative z-20 group/card",
-      "transition-all duration-200 cursor-pointer",
-      "hover:shadow-lg hover:-translate-y-1",
+  <div className={cn(
+      "bg-white border-l-2 border-slate-200 hover:border-[#1a2238] transition-colors pl-4 py-2 pr-2",
+      "relative group/card cursor-pointer hover:bg-slate-50",
       className
-    )}
-  >
-    <div className="flex justify-between items-start mb-3">
-      <div className="flex items-center gap-2">
-          <div className="text-slate-400">
-            {task.icon}
-          </div>
-          <span className={cn(
-              "text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider",
-              task.statusColor
-          )}>
-            {task.status}
-          </span>
-      </div>
-      <div className="opacity-0 group-hover/card:opacity-100 transition-opacity">
-        <MoreHorizontal className="w-4 h-4 text-slate-400" />
-      </div>
+    )}>
+      
+    <div className="flex gap-4 items-baseline mb-1">
+      <span className="font-mono text-[10px] text-[#af9164] font-bold">
+        {task.date.split('at')[1].trim()}
+      </span>
+      <h4 className="font-serif text-sm font-medium text-slate-900 group-hover:underline decoration-[#af9164] underline-offset-4 decoration-2">
+        {task.title}
+      </h4>
     </div>
 
-    <h4 className="font-serif font-medium text-sm text-slate-900 mb-3 leading-tight">
-      {task.title}
-    </h4>
-
-    <div className="flex items-center gap-4 mb-4 text-slate-500">
-      <div className="flex items-center gap-1.5">
-        <Clock className="w-3 h-3" />
-        <p className="text-[10px] font-mono">
-          {task.date.split("at")[1]}
-        </p>
-      </div>
-      <div className="flex items-center gap-1.5 border-l border-slate-200 pl-3">
-        <MapPin className="w-3 h-3" />
-        <p className="text-[10px] truncate max-w-[100px]">
-          {task.location}
-        </p>
-      </div>
+    <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 mt-2">
+      <span className="text-[9px] uppercase tracking-widest text-slate-400">Loc</span>
+      <span className="text-[10px] text-slate-600 truncate">{task.location}</span>
+      
+      <span className="text-[9px] uppercase tracking-widest text-slate-400">Stat</span>
+      <span className={cn(
+        "text-[10px] font-bold uppercase",
+        task.category === 'urgent' ? "text-red-700" : "text-slate-600"
+      )}>
+        {task.status}
+      </span>
     </div>
-
-    <div className="flex items-center justify-between pt-3 border-t border-slate-50">
-      <div className="flex gap-1">
-        {task.tags.map((tag) => (
-          <span key={tag} className="text-[9px] text-slate-400 italic">#{tag}</span>
-        ))}
-      </div>
-      <img
-          src={`https://ui-avatars.com/api/?name=${task.id === 4 ? "Harvey+Specter" : "Mike+Ross"}&background=1a2238&color=fff`}
-          className="w-5 h-5 rounded-full border-2 border-white shadow-sm"
-          alt="Attorney"
-      />
+    
+    <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
+       <ArrowUpRight className="w-3 h-3 text-slate-400" />
     </div>
   </div>
 );
+// Note: You'd need to import ArrowUpRight from lucide-react for this one.
 
 // --- VIEW IMPLEMENTATIONS ---
 
