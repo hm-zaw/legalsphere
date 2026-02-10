@@ -315,9 +315,6 @@ const ListView = ({ tasks }) => (
   </div>
 );
 
-
-
-
 export default function CaseDetailsView({ caseId, onNavigate }) {
   const [viewMode, setViewMode] = useState("Timeline");
   const [caseData, setCaseData] = useState(null);

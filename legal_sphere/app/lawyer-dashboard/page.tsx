@@ -4,23 +4,22 @@ import React, { useState } from "react";
 import { 
   LayoutDashboard, 
   Briefcase, 
-  Users, 
   Settings, 
   Search, 
   Bell, 
   Calendar, 
   FileText,
-  Clock,
-  CheckSquare,
-  Scale,
   LogOut,
-  ChevronRight,
-  Filter,
-  Download,
   Plus,
   MoreHorizontal,
-  Edit2, Maximize2, Star, TrendingUp, Info, ShoppingBag, Gem,
-  Copy, Share2, Phone, Mail, Scan, User, Command
+  Scale,
+  Clock,
+  TrendingUp,
+  AlertCircle,
+  Phone,
+  Mail,
+  MapPin,
+  ArrowRight
 } from "lucide-react";
 import { AceternitySidebar, AceternitySidebarBody, AceternitySidebarLink } from "@/components/ui/aceternity-sidebar";
 import { cn } from "@/lib/utils";
@@ -30,154 +29,147 @@ import { TasksView } from "./TasksView";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Notifications } from "@/components/lawyer_dashboard/notifications";
 
-// ... [existing imports]
-
-// --- Design Tokens ---
-const THEME = {
-  bg: "#F9F6EE", // Warm creamy background
-  cards: {
-    orange: "#FCE4D6",
-    blue: "#D9EAFD",
-    purple: "#E8D9FD",
-    red: "#FDD9E3",
-    green: "#D9FDE8",
-  },
-  text: "#2D2D2D",
-};
-
 export default function LawyerDashboardPage() {
   const [open, setOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"overview" | "matters" | "calendar" | "documents" | "settings" | "tasks">("overview");
+  const [activeTab, setActiveTab] = useState("overview");
 
   const links = [
     {
       label: "Dashboard",
       href: "#",
-      icon: <LayoutDashboard className="h-4 w-4 shrink-0 text-zinc-500 group-hover/sidebar:text-[#1a2238]" />,
+      icon: <LayoutDashboard className="h-4 w-4 shrink-0 text-slate-500 group-hover/sidebar:text-[#1a2238]" />,
       onClick: () => setActiveTab("overview"),
     },
     {
-      label: "My Matters",
+      label: "Active Matters",
       href: "#",
-      icon: <Briefcase className="h-4 w-4 shrink-0 text-zinc-500 group-hover/sidebar:text-[#1a2238]" />,
+      icon: <Briefcase className="h-4 w-4 shrink-0 text-slate-500 group-hover/sidebar:text-[#1a2238]" />,
       onClick: () => setActiveTab("matters"),
     },
     {
-      label: "Schedule",
+      label: "My Calendar",
       href: "#",
-      icon: <Calendar className="h-4 w-4 shrink-0 text-zinc-500 group-hover/sidebar:text-[#1a2238]" />,
+      icon: <Calendar className="h-4 w-4 shrink-0 text-slate-500 group-hover/sidebar:text-[#1a2238]" />,
       onClick: () => setActiveTab("calendar"),
     },
     {
       label: "Documents",
       href: "#",
-      icon: <FileText className="h-4 w-4 shrink-0 text-zinc-500 group-hover/sidebar:text-[#1a2238]" />,
+      icon: <FileText className="h-4 w-4 shrink-0 text-slate-500 group-hover/sidebar:text-[#1a2238]" />,
       onClick: () => setActiveTab("documents"),
     },
     {
-      label: "Settings",
+      label: "Firm Settings",
       href: "#",
-      icon: <Settings className="h-4 w-4 shrink-0 text-zinc-500 group-hover/sidebar:text-[#1a2238]" />,
+      icon: <Settings className="h-4 w-4 shrink-0 text-slate-500 group-hover/sidebar:text-[#1a2238]" />,
       onClick: () => setActiveTab("settings"),
     },
   ];
 
   return (
-    <div className={cn("flex w-full flex-1 flex-col overflow-hidden md:flex-row h-screen bg-[#f8f9fa]")}>
+    <div className={cn("flex w-full flex-1 flex-col overflow-hidden md:flex-row h-screen bg-[#efefec]")}>
       
-      {/* Sidebar - Compact Mode */}
+      {/* Sidebar - Legal Luxury Style */}
       <AceternitySidebar open={open} setOpen={setOpen}>
-        <AceternitySidebarBody className="justify-between gap-6 bg-white border-r border-zinc-200 py-4 w-[60px] md:w-[240px]">
+        <AceternitySidebarBody className="justify-between gap-6 bg-[#fcfcfc] border-r border-zinc-200/60 py-4 w-[60px] md:w-[240px] shadow-sm">
           <div className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto">
             {open ? <Logo /> : <LogoIcon />}
-            <div className="mt-8 flex flex-col gap-1">
+            <div className="mt-10 flex flex-col gap-2">
               {links.map((link, idx) => (
                 <AceternitySidebarLink 
                   key={idx} 
                   link={link} 
                   onClick={link.onClick}
                   className={cn(
-                    "hover:bg-zinc-100 transition-colors duration-200 rounded-md p-1.5 h-9",
-                    activeTab === "overview" && link.label === "Dashboard" && "bg-zinc-100 font-medium text-[#1a2238]"
+                    "hover:bg-zinc-100/80 transition-all duration-200 rounded-lg p-2 h-10 group/sidebar",
+                    activeTab === "overview" && link.label === "Dashboard" && "bg-zinc-100 font-semibold text-[#1a2238] border-l-2 border-[#af9164]"
                   )}
                 />
               ))}
             </div>
           </div>
           
-          <div className="border-t border-zinc-100 pt-3">
+          <div className="border-t border-zinc-100 pt-4">
              <AceternitySidebarLink
               link={{
-                label: "Log Out",
+                label: "Sign Out",
                 href: "/login",
-                icon: <LogOut className="h-4 w-4 shrink-0 text-zinc-400 group-hover/sidebar:text-red-600 transition-colors" />,
+                icon: <LogOut className="h-4 w-4 shrink-0 text-slate-400 group-hover/sidebar:text-red-700 transition-colors" />,
               }}
-              className="h-9 p-1.5"
+              className="h-10 p-2"
             />
           </div>
         </AceternitySidebarBody>
       </AceternitySidebar>
       
       {/* Main Content */}
-      <div className="relative flex flex-1 flex-col overflow-hidden h-full z-10 bg-[#f8f9fa]">
+      <div className="relative flex flex-1 flex-col overflow-hidden h-full z-10 bg-[#efefec]">
         
-        {/* Slim Header */}
-        <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-zinc-200 bg-white/80 px-6 backdrop-blur-sm">
-          <div className="flex items-center gap-3">
-            <h2 className="text-sm font-semibold text-zinc-800 tracking-tight">
-               {activeTab === "overview" && "Attorney Dashboard"}
-               {activeTab === "matters" && "Case Management"}
-               {activeTab === "calendar" && "Schedule & Deadlines"}
-               {activeTab === "tasks" && "Task Center"}
-
-               {activeTab === "documents" && "Document Repository"}
-               {activeTab === "settings" && "Settings & Preferences"}
-            </h2>
-            <div className="h-4 w-[1px] bg-zinc-300 mx-1"></div>
-            <span className="text-xs text-zinc-500 font-medium">
-              {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-            </span>
+        {/* Glassmorphism Header */}
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-zinc-200/50 bg-[#efefec]/80 px-8 backdrop-blur-md">
+          <div className="flex items-center gap-4">
+            <div className="flex flex-col">
+               <h2 className="font-serif text-lg text-[#1a2238] tracking-tight">
+                  {activeTab === "overview" && "Managing Partner Dashboard"}
+                  {activeTab === "matters" && "Case Management Registry"}
+                  {activeTab === "calendar" && "Court Schedule"}
+                  {activeTab === "tasks" && "Task Delegation"}
+                  {activeTab === "documents" && "Secure Document Vault"}
+                  {activeTab === "settings" && "Firm Configuration"}
+               </h2>
+               <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-[#af9164] font-bold">
+                  <span>LegalSphere</span>
+                  <span className="text-zinc-300">•</span>
+                  <span>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</span>
+               </div>
+            </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <div className="relative hidden md:block group">
-              <Search className="absolute left-2.5 top-2 h-3.5 w-3.5 text-zinc-400" />
+              <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-zinc-400 grouping-hover:text-[#af9164] transition-colors" />
               <input 
                 type="search" 
-                placeholder="Search matters, clients..." 
-                className="h-8 w-64 rounded border border-zinc-200 bg-zinc-50 pl-8 pr-3 text-xs shadow-none transition-all focus:border-[#af9164] focus:bg-white focus:outline-none placeholder:text-zinc-400"
+                placeholder="Search matter, client, or citation..." 
+                className="h-9 w-72 rounded-lg border border-zinc-200 bg-white/50 pl-9 pr-4 text-xs shadow-sm transition-all focus:border-[#af9164] focus:bg-white focus:outline-none placeholder:text-zinc-400 font-medium"
               />
             </div>
             
-            <div className="h-8 w-[1px] bg-zinc-200 mx-1"></div>
+            <div className="h-6 w-[1px] bg-zinc-300/50 mx-2"></div>
 
             <Popover>
               <PopoverTrigger asChild>
-                <button className="relative p-1.5 rounded text-zinc-500 hover:text-[#1a2238] hover:bg-zinc-100 transition-all outline-none">
+                <button className="relative p-2 rounded-lg text-slate-500 hover:text-[#1a2238] hover:bg-white transition-all outline-none">
                   <Bell className="h-4 w-4" />
-                  <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-[#af9164] ring-1 ring-white"></span>
+                  <span className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-[#af9164] ring-2 ring-[#efefec]"></span>
                 </button>
               </PopoverTrigger>
-              <PopoverContent className="w-64 p-0 border-zinc-200 shadow-xl rounded-lg bg-white" align="end">
-                <Notifications className="border-0 shadow-none rounded-lg" />
+              <PopoverContent className="w-72 p-0 border-zinc-200 shadow-xl rounded-xl bg-white" align="end">
+                <Notifications className="border-0 shadow-none rounded-xl" />
               </PopoverContent>
             </Popover>
             
-            <div className="h-7 w-7 rounded bg-[#1a2238] text-white flex items-center justify-center text-[10px] font-bold tracking-wider cursor-pointer hover:opacity-90 border border-[#af9164]">
-              JD
+            <div className="flex items-center gap-3 pl-2 border-l border-zinc-200/50">
+                <div className="hidden md:flex flex-col items-end">
+                    <span className="text-xs font-bold text-[#1a2238]">J. Doe, Esq.</span>
+                    <span className="text-[9px] text-[#af9164] uppercase tracking-widest">Senior Partner</span>
+                </div>
+                <div className="h-8 w-8 rounded-full bg-[#1a2238] text-[#af9164] flex items-center justify-center text-xs font-serif border border-[#af9164]/30 shadow-sm cursor-pointer hover:ring-2 hover:ring-[#af9164]/20 transition-all">
+                  JD
+                </div>
             </div>
           </div>
         </header>
 
         {/* Dense Content Area */}
-        <main className="flex-1 overflow-y-auto p-5 scroll-smooth">
-          <div className="mx-auto max-w-[1600px]">
+        <main className="flex-1 overflow-y-auto p-6 scroll-smooth">
+          <div className="mx-auto max-w-[1600px] space-y-8">
             {activeTab === "overview" && <OverviewContent />}
-            {activeTab === "settings" && <div className="animate-in fade-in duration-300"><SettingsView /></div>}
-            {activeTab === "tasks" && <div className="animate-in fade-in duration-300"><TasksView /></div>}
-            {activeTab === "matters" && <div className="text-zinc-500 text-sm p-10 text-center">Matters View Coming Soon</div>}
-            {activeTab === "calendar" && <div className="text-zinc-500 text-sm p-10 text-center">Calendar View Coming Soon</div>}
-            {activeTab === "documents" && <div className="text-zinc-500 text-sm p-10 text-center">Documents View Coming Soon</div>}
+            {activeTab === "settings" && <div className="animate-in fade-in duration-500"><SettingsView /></div>}
+            {activeTab === "tasks" && <div className="animate-in fade-in duration-500"><TasksView /></div>}
+            {activeTab === "matters" && <div className="flex h-[60vh] items-center justify-center text-slate-400 font-serif italic">Matters Registry Module Loading...</div>}
+            {activeTab === "calendar" && <div className="flex h-[60vh] items-center justify-center text-slate-400 font-serif italic">Calendar Module Loading...</div>}
+            {activeTab === "documents" && <div className="flex h-[60vh] items-center justify-center text-slate-400 font-serif italic">Document Vault Loading...</div>}
           </div>
         </main>
       </div>
@@ -185,81 +177,104 @@ export default function LawyerDashboardPage() {
   );
 }
 
-// --- Compact Logo ---
+// --- Components ---
+
 const Logo = () => (
-  <div className="flex items-center space-x-2 py-1 px-1">
-    <div className="h-6 w-6 shrink-0 rounded bg-[#1a2238] flex items-center justify-center">
+  <div className="flex items-center space-x-3 py-1 px-1">
+    <div className="h-7 w-7 shrink-0 rounded bg-[#1a2238] flex items-center justify-center border border-[#af9164]">
       <Scale size={14} className="text-[#af9164]" />
     </div>
     <div className="flex flex-col">
-      <span className="font-semibold text-sm text-[#1a2238] leading-none tracking-tight">LegalSphere</span>
-      <span className="text-[9px] text-zinc-400 font-medium tracking-wider">COUNSEL</span>
+      <span className="font-serif text-lg text-[#1a2238] leading-none tracking-tight">LegalSphere</span>
+      <span className="text-[8px] text-[#af9164] uppercase tracking-[0.2em] font-bold mt-0.5">Counsel</span>
     </div>
   </div>
 );
 
 const LogoIcon = () => (
   <div className="py-1 px-1">
-    <div className="h-6 w-6 shrink-0 rounded bg-[#1a2238] flex items-center justify-center">
+    <div className="h-7 w-7 shrink-0 rounded bg-[#1a2238] flex items-center justify-center border border-[#af9164]">
       <Scale size={14} className="text-[#af9164]" />
     </div>
   </div>
 );
 
-// --- Dense Overview Layout ---
 function OverviewContent() {
   return (
     <motion.div 
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="space-y-8 p-2 pb-10"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      className="space-y-8"
     >
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      {/* 1. Firm Intelligence Hero */}
+      <FirmIntelligenceHero />
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
-        {/* Left Column: Business Summary & Variance (8 Cols) */}
-        <div className="lg:col-span-8 space-y-6">
+        {/* Left MAIN Column (8 Cols) */}
+        <div className="lg:col-span-8 space-y-8">
           
-          {/* Business Summary Grid */}
-          <div className="rounded-[32px] bg-white/50 p-6 shadow-sm border border-white">
-            <div className="flex justify-between items-center mb-6 px-2">
-              <div className="flex items-center gap-2">
-                <div className="bg-black p-2 rounded-lg text-white"><Briefcase size={16}/></div>
-                <h2 className="font-bold text-lg">Business Summary</h2>
-              </div>
-              <div className="flex gap-2">
-                <button className="p-2 hover:bg-zinc-100 rounded-full"><Edit2 size={16}/></button>
-                <button className="p-2 hover:bg-zinc-100 rounded-full"><Plus size={16}/></button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <GlassCard title="Total Sales" value="$1,284" sub="+30% compared to last month" color="bg-[#FCE4D6]" />
-              <GlassCard title="Total Making" value="$42,215" sub="+30% Includes labor + materials" color="bg-[#D9EAFD]" />
-              <GlassCard title="Today's Sales" value="$124" sub="+30% since yesterday" color="bg-[#E8D9FD]" />
-              <GlassCard title="Order not Initiated" value="$3,842" sub="+30% drop from yesterday" color="bg-[#FBD9C9]" />
-              <GlassCard title="Delayed job Orders" value="$845.84" sub="+30% from previous weeks" color="bg-[#F1D9FD]" />
-              <GlassCard title="Jobs on Hold" value="$45.82" sub="+30% from previous month" color="bg-[#FDB9C9]" />
-            </div>
+          {/* Metrics Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <StatCard 
+                title="Billable Hours" 
+                value="142.5" 
+                unit="hrs" 
+                trend="+12% vs last month" 
+                icon={<Clock className="text-[#1a2238]" size={18} />} 
+            />
+             <StatCard 
+                title="Active Matters" 
+                value="24" 
+                unit="cases" 
+                trend="3 critical updates" 
+                trendColor="text-[#af9164]"
+                icon={<Briefcase className="text-[#1a2238]" size={18} />} 
+            />
+             <StatCard 
+                title="Pending Review" 
+                value="7" 
+                unit="docs" 
+                trend="Due by EOD" 
+                isAlert
+                icon={<FileText className="text-[#1a2238]" size={18} />} 
+            />
           </div>
 
-          {/* Jewellery Sales Variance Row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-             <VarianceCard 
-                title="Jewellery Sales Variance" 
-                label="Gold Jewellery" 
-                forecasted="$120,000" 
-                actual="$115,000" 
-                variance="-$5,000" 
-                error="-4.2%"
-                color="bg-purple-400"
-             />
-             <ValuableCustomerCard />
-          </div>
+          {/* Priority Matters List */}
+          <PriorityMattersList />
         </div>
 
-        {/* Right Column: Mason Walker Detail (4 Cols) */}
-        <div className="lg:col-span-4 space-y-6">
-          <ClientDetailCard />
+        {/* Right SIDEBAR Column (4 Cols) */}
+        <div className="lg:col-span-4 space-y-8">
+            <ClientProfileSnapshot />
+            
+            {/* Quick Actions / Recent Calls */}
+            <div className="bg-white rounded-xl p-6 shadow-[0_10px_40px_-15px_rgba(0,0,0,0.1)] border border-zinc-200/60">
+                <h3 className="font-serif text-[#1a2238] text-lg mb-4">Recent Correspondence</h3>
+                <div className="space-y-4">
+                    <div className="flex items-start gap-3 pb-3 border-b border-zinc-100">
+                         <div className="h-8 w-8 rounded-full bg-[#efefec] flex items-center justify-center text-[#1a2238] font-serif text-xs">RJ</div>
+                         <div>
+                             <p className="text-sm font-bold text-[#1a2238]">Robert Johnson</p>
+                             <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-1">Estate Planning • Re: Trust Fund</p>
+                             <p className="text-xs text-slate-600 line-clamp-2">"Here are the updated documents for the trust fund allocation..."</p>
+                         </div>
+                    </div>
+                    <div className="flex items-start gap-3 pb-3 border-b border-zinc-100">
+                         <div className="h-8 w-8 rounded-full bg-[#1a2238] flex items-center justify-center text-white font-serif text-xs">SA</div>
+                         <div>
+                             <p className="text-sm font-bold text-[#1a2238]">Sarah Al-Fayed</p>
+                             <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-1">Corporate Merger • Re: NDA</p>
+                             <p className="text-xs text-slate-600 line-clamp-2">"Can we schedule a call to discuss the new NDA terms?"</p>
+                         </div>
+                    </div>
+                </div>
+                <button className="w-full mt-4 py-2 border border-zinc-200 rounded text-xs font-bold text-slate-500 hover:text-[#1a2238] hover:border-[#1a2238] transition-colors uppercase tracking-widest">
+                    View All Messages
+                </button>
+            </div>
         </div>
 
       </div>
@@ -267,390 +282,220 @@ function OverviewContent() {
   );
 }
 
-// --- Components: High-Density UI ---
-
-function CompactMetric({ label, value, trend, trendDir, meta, isAlert, icon }: any) {
-  return (
-    <div className={cn(
-      "rounded-lg border bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.05)] hover:border-zinc-300 transition-colors relative overflow-hidden",
-      isAlert ? "border-red-200 bg-red-50/30" : "border-zinc-200"
-    )}>
-      {isAlert && <div className="absolute top-0 right-0 w-16 h-16 bg-red-100 rounded-full blur-2xl -mr-8 -mt-8 opacity-50"></div>}
-      
-      <div className="flex justify-between items-start mb-2 relative z-10">
-        <span className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 flex items-center gap-1.5">
-            {icon} {label}
-        </span>
-        {!isAlert && (
-          <div className={cn(
-            "flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full border",
-            trendDir === "up" ? "text-emerald-700 bg-emerald-50 border-emerald-100" : "text-amber-700 bg-amber-50 border-amber-100"
-          )}>
-            {trend}
-          </div>
-        )}
-      </div>
-      <div className="flex items-baseline gap-2 relative z-10">
-        <h3 className={cn("text-2xl font-bold tracking-tight", isAlert ? "text-red-700" : "text-[#1a2238]")}>
-          {value}
-        </h3>
-        <span className="text-[10px] text-zinc-400 font-medium">{meta}</span>
-      </div>
-    </div>
-  );
-}
-
-function GlassCard({ title, value, sub, color }: any) {
-  return (
-    <div className={cn("relative p-6 rounded-[24px] overflow-hidden shadow-sm transition-transform hover:scale-[1.02]", color)}>
-      <div className="flex justify-between items-start mb-8">
-        <span className="text-sm font-medium text-zinc-700">{title}</span>
-        <button className="p-1 bg-white/40 rounded-full"><Maximize2 size={12}/></button>
-      </div>
-      <div className="space-y-1">
-        <h3 className="text-2xl font-bold text-zinc-900">{value}</h3>
-        <p className="text-[10px] font-medium text-zinc-600">{sub}</p>
-      </div>
-    </div>
-  );
-}
-
-function ProfileTab({ name, role, growth, color }: any) {
-  return (
-    <div className="flex items-center gap-3 bg-white/40 border border-white py-1.5 pl-1.5 pr-4 rounded-full shrink-0 shadow-sm">
-      <div className="h-8 w-8 rounded-full bg-zinc-300 overflow-hidden border border-white" />
-      <div>
-        <p className="text-[11px] font-bold leading-none">{name}</p>
-        <p className="text-[9px] text-zinc-500">{role}</p>
-      </div>
-      <span className={cn("ml-2 text-[9px] font-bold px-2 py-0.5 rounded-full", color)}>
-        {growth}
-      </span>
-    </div>
-  );
-}
-
-function VarianceCard({ title, label, forecasted, actual, variance, error, color }: any) {
+// --- 1. Firm Intelligence Hero Component ---
+function FirmIntelligenceHero() {
     return (
-        <div className="rounded-[32px] bg-white p-8 shadow-sm border border-zinc-100/50">
-            <div className="flex justify-between items-center mb-8">
-                <h3 className="text-lg font-bold flex items-center gap-3 text-zinc-900">
-                    <div className="bg-black text-white p-2 rounded-xl flex items-center justify-center shadow-lg shadow-zinc-200">
-                        <TrendingUp size={16} strokeWidth={2.5}/>
-                    </div>
-                    Jewellery Sales Variance
-                </h3>
-                <button className="h-9 w-9 rounded-full border border-zinc-200 flex items-center justify-center hover:bg-zinc-50 text-zinc-400 transition-colors">
-                    <Plus size={18} />
-                </button>
-            </div>
+        <div className="relative overflow-hidden rounded-2xl bg-[#1a2238] text-white shadow-2xl">
+            {/* Background Texture */}
+            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-soft-light"></div>
+            <div className="absolute top-0 right-0 w-2/3 h-full bg-gradient-to-l from-[#af9164]/30 via-transparent to-transparent"></div>
             
-            <div className="space-y-10">
-                <VarianceItem
-                    icon={<ShoppingBag size={14} className="text-zinc-700"/>}
-                    label="Gold Jewellery"
-                    error="-4.2%"
-                    forecast="$120,000"
-                    actual="$115,000"
-                    variance="-$5,000"
-                    gradient="from-purple-200 via-purple-300 to-purple-100"
-                    thumbColor="border-purple-300 ring-purple-100"
-                    progress="45%"
-                />
-
-                <div className="h-px bg-gradient-to-r from-transparent via-zinc-200 to-transparent w-full" />
-
-                <VarianceItem
-                    icon={<Gem size={14} className="text-zinc-700"/>}
-                    label="Diamond Jewellery"
-                    error="+3.8%"
-                    errorColor="text-emerald-500"
-                    errorSign="+"
-                    forecast="$180,000"
-                    actual="$187,000"
-                    variance="+$7,000"
-                    varianceColor="text-emerald-600"
-                    gradient="from-rose-200 via-rose-300 to-rose-100"
-                    thumbColor="border-rose-300 ring-rose-100"
-                    progress="65%"
-                />
-            </div>
-        </div>
-    );
-}
-
-function VarianceItem({ 
-    icon, label, error, errorColor = "text-red-500", errorSign = "-",
-    forecast, actual, variance, varianceColor = "text-red-600",
-    gradient, thumbColor, progress 
-}: any) {
-    return (
-        <div className="space-y-4">
-             <div className="flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-full bg-zinc-50 border border-zinc-100 flex items-center justify-center shadow-sm">
-                        {icon}
+            <div className="relative z-10 p-8 md:p-10 flex flex-col md:flex-row justify-between items-end md:items-center gap-6">
+                <div className="space-y-4 max-w-2xl">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-widest text-[#af9164]">
+                         <span className="h-1.5 w-1.5 rounded-full bg-[#af9164] animate-pulse"></span>
+                         Firm Intelligence • Morning Brief
                     </div>
-                    <span className="font-bold text-zinc-800 text-sm tracking-tight">{label}</span>
+                    <h1 className="font-serif text-3xl md:text-4xl leading-tight">
+                        Good Morning, <span className="text-[#af9164] italic">Counselor.</span>
+                    </h1>
+                    <p className="text-slate-300 font-light text-sm md:text-base max-w-lg leading-relaxed">
+                        You have <span className="text-white font-medium border-b border-[#af9164]">3 court deadlines</span> approaching and <span className="text-white font-medium border-b border-[#af9164]">2 new client inquiries</span> pending review.
+                    </p>
                 </div>
-                <div className="text-right">
-                    <span className="block text-[9px] text-zinc-400 font-medium uppercase tracking-wider mb-0.5">Error</span>
-                    <span className={cn("text-xs font-bold", errorColor)}>{error}</span>
-                </div>
-            </div>
-
-            <div className="relative h-3 w-full bg-zinc-50 rounded-full shadow-inner ring-1 ring-zinc-100/50">
-                <div 
-                    className={cn("absolute top-0 bottom-0 left-0 rounded-full bg-gradient-to-r shadow-sm", gradient)} 
-                    style={{ width: progress }} 
-                />
-                <div 
-                    className={cn("absolute top-1/2 -ml-2 -mt-2 h-4 w-4 rounded-full bg-white border-2 shadow-md cursor-pointer transition-transform hover:scale-110", thumbColor)}
-                    style={{ left: progress }}
-                />
-            </div>
-
-            <div className="grid grid-cols-4 gap-4 pt-1">
-                <div className="space-y-1">
-                    <span className="block text-[9px] text-zinc-400 font-medium tracking-wide">Forecasted</span>
-                    <span className="block text-sm font-bold text-zinc-700 tracking-tight">{forecast}</span>
-                </div>
-                <div className="space-y-1">
-                    <span className="block text-[9px] text-zinc-400 font-medium tracking-wide">Actual</span>
-                    <span className="block text-sm font-bold text-zinc-800 tracking-tight">{actual}</span>
-                </div>
-                <div className="space-y-1">
-                     <span className="block text-[9px] text-zinc-400 font-medium tracking-wide">Confidence</span>
-                     <div className="flex text-zinc-800 gap-0.5 pt-0.5">
-                        <Star size={10} fill="currentColor" className="text-zinc-800"/>
-                        <Star size={10} fill="currentColor" className="text-zinc-800"/>
-                        <Star size={10} fill="currentColor" className="text-zinc-800"/>
-                        <Star size={10} fill="currentColor" className="text-zinc-800"/>
-                        <Star size={10} className="text-zinc-300"/>
+                
+                <div className="flex items-center gap-4">
+                     <div className="text-right px-4 border-r border-white/10 hidden sm:block">
+                        <span className="block text-2xl font-serif leading-none">98%</span>
+                        <span className="text-[9px] uppercase tracking-widest text-slate-400">Success Rate</span>
                      </div>
-                </div>
-                <div className="space-y-1 text-right">
-                     <span className="block text-[9px] text-zinc-400 font-medium tracking-wide">Variance</span>
-                     <span className={cn("block text-sm font-bold tracking-tight", varianceColor)}>{variance}</span>
+                     <button className="bg-[#af9164] hover:bg-[#9c7f56] text-white px-6 py-3 rounded-lg text-xs font-bold uppercase tracking-widest shadow-lg shadow-[#af9164]/20 transition-all flex items-center gap-2">
+                        <Plus size={14} /> New Matter
+                     </button>
                 </div>
             </div>
         </div>
     )
 }
 
-function ValuableCustomerCard() {
+// --- 2. Minimalist Stat Card ---
+function StatCard({ title, value, unit, trend, trendColor = "text-emerald-700", icon, isAlert }: any) {
     return (
-        <div className="rounded-[32px] bg-white p-8 shadow-sm border border-zinc-100/50 flex flex-col h-full">
-            <div className="flex justify-between items-center mb-8">
-                <h3 className="text-lg font-bold flex items-center gap-3 text-zinc-900">
-                    <div className="bg-black text-white p-2 rounded-xl flex items-center justify-center shadow-lg shadow-zinc-200">
-                        <Users size={16} strokeWidth={2.5}/>
-                    </div>
-                    Valuable Customer
-                </h3>
-                <button className="h-9 w-9 rounded-full border border-zinc-200 flex items-center justify-center hover:bg-zinc-50 text-zinc-400 transition-colors">
-                    <Plus size={18} />
-                </button>
-            </div>
-            
-            <div className="space-y-8 flex-1">
-                {/* Progress Section */}
+        <div className={cn(
+            "bg-white p-6 rounded-xl border transition-all h-full flex flex-col justify-between group hover:border-[#1a2238]/20",
+            isAlert ? "border-amber-200/50 shadow-[0_4px_20px_-5px_rgba(251,191,36,0.1)]" : "border-zinc-200/60 shadow-[0_10px_40px_-15px_rgba(0,0,0,0.05)]"
+        )}>
+            <div className="flex justify-between items-start mb-4">
                 <div>
-                    <div className="flex justify-between items-end mb-3">
-                         <h4 className="font-bold text-zinc-700 text-sm">Milestones Progress</h4>
-                    </div>
-                    
-                    <div className="relative h-4 w-full bg-zinc-50 rounded-full ring-1 ring-zinc-200/50 p-0.5 mb-2">
-                         <div className="absolute top-0 bottom-0 left-0 bg-gradient-to-r from-violet-200 to-purple-400 rounded-full shadow-sm" style={{ width: '55%'}} />
-                    </div>
-
-                    <div className="flex justify-between text-[10px] text-zinc-400 font-medium px-1">
-                        <span>0%</span>
-                        <span>20%</span>
-                        <span>55%</span>
-                        <span>100%</span>
-                    </div>
+                     <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">{title}</p>
+                     <div className="flex items-baseline gap-1">
+                        <h3 className="font-serif text-3xl text-[#1a2238] leading-none">{value}</h3>
+                        <span className="text-xs font-medium text-slate-400">{unit}</span>
+                     </div>
                 </div>
-
-                {/* Timeline */}
-                <div className="relative pl-2 ml-1 space-y-7">
-                    {/* Vertical Line */}
-                    <div className="absolute top-2 bottom-4 left-[3px] w-px bg-zinc-200" />
-                    
-                    <TimelineItem
-                        title="Restock Emerald Necklace"
-                        subtitle="Main Inventory"
-                        date="May 24 – 2 days from now"
-                        tag="Inventory"
-                        tagStyles="bg-blue-100 text-blue-700 font-bold"
-                        dotColor="bg-black ring-4 ring-white"
-                        isFirst
-                    />
-                     <TimelineItem
-                        title="Finalize Client Order"
-                        subtitle="Isabella Reed"
-                        date="May 24 – 2 days from now"
-                        tag="Custom Order"
-                        tagStyles="bg-orange-100 text-orange-700 font-bold"
-                        dotColor="bg-black ring-4 ring-white"
-                        image="https://i.pravatar.cc/150?u=a042581f4e29026024d"
-                    />
-                     <TimelineItem
-                        title="Schedule Diamond Polishing"
-                        date="May 24 – 2 days from now"
-                        tag="Maintenance"
-                        tagStyles="bg-pink-100 text-pink-700 font-bold"
-                        dotColor="bg-black ring-4 ring-white"
-                        image="https://i.pravatar.cc/150?u=a042581f4e29026704d"
-                    />
+                <div className={cn("p-2 rounded-full", isAlert ? "bg-amber-50 text-amber-600" : "bg-slate-50 text-slate-400 group-hover:bg-[#1a2238] group-hover:text-white transition-colors")}>
+                    {icon}
                 </div>
             </div>
-        </div>
-    );
-}
-
-function TimelineItem({ title, subtitle, date, tag, tagStyles, dotColor, image, isFirst }: any) {
-    return (
-        <div className="relative pl-6">
-            {/* Timeline Dot */}
-            <div className={cn("absolute left-[-1px] top-1 h-2.5 w-2.5 rounded-full z-10", dotColor, isFirst ? "bg-zinc-200" : "bg-black")} />
             
-            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                <div className="space-y-1.5 flex-1 p-0.5">
-                    <div className="text-xs font-bold text-zinc-800 leading-tight">
-                        {title} {subtitle && <span className="font-normal text-zinc-500">– {subtitle}</span>}
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="h-5 w-5 rounded-full bg-zinc-100 border border-white shadow-sm overflow-hidden">
-                            {image ? (
-                                <img src={image} alt="" className="h-full w-full object-cover" />
-                            ) : (
-                                <div className="h-full w-full bg-gradient-to-br from-zinc-200 to-zinc-300" />
-                            )}
-                        </div>
-                        <span className="text-[10px] text-zinc-400 font-medium">{date}</span>
-                    </div>
-                </div>
-                
-                <div className={cn("text-[9px] px-2.5 py-1 rounded-full whitespace-nowrap self-start flex items-center gap-1.5 shadow-sm min-w-[85px] justify-center", tagStyles)}>
-                    <div className="h-1.5 w-1.5 rounded-full bg-current opacity-50" />
-                    {tag}
-                </div>
-            </div>
-        </div>
-    )
-}
-
-function ClientDetailCard() {
-    return (
-        <div className="space-y-6">
-            {/* Profile Card */}
-            <div className="rounded-[32px] bg-white p-6 text-center shadow-sm border border-zinc-100 relative overflow-hidden">
-                <div className="flex justify-between items-start mb-6 relative z-10">
-                     <div className="flex gap-2">
-                        <button className="h-8 w-8 rounded-full border border-zinc-200 flex items-center justify-center text-zinc-400 hover:text-zinc-700 hover:bg-zinc-50 transition-colors"><Copy size={14}/></button>
-                        <button className="h-8 w-8 rounded-full border border-zinc-200 flex items-center justify-center text-zinc-400 hover:text-zinc-700 hover:bg-zinc-50 transition-colors"><Share2 size={14}/></button>
-                     </div>
-                     <div className="flex gap-2">
-                        <button className="h-8 w-8 rounded-full border border-zinc-200 flex items-center justify-center text-zinc-400 hover:text-zinc-700 hover:bg-zinc-50 transition-colors"><Edit2 size={14}/></button>
-                        <button className="h-8 w-8 rounded-full border border-zinc-200 flex items-center justify-center text-zinc-400 hover:text-zinc-700 hover:bg-zinc-50 transition-colors"><Maximize2 size={14}/></button>
-                     </div>
-                </div>
-
-                <div className="relative w-28 h-28 mx-auto mb-4">
-                    <div className="w-full h-full rounded-full overflow-hidden border border-zinc-100 shadow-sm">
-                         <img src="https://i.pravatar.cc/300?u=mason" alt="Mason Walker" className="w-full h-full object-cover" />
-                    </div>
-                </div>
-
-                <h2 className="text-xl font-bold text-zinc-900 mb-1 tracking-tight">Mason Walker</h2>
-                <p className="text-[10px] text-zinc-400 font-medium uppercase tracking-wide max-w-[200px] mx-auto">
-                    High-End Client Coordinator
+            <div className="flex items-center gap-2 mt-2 pt-3 border-t border-zinc-100">
+                {isAlert ? <AlertCircle size={12} className="text-amber-600" /> : <TrendingUp size={12} className={trendColor} />}
+                <p className={cn("text-[10px] font-bold uppercase tracking-wide", isAlert ? "text-amber-700" : trendColor)}>
+                    {trend}
                 </p>
-
-                <div className="flex justify-center gap-3 mt-6">
-                    <ActionButton icon={<Edit2 size={14}/>} />
-                    <ActionButton icon={<Mail size={14}/>} />
-                    <ActionButton icon={<Phone size={14}/>} />
-                    <ActionButton icon={<Plus size={16}/>} />
-                    <ActionButton icon={<Scan size={14}/>} />
-                    <ActionButton icon={<Calendar size={14}/>} />
-                </div>
-            </div>
-
-            {/* Detailed Info Card */}
-            <div className="rounded-[32px] bg-white p-6 shadow-sm border border-zinc-100 flex flex-col h-full">
-                <div className="flex justify-between items-center mb-6">
-                    <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-full bg-black flex items-center justify-center text-white shadow-md">
-                            <FileText size={14} strokeWidth={2.5}/>
-                        </div>
-                        <h3 className="text-sm font-bold text-zinc-900">Detailed Information</h3>
-                    </div>
-                    <div className="flex gap-2">
-                         <button className="h-8 w-8 rounded-full border border-zinc-200 flex items-center justify-center hover:bg-zinc-50 text-zinc-400 transition-colors"><Edit2 size={12}/></button>
-                         <button className="h-8 w-8 rounded-full border border-zinc-200 flex items-center justify-center hover:bg-zinc-50 text-zinc-400 transition-colors"><Plus size={14}/></button>
-                    </div>
-                </div>
-                
-                <div className="space-y-2">
-                    <DetailItem label="First Name" value="Mason" icon={<User size={14} />} />
-                    <DetailItem label="Last Name" value="Walker" icon={<User size={14} />} />
-                    <DetailItem label="Email" value="masonwalker@gmail.com" icon={<Mail size={14} />} />
-                    <DetailItem label="Phone Number" value="+9446357359" icon={<Phone size={14} />} />
-                    
-                    {/* Source Item Custom */}
-                     <div className="flex items-center gap-3 group p-2 rounded-xl hover:bg-zinc-50 transition-colors cursor-default">
-                        <div className="h-8 w-8 rounded-full bg-zinc-50 border border-zinc-100 flex items-center justify-center text-zinc-400 shrink-0">
-                            <Command size={14} />
-                        </div>
-                        <div className="flex-1">
-                            <p className="text-[10px] text-zinc-400 font-medium uppercase tracking-wide mb-1">Source</p>
-                            <div className="flex gap-2">
-                                <SocialIcon>X</SocialIcon>
-                                <SocialIcon>in</SocialIcon>
-                                <SocialIcon>m</SocialIcon>
-                                <SocialIcon>d</SocialIcon>
-                            </div>
-                        </div>
-                    </div>
-
-                    <DetailItem label="Last Connected" value="05/15/2025 at 7:16 pm" icon={<Calendar size={14} />} />
-                </div>
             </div>
         </div>
-    );
-}
-
-function ActionButton({ icon }: { icon: React.ReactNode }) {
-    return (
-        <button className="h-9 w-9 rounded-full border border-zinc-200 bg-white hover:bg-zinc-50 flex items-center justify-center text-zinc-600 transition-all shadow-sm">
-            {icon}
-        </button>
     )
 }
 
-function SocialIcon({ children }: { children: React.ReactNode }) {
-   return (
-       <div className="h-5 w-5 rounded-full border border-zinc-200 flex items-center justify-center text-[8px] font-bold text-zinc-500 bg-white hover:bg-zinc-50 transition-colors cursor-pointer">
-        {children}
-       </div>
-   )
+// --- 3. Priority Matters List (Table) ---
+function PriorityMattersList() {
+    return (
+        <div className="bg-white rounded-xl shadow-[0_10px_40px_-15px_rgba(0,0,0,0.1)] border border-zinc-200/60 overflow-hidden flex flex-col">
+            <div className="px-6 py-5 border-b border-zinc-100 flex justify-between items-center">
+                <h3 className="font-serif text-[#1a2238] text-xl">Priority Matters</h3>
+                <button className="text-[10px] font-bold text-[#af9164] uppercase tracking-widest hover:text-[#8e734c] flex items-center gap-1">
+                    View All <ArrowRight size={10} />
+                </button>
+            </div>
+            <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                    <thead className="bg-[#fcfcfc] text-[9px] uppercase tracking-widest text-slate-400 font-bold border-b border-zinc-100">
+                        <tr>
+                            <th className="px-6 py-3">Case Title</th>
+                            <th className="px-6 py-3">Client</th>
+                            <th className="px-6 py-3">Status</th>
+                            <th className="px-6 py-3">Last Activity</th>
+                            <th className="px-6 py-3 text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-50">
+                        <MatterRow 
+                            title="Estate of H. Kensington" 
+                            refId="PRO-2024-001"
+                            client="Eleanor Kensington"
+                            status="In Review"
+                            statusColor="text-emerald-700 bg-emerald-50 border-emerald-100"
+                            activity="Doc Verified"
+                            time="2h ago"
+                        />
+                        <MatterRow 
+                            title="TechFlow Merger vs. State" 
+                            refId="CORP-2024-089"
+                            client="TechFlow Inc."
+                            status="Hearing Prep"
+                            statusColor="text-[#af9164] bg-amber-50/50 border-amber-100"
+                            activity="Brief Drafted"
+                            time="5h ago"
+                        />
+                         <MatterRow 
+                            title="Vanderbilt Trust Dispute" 
+                            refId="LIT-2023-112"
+                            client="Cornelius Vanderbilt IV"
+                            status="Pending Info"
+                            statusColor="text-[#1a2238] bg-slate-100 border-slate-200"
+                            activity="Client Email"
+                            time="1d ago"
+                        />
+                         <MatterRow 
+                            title="Global Shipping Liability" 
+                            refId="MAR-2024-003"
+                            client="Oceanic Logistics"
+                            status="Discovery"
+                            statusColor="text-purple-700 bg-purple-50 border-purple-100"
+                            activity="Motion Filed"
+                            time="2d ago"
+                        />
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    )
 }
 
-function DetailItem({ label, value, icon }: { label: string, value: string, icon: React.ReactNode }) {
+function MatterRow({ title, refId, client, status, statusColor, activity, time }: any) {
     return (
-        <div className="flex items-center gap-3 group p-2 rounded-xl hover:bg-zinc-50 transition-colors cursor-default">
-            <div className="h-8 w-8 rounded-full bg-zinc-50 border border-zinc-100 flex items-center justify-center text-zinc-400 shrink-0">
-                {icon}
+        <tr className="hover:bg-zinc-50/50 transition-colors group">
+            <td className="px-6 py-4">
+                <p className="font-bold text-[#1a2238] text-sm font-serif">{title}</p>
+                <p className="text-[10px] text-slate-400 font-mono mt-0.5">{refId}</p>
+            </td>
+            <td className="px-6 py-4">
+                <div className="flex items-center gap-2">
+                    <div className="h-6 w-6 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center text-[9px] font-serif">
+                        {client.charAt(0)}
+                    </div>
+                    <span className="text-xs text-slate-700 font-medium">{client}</span>
+                </div>
+            </td>
+            <td className="px-6 py-4">
+                 <span className={cn("text-[9px] font-bold uppercase tracking-wide px-2 py-1 rounded-full border", statusColor)}>
+                    {status}
+                 </span>
+            </td>
+            <td className="px-6 py-4">
+                <div className="flex flex-col">
+                    <span className="text-xs text-slate-700 font-medium">{activity}</span>
+                    <span className="text-[10px] text-slate-400">{time}</span>
+                </div>
+            </td>
+            <td className="px-6 py-4 text-right">
+                <button className="p-1.5 text-slate-400 hover:text-[#af9164] transition-colors">
+                    <MoreHorizontal size={14} />
+                </button>
+            </td>
+        </tr>
+    )
+}
+
+// --- 4. Client Snapshot (Index Card Style) ---
+function ClientProfileSnapshot() {
+    return (
+        <div className="bg-white p-0 rounded-xl shadow-[0_10px_40px_-15px_rgba(0,0,0,0.1)] border border-zinc-200/60 relative overflow-hidden group">
+            <div className="h-1.5 w-full bg-[#af9164]"></div>
+            <div className="p-6">
+                <div className="flex justify-between items-start mb-6">
+                     <div className="h-14 w-14 rounded-full bg-slate-100 p-1 border border-zinc-200">
+                        <img src="https://i.pravatar.cc/150?u=mason" alt="Client" className="h-full w-full rounded-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" />
+                     </div>
+                     <div className="flex gap-2">
+                         <button className="p-2 border border-zinc-100 rounded-full hover:border-[#af9164] hover:text-[#af9164] transition-colors text-slate-400 bg-white shadow-sm"><Phone size={12} /></button>
+                         <button className="p-2 border border-zinc-100 rounded-full hover:border-[#af9164] hover:text-[#af9164] transition-colors text-slate-400 bg-white shadow-sm"><Mail size={12} /></button>
+                     </div>
+                </div>
+
+                <div className="space-y-1 mb-6">
+                    <h3 className="font-serif text-xl text-[#1a2238]">Mason Walker</h3>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#af9164]">Active Client • VIP</p>
+                </div>
+
+                <div className="space-y-4">
+                    <div className="flex items-center gap-3 p-2 bg-zinc-50 rounded-lg border border-zinc-100">
+                        <MapPin size={14} className="text-slate-400 ml-1" />
+                        <div className="flex-1">
+                            <p className="text-[9px] text-slate-400 uppercase tracking-wide">Location</p>
+                            <p className="text-xs font-semibold text-slate-700">New York, NY</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3 p-2 bg-zinc-50 rounded-lg border border-zinc-100">
+                        <Briefcase size={14} className="text-slate-400 ml-1" />
+                        <div className="flex-1">
+                            <p className="text-[9px] text-slate-400 uppercase tracking-wide">Associated Matter</p>
+                            <p className="text-xs font-semibold text-slate-700">Walker vs. State (Pending)</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="mt-6 pt-6 border-t border-zinc-100">
+                     <div className="flex justify-between text-[10px] text-slate-500 mb-2 font-medium uppercase tracking-wide">
+                        <span>Profile Completion</span>
+                        <span>85%</span>
+                     </div>
+                     <div className="h-1.5 w-full bg-zinc-100 rounded-full overflow-hidden">
+                        <div className="h-full w-[85%] bg-[#1a2238]"></div>
+                     </div>
+                </div>
             </div>
-            <div className="flex-1">
-                <p className="text-[9px] text-zinc-400 font-medium uppercase tracking-wide mb-0.5">{label}</p>
-                <p className="text-xs font-bold text-zinc-800 leading-tight">{value}</p>
-            </div>
-            <button className="h-7 w-7 rounded-full bg-white border border-zinc-100 flex items-center justify-center text-zinc-300 opacity-0 group-hover:opacity-100 transition-all shadow-sm hover:text-zinc-600">
-                <Edit2 size={10} />
-            </button>
         </div>
     );
 }
