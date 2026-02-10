@@ -179,22 +179,26 @@ export default function LawyerDashboardPage() {
 
 // --- Components ---
 
+// --- Logo Components (Fixed Size & Alignment) ---
 const Logo = () => (
-  <div className="flex items-center space-x-3 py-1 px-1">
-    <div className="h-7 w-7 shrink-0 rounded bg-[#1a2238] flex items-center justify-center border border-[#af9164]">
-      <Scale size={14} className="text-[#af9164]" />
+  // We keep p-1.5 to align the left edge with the sidebar links below.
+  // We increased the logo size to h-9 w-9 to match the original design prominence.
+  <div className="flex items-center -ml-2">
+    <div className="h-14 w-14 shrink-0 flex items-center justify-center">
+      <img src="/logo.png" alt="LegalSphere Logo" className="object-contain w-full h-full" />
     </div>
-    <div className="flex flex-col">
-      <span className="font-serif text-lg text-[#1a2238] leading-none tracking-tight">LegalSphere</span>
-      <span className="text-[8px] text-[#af9164] uppercase tracking-[0.2em] font-bold mt-0.5">Counsel</span>
-    </div>
+    <span className="font-bold text-lg text-[#1a2238] leading-none tracking-tight">
+      LegalSphere
+    </span>
   </div>
 );
 
 const LogoIcon = () => (
-  <div className="py-1 px-1">
-    <div className="h-7 w-7 shrink-0 rounded bg-[#1a2238] flex items-center justify-center border border-[#af9164]">
-      <Scale size={14} className="text-[#af9164]" />
+  // In the collapsed state, we ensure the logo is visible and not tiny (h-8 w-8).
+  // The wrapper p-1 maintains the vertical rhythm with the links.
+  <div className="flex items-center justify-start -ml-2">
+    <div className="h-12 w-12 shrink-0 flex items-center justify-center">
+       <img src="/logo.png" alt="LegalSphere Logo" className="object-contain w-full h-full" />
     </div>
   </div>
 );

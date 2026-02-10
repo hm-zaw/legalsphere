@@ -29,7 +29,6 @@ import CasesView from "./CasesView";
 import LegalTeamView from "./LegalTeamView";
 
 // --- Design Tokens ---
-// We use a "Zinc" palette for a colder, more professional look.
 const THEME = {
   navy: "#1a2238",
   gold: "#af9164",
@@ -78,14 +77,14 @@ export default function AdminDashboardPage() {
         <AceternitySidebarBody className="justify-between gap-6 bg-white border-r border-zinc-200 py-4 w-[60px] md:w-[240px]">
           <div className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto">
             {open ? <Logo /> : <LogoIcon />}
-            <div className="mt-8 flex flex-col gap-1">
+            <div className="mt-5 flex flex-col gap-1">
               {links.map((link, idx) => (
                 <AceternitySidebarLink 
                   key={idx} 
                   link={link} 
                   onClick={link.onClick}
                   className={cn(
-                    "hover:bg-zinc-100 transition-colors duration-200 rounded-md p-1.5 h-9",
+                    "hover:bg-zinc-100 transition-colors duration-200 rounded-md px-1.5 h-9",
                     activeTab === "overview" && link.label === "Dashboard" && "bg-zinc-100 font-medium text-[#1a2238]"
                   )}
                 />
@@ -159,22 +158,26 @@ export default function AdminDashboardPage() {
   );
 }
 
-// --- Compact Logo ---
+// --- Logo Components (Fixed Size & Alignment) ---
 const Logo = () => (
-  <div className="flex items-center space-x-2 py-1 px-1">
-    <div className="h-6 w-6 shrink-0 rounded bg-[#1a2238] flex items-center justify-center">
-      <Scale size={14} className="text-[#af9164]" />
+  // We keep p-1.5 to align the left edge with the sidebar links below.
+  // We increased the logo size to h-9 w-9 to match the original design prominence.
+  <div className="flex items-center -ml-2">
+    <div className="h-14 w-14 shrink-0 flex items-center justify-center">
+      <img src="/logo.png" alt="LegalSphere Logo" className="object-contain w-full h-full" />
     </div>
-    <div className="flex flex-col">
-      <span className="font-semibold text-sm text-[#1a2238] leading-none tracking-tight">LegalSphere</span>
-    </div>
+    <span className="font-bold text-lg text-[#1a2238] leading-none tracking-tight">
+      LegalSphere
+    </span>
   </div>
 );
 
 const LogoIcon = () => (
-  <div className="py-1 px-1">
-    <div className="h-6 w-6 shrink-0 rounded bg-[#1a2238] flex items-center justify-center">
-      <Scale size={14} className="text-[#af9164]" />
+  // In the collapsed state, we ensure the logo is visible and not tiny (h-8 w-8).
+  // The wrapper p-1 maintains the vertical rhythm with the links.
+  <div className="flex items-center justify-start -ml-2">
+    <div className="h-12 w-12 shrink-0 flex items-center justify-center">
+       <img src="/logo.png" alt="LegalSphere Logo" className="object-contain w-full h-full" />
     </div>
   </div>
 );
@@ -221,31 +224,102 @@ function OverviewContent() {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 h-full">
         {/* 2. Main Chart (Spans 8 columns) */}
-        <div className="lg:col-span-8 rounded-lg bg-white border border-zinc-200 shadow-[0_1px_2px_rgba(0,0,0,0.05)] p-4 flex flex-col h-[380px]">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-sm font-semibold text-zinc-800">Case Velocity & Resolution</h3>
-              <p className="text-[11px] text-zinc-500">Intake vs. Closed volume (Trailing 12 Months)</p>
+        <div className="lg:col-span-8 rounded-lg bg-white border border-zinc-200 shadow-sm flex flex-col h-[380px] overflow-hidden">
+          {/* Chart Header */}
+          <div className="px-5 py-4 border-b border-zinc-100 flex items-center justify-between bg-white">
+            <div className="space-y-0.5">
+              <h3 className="text-sm font-bold text-zinc-900 flex items-center gap-2">
+                <TrendingUp size={16} className="text-[#af9164]" />
+                Case Velocity & Resolution
+              </h3>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-[#1a2238]"></span>
+                  <span className="text-[10px] text-zinc-500 font-medium uppercase tracking-wider">New Intake</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-[#af9164]"></span>
+                  <span className="text-[10px] text-zinc-500 font-medium uppercase tracking-wider">Resolved</span>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-               <button className="flex items-center gap-1.5 px-2 py-1 rounded border border-zinc-200 text-[11px] font-medium text-zinc-600 hover:bg-zinc-50 transition-colors">
-                 <Filter size={12} /> Filter
-               </button>
-               <button className="flex items-center gap-1.5 px-2 py-1 rounded border border-zinc-200 text-[11px] font-medium text-zinc-600 hover:bg-zinc-50 transition-colors">
-                 <Download size={12} /> Export
-               </button>
+            
+            <div className="flex items-center bg-zinc-50 p-0.5 rounded-md border border-zinc-200">
+              {['1W', '1M', '3M', '1Y'].map((range) => (
+                <button 
+                  key={range} 
+                  className={cn(
+                    "px-2.5 py-1 text-[10px] font-bold rounded transition-all",
+                    range === '1Y' ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-400 hover:text-zinc-600"
+                  )}
+                >
+                  {range}
+                </button>
+              ))}
             </div>
           </div>
-          
-          {/* Chart Placeholder - keeping it clean */}
-          <div className="flex-1 w-full bg-zinc-50/50 rounded border border-dashed border-zinc-200 flex items-end justify-between px-4 pb-0 relative">
-             <div className="absolute inset-0 flex items-center justify-center text-xs text-zinc-400 font-mono">
-               [ Interactive Data Visualization ]
-             </div>
-             {/* Simple aesthetic bars for visual density */}
-             {[40, 65, 50, 80, 55, 70, 90, 60, 75, 50, 85, 95].map((h, i) => (
-               <div key={i} className="w-[6%] bg-[#1a2238] opacity-90 rounded-t-[2px]" style={{ height: `${h}%` }} />
-             ))}
+
+          {/* Visual Chart Area */}
+          <div className="flex-1 p-6 flex flex-col justify-between relative group">
+            {/* Background Grid Lines */}
+            <div className="absolute inset-x-6 inset-y-6 flex flex-col justify-between pointer-events-none">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="w-full border-t border-zinc-50" />
+              ))}
+            </div>
+
+            {/* The Bars */}
+            <div className="relative z-10 flex-1 flex items-end justify-between gap-3">
+              {[
+                { in: 45, out: 30, m: 'Jan' }, { in: 52, out: 40, m: 'Feb' },
+                { in: 38, out: 45, m: 'Mar' }, { in: 65, out: 50, m: 'Apr' },
+                { in: 48, out: 42, m: 'May' }, { in: 70, out: 60, m: 'Jun' },
+                { in: 85, out: 75, m: 'Jul' }, { in: 60, out: 55, m: 'Aug' },
+                { in: 75, out: 65, m: 'Sep' }, { in: 90, out: 80, m: 'Oct' },
+                { in: 65, out: 70, m: 'Nov' }, { in: 95, out: 85, m: 'Dec' }
+              ].map((data, i) => (
+                <div key={i} className="flex-1 flex flex-col items-center gap-2 group/bar">
+                  <div className="w-full flex items-end justify-center gap-[2px] h-48">
+                    {/* Intake Bar */}
+                    <motion.div 
+                      initial={{ height: 0 }}
+                      animate={{ height: `${data.in}%` }}
+                      className="w-full max-w-[8px] bg-[#1a2238] rounded-t-sm relative transition-all group-hover/bar:bg-[#2a375a]"
+                    >
+                      <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-zinc-900 text-white text-[9px] px-1.5 py-0.5 rounded opacity-0 group-hover/bar:opacity-100 transition-opacity pointer-events-none font-mono">
+                        {data.in}
+                      </div>
+                    </motion.div>
+                    {/* Resolution Bar */}
+                    <motion.div 
+                      initial={{ height: 0 }}
+                      animate={{ height: `${data.out}%` }}
+                      className="w-full max-w-[8px] bg-[#af9164]/40 rounded-t-sm transition-all group-hover/bar:bg-[#af9164]"
+                    />
+                  </div>
+                  <span className="text-[10px] font-bold text-zinc-400 group-hover/bar:text-zinc-900 transition-colors uppercase tracking-tighter">
+                    {data.m}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Bottom Summary Bar */}
+          <div className="px-5 py-3 bg-zinc-50 border-t border-zinc-100 flex items-center justify-between">
+            <div className="flex gap-6">
+              <div className="flex flex-col">
+                <span className="text-[9px] text-zinc-400 uppercase font-bold tracking-widest">Avg. Processing Time</span>
+                <span className="text-xs font-semibold text-zinc-800">14.2 Days</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[9px] text-zinc-400 uppercase font-bold tracking-widest">Efficiency Rate</span>
+                <span className="text-xs font-semibold text-emerald-600">+4.2%</span>
+              </div>
+            </div>
+            <button className="text-[10px] font-bold text-[#1a2238] hover:underline flex items-center gap-1">
+              Generate Full Report <ChevronRight size={12} />
+            </button>
           </div>
         </div>
 

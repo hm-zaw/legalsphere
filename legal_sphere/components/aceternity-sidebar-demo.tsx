@@ -137,23 +137,18 @@ export function AceternitySidebarDemo({ children }: { children: React.ReactNode 
   );
 }
 
+// --- Logo Components (Fixed Size & Alignment) ---
 export const Logo = () => {
   return (
     <a
       href="/dashboard"
-      className="relative z-20 flex items-center space-x-3 py-1 text-sm font-normal text-black">
-      <div
-        className="h-6 w-6 shrink-0 rounded bg-[#1a2238] flex items-center justify-center shadow-md"
-      >
-        <IconScale size={16} className="text-white" />
+      className="relative z-20 flex items-center -ml-2">
+      <div className="h-14 w-14 shrink-0 flex items-center justify-center">
+        <img src="/logo.png" alt="LegalSphere Logo" className="object-contain w-full h-full" />
       </div>
-      <motion.span
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        // UPDATED: Text is now Navy to pop against the white sidebar
-        className="font-medium whitespace-pre text-[#1a2238] font-serif text-lg tracking-wide">
+      <span className="font-bold text-lg text-[#1a2238] leading-none tracking-tight">
         LegalSphere
-      </motion.span>
+      </span>
     </a>
   );
 };
@@ -162,11 +157,9 @@ export const LogoIcon = () => {
   return (
     <a
       href="/dashboard"
-      className="relative z-20 flex items-center space-x-2 py-1 text-sm font-normal text-black">
-      <div
-        className="h-6 w-6 shrink-0 rounded bg-[#1a2238] flex items-center justify-center shadow-md"
-      >
-        <IconScale size={16} className="text-white" />
+      className="relative z-20 flex items-center justify-start -ml-2">
+      <div className="h-12 w-12 shrink-0 flex items-center justify-center">
+        <img src="/logo.png" alt="LegalSphere Logo" className="object-contain w-full h-full" />
       </div>
     </a>
   );
