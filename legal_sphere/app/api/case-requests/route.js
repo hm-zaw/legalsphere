@@ -39,19 +39,28 @@ export async function GET(request) {
       .limit(limit)
       .toArray();
 
+    // Helper to format status strings (e.g., "analysis_completed" -> "Analysis Completed")
+    const formatStatus = (status) => {
+      if (!status) return "Pending";
+      return status
+        .split('_')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+    };
+
     // Transform case data to match the expected format
     const formattedCases = cases.map(caseItem => ({
-      id: caseItem.id,
-      title: caseItem.case?.title || 'Untitled Case',
-      category: caseItem.case?.category || 'General',
-      status: caseItem.status,
-      priority: caseItem.priority || 'medium',
+      id: caseItem.id || caseItem._id?.toString(), // Ensure ID is always present
+      title: caseItem.case?.title || caseItem.title || 'Untitled Case',
+      category: caseItem.case?.category || caseItem.category || 'General',
+      status: formatStatus(caseItem.status),
+      priority: caseItem.priority || caseItem.case?.urgency || 'Normal',
       progress: caseItem.progress || 0,
       submittedDate: caseItem.createdAt,
       lastUpdated: caseItem.updatedAt || caseItem.createdAt,
-      lawyer: caseItem.lawyer?.name || 'Pending Assignment',
+      lawyer: caseItem.lawyer?.name || caseItem.lawyer || 'Pending Assignment',
       amount: caseItem.amount || 'TBD',
-      description: caseItem.case?.description || 'No description available',
+      description: caseItem.case?.description || caseItem.description || 'No description available',
       client: caseItem.client,
       createdAt: caseItem.createdAt,
       updatedAt: caseItem.updatedAt

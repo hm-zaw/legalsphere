@@ -27,21 +27,21 @@ export function AceternitySidebarDemo({ children }: { children: React.ReactNode 
   const links = [
     {
       label: "Dashboard",
-      href: "/dashboard",
+      href: "/dashboard?view=overview",
       icon: (
         <IconHome className="h-5 w-5 shrink-0 text-neutral-500 group-hover/sidebar:text-[#af9164] transition-colors" />
       ),
     },
     {
       label: "New Filing",
-      href: "/dashboard?section=apply-new",
+      href: "/dashboard?view=apply-new",
       icon: (
         <IconPlus className="h-5 w-5 shrink-0 text-neutral-500 group-hover/sidebar:text-[#af9164] transition-colors" />
       ),
     },
     {
       label: "My Dossiers",
-      href: "/my-cases",
+      href: "/dashboard?view=my-cases",
       icon: (
         <IconFileText className="h-5 w-5 shrink-0 text-neutral-500 group-hover/sidebar:text-[#af9164] transition-colors" />
       ),
@@ -62,14 +62,14 @@ export function AceternitySidebarDemo({ children }: { children: React.ReactNode 
     },
     {
       label: "Profile",
-      href: "/profile",
+      href: "/dashboard?view=profile",
       icon: (
         <IconUserBolt className="h-5 w-5 shrink-0 text-neutral-500 group-hover/sidebar:text-[#af9164] transition-colors" />
       ),
     },
     {
       label: "Settings",
-      href: "/settings",
+      href: "/dashboard?view=profile&tab=settings",
       icon: (
         <IconSettings className="h-5 w-5 shrink-0 text-neutral-500 group-hover/sidebar:text-[#af9164] transition-colors" />
       ),
@@ -118,14 +118,14 @@ export function AceternitySidebarDemo({ children }: { children: React.ReactNode 
             <AceternitySidebarLink
               link={{
                 label: "LegalSphere User",
-                href: "/profile",
+                href: "/dashboard?view=profile",
                 icon: (
                   <div className="h-7 w-7 shrink-0 rounded-full bg-[#1a2238] flex items-center justify-center border border-neutral-200">
                     <IconUserBolt className="h-4 w-4 text-white" />
                   </div>
                 ),
               }}
-              onClick={() => handleLinkClick("/profile")}
+              onClick={() => handleLinkClick("/dashboard?view=profile")}
             />
           </div>
         </AceternitySidebarBody>

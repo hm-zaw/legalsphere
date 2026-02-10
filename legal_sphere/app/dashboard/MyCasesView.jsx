@@ -22,11 +22,10 @@ import {
   CheckCheck,
   X
 } from "lucide-react";
-import { AceternitySidebarDemo } from "@/components/aceternity-sidebar-demo";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { cn } from "@/lib/utils";
 import { apiClient } from "@/lib/api";
-import { motion, AnimatePresence } from "framer-motion"; // Ensure framer-motion is installed
+import { motion, AnimatePresence } from "framer-motion";
 
 // --- Design Tokens ---
 const LEGAL_NAVY = "#1a2238";
@@ -42,7 +41,7 @@ const StatSummary = ({ label, value, subtext }) => (
   </div>
 );
 
-export default function MyCasesPage() {
+export default function MyCasesView({ onNavigate }) {
   const router = useRouter();
   const notificationRef = useRef(null);
   
@@ -195,7 +194,9 @@ export default function MyCasesPage() {
   };
 
   const handleCaseClick = (caseId) => {
-    router.push(`/my-cases/case-details?id=${caseId}`);
+    // If navigation should open details in dashboard, implement here.
+    // Otherwise route to details page.
+    router.push(`/dashboard?view=case-details&id=${caseId}`);
   };
 
   const filteredCases = useMemo(() => {
@@ -221,11 +222,10 @@ export default function MyCasesPage() {
   if (!isClient) return null;
 
   return (
-    <AceternitySidebarDemo>
-      <div
-        className="flex-1 w-full min-h-screen bg-[#efefec] selection:bg-[#af9164]/30 overflow-y-auto"
-        style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
-      >
+    <div
+    className="flex-1 w-full min-h-screen bg-[#efefec] selection:bg-[#af9164]/30 overflow-y-auto"
+    style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
+    >
         <div className="w-full max-w-7xl mx-auto p-6 lg:p-12 space-y-12">
           
           {/* --- Header Section --- */}
@@ -389,7 +389,7 @@ export default function MyCasesPage() {
                </div>
 
               <button
-                onClick={() => router.push('/apply-new')}
+                onClick={() => onNavigate("apply-new")}
                 className="group relative overflow-hidden bg-slate-900 px-6 py-3 text-white transition-all hover:bg-[#af9164] shadow-lg active:scale-95 rounded-sm"
               >
                 <div className="relative z-10 flex items-center gap-2">
@@ -528,7 +528,7 @@ export default function MyCasesPage() {
                         <span className="text-[9px] uppercase font-bold text-slate-400 tracking-[0.15em]">Last Activity</span>
                         <div className="flex items-center gap-1.5 text-xs text-slate-600">
                             <Clock className="w-3 h-3 text-[#af9164] opacity-70" />
-                            {item.lastUpdated}
+                            {new Date(item.lastUpdated).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
                         </div>
                     </div>
                   </div>
@@ -589,7 +589,7 @@ export default function MyCasesPage() {
               </p>
               {cases.length === 0 ? (
                 <button 
-                  onClick={() => router.push('/apply-new')}
+                  onClick={() => onNavigate("apply-new")}
                   className="text-xs font-bold uppercase tracking-widest text-[#af9164] hover:text-[#92784e] underline underline-offset-4"
                 >
                   Submit Your First Case
@@ -613,7 +613,6 @@ export default function MyCasesPage() {
           </div>
 
         </div>
-      </div>
-    </AceternitySidebarDemo>
+    </div>
   );
 }

@@ -17,7 +17,6 @@ import {
   Briefcase,
   Award
 } from "lucide-react";
-import { AceternitySidebarDemo } from "@/components/aceternity-sidebar-demo";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { cn } from "@/lib/utils";
 
@@ -56,7 +55,7 @@ const SectionHeader = ({ title, description }) => (
   </div>
 );
 
-export default function ProfilePage() {
+export default function ProfileView() {
   const [userData, setUserData] = useState(null);
   const [isClient, setIsClient] = useState(false);
   const [activeTab, setActiveTab] = useState("Personal");
@@ -80,13 +79,12 @@ export default function ProfilePage() {
   if (!isClient) return null;
 
   return (
-    <AceternitySidebarDemo>
-      <div
-        className="flex-1 w-full min-h-screen bg-[#efefec] selection:bg-slate-200 overflow-y-auto"
-        style={{
-          fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial',
-        }}
-      >
+    <div
+    className="flex-1 w-full min-h-screen bg-[#efefec] selection:bg-slate-200 overflow-y-auto"
+    style={{
+        fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial',
+    }}
+    >
         <div className="w-full max-w-5xl mx-auto p-6 lg:p-12 space-y-8">
           
           {/* --- Header Section --- */}
@@ -320,7 +318,6 @@ export default function ProfilePage() {
 
           </div>
         </div>
-      </div>
-    </AceternitySidebarDemo>
+    </div>
   );
 }

@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 
 // Refined Professional Palette
 const LEGAL_NAVY = "#1a2238"; // Deep, authoritative navy
@@ -43,12 +44,34 @@ const SubHeading = ({ children }: { children: React.ReactNode }) => (
   </p>
 );
 
-export function ApplyNewForm() {
+export default function ApplyNewView({ onNavigate }: { onNavigate?: (view: string) => void }) {
+  const router = useRouter();
   const STEPS = ["Client Details", "Case Information", "Documents", "Consultation", "Review & Submit"];
   const [stepIndex, setStepIndex] = useState(0);
   const [attempted, setAttempted] = useState(false);
   const [docFiles, setDocFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [userData, setUserData] = useState<any>(null);
+
+  // Load user data on mount to pre-fill form
+  useEffect(() => {
+    const storedUser = localStorage.getItem("userData");
+    if (storedUser) {
+        const parsed = JSON.parse(storedUser);
+        setUserData(parsed);
+        // Pre-fill client details if available
+        setForm(prev => ({
+            ...prev,
+            client: {
+                ...prev.client,
+                fullName: parsed.name || "",
+                email: parsed.email || "",
+                // Add other fields if available in user object
+            }
+        }));
+    }
+  }, []);
+
   const [form, setForm] = useState({
     client: {
       fullName: "",
@@ -155,6 +178,12 @@ export function ApplyNewForm() {
     setAttempted(true);
     if (Object.keys(errors).length > 0) return;
 
+    // Execute submit logic if valid
+    if (stepIndex !== STEPS.length - 1) {
+        next();
+        return;
+    }
+
     try {
       setSubmitting(true);
 
@@ -195,16 +224,23 @@ export function ApplyNewForm() {
         });
       }
 
-      const res = await fetch("/api/case-requests", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          client: form.client,
+      // Attach client ID if available
+      const payload = {
+          client: {
+              ...form.client,
+              id: userData?.id || userData?._id // Add user ID to link case
+          },
+          clientId: userData?.id || userData?._id || userData?.email, // Helper for direct lookup
           case: form.case,
           consultation: form.consultation,
           acknowledgements: form.acknowledgements,
           documents: uploadedDocs,
-        }),
+      };
+
+      const res = await fetch("/api/case-requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
@@ -218,36 +254,16 @@ export function ApplyNewForm() {
 
       const data = await res.json();
       setDocFiles([]);
-      setForm({
-        client: {
-          fullName: "",
-          idNumber: "",
-          email: "",
-          phone: "",
-          address: "",
-          dob: "",
-        },
-        case: {
-          title: "",
-          category: "",
-          description: "",
-          incidentDate: "",
-          urgency: "",
-        },
-        consultation: {
-          type: "",
-          date: "",
-          timeSlot: "",
-          notes: "",
-        },
-        acknowledgements: {
-          accurate: false,
-          privacy: false,
-        },
-      });
-      setStepIndex(0);
-      setAttempted(false);
-      alert("Case request submitted. Reference ID: " + (data.id || "N/A"));
+      // Reset form... (simplification)
+      alert("Case request submitted successfully. Redirecting to dashboard...");
+      
+      // Navigate to My Cases view
+      if (onNavigate) {
+          onNavigate("my-cases");
+      } else {
+          router.push("/dashboard?view=my-cases");
+      }
+      
     } catch (err: any) {
       alert(
         err?.message ||

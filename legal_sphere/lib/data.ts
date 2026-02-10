@@ -123,7 +123,7 @@ export type Task = {
   clientName: string;
   description: string;
   dueDate: string;
-  status: 'Pending' | 'Completed';
+  status: 'Pending' | 'Completed' | 'Accepted' | 'Denied';
   icon: LucideIcon;
 };
 

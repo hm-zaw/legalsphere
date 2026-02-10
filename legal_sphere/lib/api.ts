@@ -113,13 +113,13 @@ class ApiClient {
         const user = Array.isArray(parsed) ? parsed[0] : parsed;
         // Try different possible ID fields; fall back to email for older sessions.
         clientId =
+          user?.email ||
+          user?.client?.email ||
           user?.id ||
           user?.clientId ||
           user?.userId ||
           user?._id ||
           user?.client?.id ||
-          user?.email ||
-          user?.client?.email ||
           '';
         console.log('Extracted client identifier:', clientId, 'from user data:', user);
       }

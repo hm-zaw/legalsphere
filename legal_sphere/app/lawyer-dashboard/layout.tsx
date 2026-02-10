@@ -20,7 +20,7 @@ export default function LawyerDashboardLayout({
       enableSystem
       disableTransitionOnChange
     >
-      <div className={cn("min-h-screen bg-background text-foreground")}>
+      <div>
         {children}
         <Toaster />
       </div>

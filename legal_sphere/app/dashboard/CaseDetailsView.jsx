@@ -20,9 +20,10 @@ import {
   AlertCircle,
   Hourglass
 } from "lucide-react";
-import { AceternitySidebarDemo } from "@/components/aceternity-sidebar-demo";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { cn } from "@/lib/utils";
+import { apiClient } from "@/lib/api";
+import { useEffect } from "react";
 
 // --- Design Tokens ---
 const LEGAL_NAVY = "#1a2238";
@@ -315,97 +316,122 @@ const ListView = ({ tasks }) => (
 );
 
 
-export default function CaseDetailsPage() {
+
+
+export default function CaseDetailsView({ caseId, onNavigate }) {
   const [viewMode, setViewMode] = useState("Timeline");
+  const [caseData, setCaseData] = useState(null);
+  const [loading, setLoading] = useState(false);
   
   const days = ["MON 20", "TUE 21", "WED 22", "THU 23", "FRI 24", "SAT 25", "SUN 26"];
 
+  useEffect(() => {
+    if (caseId) {
+        const fetchData = async () => {
+            setLoading(true);
+            try {
+                const res = await apiClient.getCaseDetails(caseId);
+                if (res.data) {
+                    setCaseData(res.data);
+                }
+            } catch (err) {
+                console.error("Failed to fetch case details:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchData();
+    }
+  }, [caseId]);
+
   return (
-    <AceternitySidebarDemo>
-      <div
-        className="flex-1 w-full min-h-screen bg-[#efefec] selection:bg-slate-200 overflow-y-auto"
-        style={{ fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial' }}
-      >
-        <div className="w-full max-w-[1400px] mx-auto p-6 lg:p-8 space-y-8">
+    <div
+      className="flex-1 w-full min-h-screen bg-[#efefec] selection:bg-slate-200 overflow-y-auto"
+      style={{ fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial' }}
+    >
+      <div className="w-full max-w-[1400px] mx-auto p-6 lg:p-8 space-y-8">
 
-          {/* --- Header Section --- */}
-          <header className="flex flex-col gap-6 border-b-2 border-slate-900 pb-6">
-            <div className="flex justify-between items-start">
-              <div className="space-y-2">
-                <Breadcrumbs className="text-xs font-mono uppercase text-slate-500 tracking-tighter" />
-                <div className="flex items-center gap-3">
-                    <h1 className="font-serif text-3xl md:text-4xl text-slate-900 leading-tight">Contract Dispute Resolution</h1>
-                    <span className="font-mono text-[#af9164] text-sm bg-[#af9164]/10 px-2 py-1 rounded">CASE #57</span>
-                </div>
-                <p className="text-sm text-slate-500 max-w-2xl font-light">
-                   Legal proceedings regarding breach of contract seeking damages and resolution pursuant to Article 4.2 of the corporate bylaws.
-                </p>
-              </div>
-              <div className="flex gap-2">
-                 <button className="hidden sm:flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 text-xs font-bold uppercase tracking-wider hover:border-[#af9164] hover:text-[#af9164] transition-colors shadow-sm">
-                   <FileText className="w-3.5 h-3.5" /> Documents
-                 </button>
-                 <button className="flex items-center gap-2 px-4 py-2 bg-[#1a2238] text-white text-xs font-bold uppercase tracking-wider hover:bg-[#af9164] transition-colors shadow-md">
-                   <Activity className="w-3.5 h-3.5" /> Actions
-                 </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 pt-2">
-                <MetadataField icon={Gavel} label="Current Status" value="Active Litigation" subValue="On Track" />
-                <MetadataField icon={User} label="Lead Counsel" value="Sarah Jenkins, Esq." />
-                <MetadataField icon={Tag} label="Classification" value="Civil Litigation" subValue="Contract" />
-                <MetadataField icon={Users} label="Legal Team" value="S. Jenkins, M. Chen" />
-            </div>
-          </header>
-
-          {/* --- Main Paper Sheet Container --- */}
-          <div className="bg-white relative flex flex-col min-h-[600px] shadow-2xl" style={{ boxShadow: PAPER_SHADOW }}>
-            
-            {/* Toolbar */}
-            <div className="px-6 py-4 flex flex-col md:flex-row justify-between items-center border-b border-slate-100 gap-4">
-              <div className="flex items-center gap-6 border-b border-slate-200 md:border-none w-full md:w-auto pb-2 md:pb-0">
-                {["Kanban", "List", "Timeline"].map((view) => (
-                  <button
-                    key={view}
-                    onClick={() => setViewMode(view)}
-                    className={cn(
-                        "text-xs font-bold uppercase tracking-widest transition-all",
-                        view === viewMode ? "text-[#1a2238] border-b-2 border-[#1a2238] pb-1 md:pb-0 md:border-none" : "text-slate-400 hover:text-slate-600"
-                    )}
-                  >
-                    {view}
-                  </button>
-                ))}
-              </div>
-
-              <div className="flex items-center gap-3 w-full md:w-auto justify-end">
-                <div className="flex items-center border border-slate-200 rounded-sm bg-slate-50/50">
-                  <button className="p-1.5 hover:bg-slate-200 text-slate-500 transition-colors"><ChevronLeft className="w-3.5 h-3.5" /></button>
-                  <span className="text-xs font-medium text-slate-700 flex items-center gap-2 px-3 border-l border-r border-slate-200 h-8 font-serif">
-                    <CalendarIcon className="w-3.5 h-3.5 text-[#af9164]" />
-                    May 20 - May 26
+        {/* --- Header Section --- */}
+        <header className="flex flex-col gap-6 border-b-2 border-slate-900 pb-6">
+          <div className="flex justify-between items-start">
+            <div className="space-y-2">
+              <Breadcrumbs className="text-xs font-mono uppercase text-slate-500 tracking-tighter" />
+              <div className="flex items-center gap-3">
+                  <h1 className="font-serif text-3xl md:text-4xl text-slate-900 leading-tight">
+                    {loading ? "Loading..." : caseData?.case?.title || "Contract Dispute Resolution"}
+                  </h1>
+                  <span className="font-mono text-[#af9164] text-sm bg-[#af9164]/10 px-2 py-1 rounded">
+                    CASE #{caseId ? caseId.slice(0, 8) : "57"}
                   </span>
-                  <button className="p-1.5 hover:bg-slate-200 text-slate-500 transition-colors"><ChevronRight className="w-3.5 h-3.5" /></button>
-                </div>
-                <button className="flex items-center gap-2 px-3 py-1.5 border border-slate-200 rounded-sm text-xs font-medium text-slate-600 hover:border-[#af9164] hover:text-[#af9164] transition-colors">
-                  <Filter className="w-3.5 h-3.5" />
-                </button>
               </div>
+              <p className="text-sm text-slate-500 max-w-2xl font-light">
+                  {caseData?.case?.description || "Legal proceedings regarding breach of contract seeking damages and resolution pursuant to Article 4.2 of the corporate bylaws."}
+              </p>
+            </div>
+            <div className="flex gap-2">
+                <button className="hidden sm:flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 text-xs font-bold uppercase tracking-wider hover:border-[#af9164] hover:text-[#af9164] transition-colors shadow-sm">
+                  <FileText className="w-3.5 h-3.5" /> Documents
+                </button>
+                <button className="flex items-center gap-2 px-4 py-2 bg-[#1a2238] text-white text-xs font-bold uppercase tracking-wider hover:bg-[#af9164] transition-colors shadow-md">
+                  <Activity className="w-3.5 h-3.5" /> Actions
+                </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 pt-2">
+              <MetadataField icon={Gavel} label="Current Status" value={caseData?.status || "Active Litigation"} subValue="On Track" />
+              <MetadataField icon={User} label="Lead Counsel" value={caseData?.lawyer || "Sarah Jenkins, Esq."} />
+              <MetadataField icon={Tag} label="Classification" value={caseData?.case?.category || "Civil Litigation"} subValue="Contract" />
+              <MetadataField icon={Users} label="Legal Team" value="S. Jenkins, M. Chen" />
+          </div>
+        </header>
+
+        {/* --- Main Paper Sheet Container --- */}
+        <div className="bg-white relative flex flex-col min-h-[600px] shadow-2xl" style={{ boxShadow: PAPER_SHADOW }}>
+          
+          {/* Toolbar */}
+          <div className="px-6 py-4 flex flex-col md:flex-row justify-between items-center border-b border-slate-100 gap-4">
+            <div className="flex items-center gap-6 border-b border-slate-200 md:border-none w-full md:w-auto pb-2 md:pb-0">
+              {["Kanban", "List", "Timeline"].map((view) => (
+                <button
+                  key={view}
+                  onClick={() => setViewMode(view)}
+                  className={cn(
+                      "text-xs font-bold uppercase tracking-widest transition-all",
+                      view === viewMode ? "text-[#1a2238] border-b-2 border-[#1a2238] pb-1 md:pb-0 md:border-none" : "text-slate-400 hover:text-slate-600"
+                  )}
+                >
+                  {view}
+                </button>
+              ))}
             </div>
 
-            {/* Content Area */}
-            {viewMode === "Timeline" && <TimelineView days={days} tasks={tasks} />}
-            {viewMode === "Kanban" && <KanbanView tasks={tasks} />}
-            {viewMode === "List" && <ListView tasks={tasks} />}
+            <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+              <div className="flex items-center border border-slate-200 rounded-sm bg-slate-50/50">
+                <button className="p-1.5 hover:bg-slate-200 text-slate-500 transition-colors"><ChevronLeft className="w-3.5 h-3.5" /></button>
+                <span className="text-xs font-medium text-slate-700 flex items-center gap-2 px-3 border-l border-r border-slate-200 h-8 font-serif">
+                  <CalendarIcon className="w-3.5 h-3.5 text-[#af9164]" />
+                  May 20 - May 26
+                </span>
+                <button className="p-1.5 hover:bg-slate-200 text-slate-500 transition-colors"><ChevronRight className="w-3.5 h-3.5" /></button>
+              </div>
+              <button className="flex items-center gap-2 px-3 py-1.5 border border-slate-200 rounded-sm text-xs font-medium text-slate-600 hover:border-[#af9164] hover:text-[#af9164] transition-colors">
+                <Filter className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
 
-          </div>
-          
-          <div className="text-center pb-8">
-             <p className="text-[10px] text-slate-400 uppercase tracking-widest">LegalSphere Case File #57 • Confidential</p>
-          </div>
+          {/* Content Area */}
+          {viewMode === "Timeline" && <TimelineView days={days} tasks={tasks} />}
+          {viewMode === "Kanban" && <KanbanView tasks={tasks} />}
+          {viewMode === "List" && <ListView tasks={tasks} />}
+
+        </div>
+        
+        <div className="text-center pb-8">
+            <p className="text-[10px] text-slate-400 uppercase tracking-widest">LegalSphere Case File #57 • Confidential</p>
         </div>
       </div>
-    </AceternitySidebarDemo>
+    </div>
   );
 }
