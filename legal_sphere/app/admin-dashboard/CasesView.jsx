@@ -120,7 +120,7 @@ export default function CasesView() {
       if (!combined && !selectedApp?.case?.title) throw new Error("No case content available");
 
       // 2. Call BART classification API
-      const res = await fetch("/api/dev/test-classify", {
+      const res = await fetch("/api/admin/classify-case", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
