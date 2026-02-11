@@ -28,15 +28,51 @@ function getBootstrapServers(): string[] {
     .filter(Boolean);
 }
 
+function getSecurityConfig() {
+  const securityProtocol = process.env.KAFKA_SECURITY_PROTOCOL || "PLAINTEXT";
+  const saslMechanism = process.env.KAFKA_SASL_MECHANISM || "PLAIN";
+  const username = process.env.KAFKA_USERNAME;
+  const password = process.env.KAFKA_PASSWORD;
+
+  // Return undefined for local development (PLAINTEXT)
+  if (securityProtocol === "PLAINTEXT") {
+    return undefined;
+  }
+
+  // Return security config for cloud Kafka
+  const config: any = {
+    ssl: securityProtocol.includes("SSL"),
+  };
+
+  if (username && password) {
+    config.sasl = {
+      mechanism: saslMechanism,
+      username,
+      password,
+    };
+  }
+
+  return config;
+}
+
 async function getProducer(): Promise<Producer> {
   if (global._kafkaProducer) return global._kafkaProducer;
   if (global._kafkaProducerConnecting) return global._kafkaProducerConnecting;
 
   global._kafkaProducerConnecting = (async () => {
-    const kafka = new Kafka({
+    const securityConfig = getSecurityConfig();
+    
+    const kafkaConfig: any = {
       clientId: "legal-sphere-nextjs",
       brokers: getBootstrapServers(),
-    });
+    };
+
+    // Add security configuration if available
+    if (securityConfig) {
+      Object.assign(kafkaConfig, securityConfig);
+    }
+
+    const kafka = new Kafka(kafkaConfig);
 
     const producer = kafka.producer();
     await producer.connect();

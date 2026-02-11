@@ -1,4 +1,5 @@
 import os
+import ssl
 from kafka import KafkaProducer, KafkaConsumer
 from kafka.errors import KafkaError
 import json
@@ -17,9 +18,19 @@ class KafkaConfig:
         self.case_notifications_topic = os.getenv('KAFKA_CASE_NOTIFICATIONS_TOPIC', 'case-notifications')
         self.group_id = os.getenv('KAFKA_CONSUMER_GROUP_ID', 'notification-processors')
         
+        # Cloud authentication configuration
+        self.security_protocol = os.getenv('KAFKA_SECURITY_PROTOCOL', 'PLAINTEXT')
+        self.sasl_mechanism = os.getenv('KAFKA_SASL_MECHANISM', 'PLAIN')
+        self.sasl_username = os.getenv('KAFKA_USERNAME')
+        self.sasl_password = os.getenv('KAFKA_PASSWORD')
+        
+        # Log authentication mode (without credentials)
+        if self.security_protocol != 'PLAINTEXT':
+            logger.info(f"Kafka security protocol: {self.security_protocol}, SASL mechanism: {self.sasl_mechanism}")
+        
     def get_producer_config(self):
         """Get Kafka producer configuration"""
-        return {
+        config = {
             'bootstrap_servers': self.bootstrap_servers,
             'value_serializer': lambda v: json.dumps(v).encode('utf-8'),
             'key_serializer': lambda k: k.encode('utf-8') if k else None,
@@ -30,10 +41,31 @@ class KafkaConfig:
             'linger_ms': 10,
             'buffer_memory': 33554432,
         }
+        
+        # Add security configuration for cloud Kafka
+        if self.security_protocol != 'PLAINTEXT':
+            config['security_protocol'] = self.security_protocol
+            config['sasl_mechanism'] = self.sasl_mechanism
+            config['sasl_plain_username'] = self.sasl_username
+            config['sasl_plain_password'] = self.sasl_password
+            
+            # Add SSL configuration for SASL_SSL
+            if self.security_protocol == 'SASL_SSL':
+                config['ssl_check_hostname'] = False  # Disable hostname check for Aiven
+                config['ssl_cafile'] = None  # Use system CA certificates
+                config['ssl_certfile'] = None
+                config['ssl_keyfile'] = None
+                # Create unverified SSL context for development
+                ssl_context = ssl.create_default_context()
+                ssl_context.check_hostname = False
+                ssl_context.verify_mode = ssl.CERT_NONE
+                config['ssl_context'] = ssl_context
+        
+        return config
     
     def get_consumer_config(self):
         """Get Kafka consumer configuration"""
-        return {
+        config = {
             'bootstrap_servers': self.bootstrap_servers,
             'group_id': self.group_id,
             'value_deserializer': lambda m: json.loads(m.decode('utf-8')),
@@ -47,6 +79,27 @@ class KafkaConfig:
             'reconnect_backoff_ms': 1000,
             'retry_backoff_ms': 100,
         }
+        
+        # Add security configuration for cloud Kafka
+        if self.security_protocol != 'PLAINTEXT':
+            config['security_protocol'] = self.security_protocol
+            config['sasl_mechanism'] = self.sasl_mechanism
+            config['sasl_plain_username'] = self.sasl_username
+            config['sasl_plain_password'] = self.sasl_password
+            
+            # Add SSL configuration for SASL_SSL
+            if self.security_protocol == 'SASL_SSL':
+                config['ssl_check_hostname'] = False  # Disable hostname check for Aiven
+                config['ssl_cafile'] = None  # Use system CA certificates
+                config['ssl_certfile'] = None
+                config['ssl_keyfile'] = None
+                # Create unverified SSL context for development
+                ssl_context = ssl.create_default_context()
+                ssl_context.check_hostname = False
+                ssl_context.verify_mode = ssl.CERT_NONE
+                config['ssl_context'] = ssl_context
+        
+        return config
 
 class KafkaService:
     """Kafka service for producing and consuming messages"""
