@@ -1,4 +1,5 @@
 flask
+PyJWT
 flask-cors
 python-dotenv
 cloudinary

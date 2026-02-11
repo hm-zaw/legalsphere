@@ -141,6 +141,54 @@ def list_case_requests():
     except Exception as e:
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
+@case_requests_bp.route('/api/lawyer/cases', methods=['GET'])
+def get_lawyer_cases():
+    """Get cases assigned to a lawyer"""
+    try:
+        lawyer_id = request.args.get('lawyerId')
+        status = request.args.get('status')
+        
+        collection = get_db_collection('case_requests')
+        
+        # Build query
+        query = {}
+        if lawyer_id:
+            query['assignedLawyerId'] = lawyer_id
+        
+        if status:
+            if status == 'incoming':
+                query['status'] = 'lawyer_assigned'
+            elif status == 'active':
+                query['status'] = 'active'
+            else:
+                query['status'] = status
+                
+        cases = list(collection.find(query).sort('updatedAt', -1))
+        
+        formatted_cases = []
+        for case in cases:
+            if '_id' in case:
+                case['_id'] = str(case['_id'])
+            
+            formatted_case = {
+                'id': case.get('id', ''),
+                '_id': case.get('_id'),
+                'title': case.get('case', {}).get('title', 'Untitled Case'),
+                'description': case.get('case', {}).get('description', ''),
+                'status': _format_status(case.get('status', 'pending')),
+                'rawStatus': case.get('status'),
+                'client': case.get('client', {}),
+                'createdAt': case.get('createdAt'),
+                'updatedAt': case.get('updatedAt'),
+                'documents': case.get('documents', [])
+            }
+            formatted_cases.append(formatted_case)
+            
+        return jsonify({'cases': formatted_cases}), 200
+        
+    except Exception as e:
+        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+
 @case_requests_bp.route('/api/my-cases', methods=['GET'])
 @token_required
 def get_user_cases():
@@ -158,9 +206,9 @@ def get_user_cases():
         # Add status filter if provided
         if status:
             if status == 'pending':
-                query['status'] = {'$in': ['pending_submission', 'pending_admin_review']}
+                query['status'] = {'$in': ['pending_submission', 'pending_admin_review', 'lawyer_assigned']}
             elif status == 'active':
-                query['status'] = {'$nin': ['completed', 'rejected']}
+                query['status'] = {'$nin': ['completed', 'rejected', 'pending_submission']}
             elif status == 'completed':
                 query['status'] = 'completed'
             else:
@@ -193,6 +241,7 @@ def get_user_cases():
                 'submittedDate': _format_date(case.get('createdAt')),
                 'lastUpdated': _format_relative_time(case.get('updatedAt')),
                 'lawyer': _get_lawyer_info(case),
+                'lawyerDetails': case.get('assignedLawyer'),
                 'amount': 'N/A',  # Amount not in current structure
                 'description': case.get('case', {}).get('description', ''),
                 'client': case.get('client', {}),
@@ -224,7 +273,8 @@ def _format_status(status):
         'pending_submission': 'Pending Submission',
         'pending_admin_review': 'Pending Review',
         'under_review': 'Under Review',
-        'lawyer_assigned': 'Lawyer Assigned',
+        'lawyer_assigned': 'Lawyer Reviewing', # Changed for client visibility
+        'active': 'Active', 
         'in_progress': 'In Progress',
         'document_required': 'Document Required',
         'completed': 'Completed',
@@ -241,7 +291,8 @@ def _calculate_progress(status):
         'pending_submission': 10,
         'pending_admin_review': 20,
         'under_review': 30,
-        'lawyer_assigned': 50,
+        'lawyer_assigned': 45,
+        'active': 50,
         'in_progress': 70,
         'document_required': 45,
         'completed': 100,
@@ -300,8 +351,12 @@ def _format_relative_time(date_string):
 def _get_lawyer_info(case):
     """Get lawyer information from case"""
     lawyer = case.get('assignedLawyer')
+    status = case.get('status')
     if lawyer:
-        return f"{lawyer.get('name', 'Unknown')}, Esq."
+        if status in ['active', 'in_progress', 'completed']:
+             return f"{lawyer.get('name', 'Unknown')}, Esq."
+        else:
+             return "Assigning..." # Don't reveal name until accepted
     return "Pending Assignment"
 
 @case_requests_bp.route('/api/debug/cases', methods=['GET'])

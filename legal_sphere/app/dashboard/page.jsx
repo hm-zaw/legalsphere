@@ -6,9 +6,9 @@ import { AceternitySidebarDemo } from "@/components/aceternity-sidebar-demo";
 import OverviewView from "./OverviewView";
 import MyCasesView from "./MyCasesView";
 import CaseDetailsView from "./CaseDetailsView";
-
 import ApplyNewView from "./ApplyNewView";
 import ProfileView from "./ProfileView";
+import { withRoleProtection } from "@/hooks/useAuth";
 
 function DashboardContent() {
   const router = useRouter();
@@ -49,10 +49,13 @@ function DashboardContent() {
   );
 }
 
-export default function DashboardPage() {
+function DashboardPage() {
   return (
     <Suspense fallback={<div className="min-h-screen bg-[#efefec] flex items-center justify-center">Loading...</div>}>
       <DashboardContent />
     </Suspense>
   );
 }
+
+// Export the protected component
+export default withRoleProtection(DashboardPage, ['client', 'user']);

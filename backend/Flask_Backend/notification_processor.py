@@ -4,6 +4,7 @@ import logging
 from datetime import datetime
 from kafka_config import kafka_service
 from mongodb_client import get_db_collection
+from bson.objectid import ObjectId
 
 logger = logging.getLogger(__name__)
 
@@ -106,9 +107,15 @@ class NotificationProcessor:
             
             logger.info(f"Notification {str(notification_id)} stored in database")
             
-            # Also update the case status if this is a rejection notification
+            # Also update the case status based on notification type
             if notification_data.get('notificationType') == 'case_rejected':
                 self._update_case_rejection_status(notification_data)
+            elif notification_data.get('notificationType') == 'case_assigned':
+                self._update_case_assigned_status(notification_data)
+            elif notification_data.get('notificationType') == 'case_accepted':
+                self._update_case_accepted_status(notification_data)
+            elif notification_data.get('notificationType') == 'case_denied':
+                self._update_case_denied_status(notification_data)
             
             logger.info(f"Successfully processed notification {notification_id}")
             
@@ -125,7 +132,7 @@ class NotificationProcessor:
             collection = get_db_collection('case_requests')
             
             # Find the case by either id or _id
-            from bson.objectid import ObjectId
+            # from bson.objectid import ObjectId (Moved to top)
             
             # Try to find by string ID first, then by ObjectId
             case = None
@@ -157,10 +164,124 @@ class NotificationProcessor:
                 )
                 logger.info(f"Updated case {case_id} status to rejected")
             else:
-                logger.warning(f"Case {case_id} not found for rejection status update")
+                logger.warning(f"Case {case_id} not found for status update")
                 
         except Exception as e:
             logger.error(f"Error updating case rejection status: {e}")
+
+    def _update_case_assigned_status(self, notification_data):
+        """Update case status when lawyer is assigned"""
+        try:
+            case_id = notification_data.get('caseId')
+            if not case_id:
+                return
+            
+            collection = get_db_collection('case_requests')
+            
+            # Find case helper
+            case = self._find_case(collection, case_id)
+            
+            if case:
+                metadata = notification_data.get('metadata', {})
+                lawyer_id = metadata.get('lawyerId')
+                lawyer_name = metadata.get('lawyerName')
+                
+                collection.update_one(
+                    {'_id': case['_id']},
+                    {
+                        '$set': {
+                            'status': 'lawyer_assigned',
+                            'assignedLawyer': {
+                                'id': lawyer_id,
+                                'name': lawyer_name,
+                                'assignedAt': datetime.utcnow().isoformat()
+                            },
+                            'assignedLawyerId': lawyer_id, # Top level for easier querying
+                            'updatedAt': datetime.utcnow().isoformat()
+                        }
+                    }
+                )
+                logger.info(f"Updated case {case_id} status to lawyer_assigned (Lawyer: {lawyer_name})")
+            else:
+                logger.warning(f"Case {case_id} not found for assignment update")
+        except Exception as e:
+            logger.error(f"Error updating case assignment status: {e}")
+
+    def _update_case_accepted_status(self, notification_data):
+        """Update case status when lawyer accepts assignment"""
+        try:
+            case_id = notification_data.get('caseId')
+            if not case_id:
+                return
+            
+            collection = get_db_collection('case_requests')
+            case = self._find_case(collection, case_id)
+            
+            if case:
+                collection.update_one(
+                    {'_id': case['_id']},
+                    {
+                        '$set': {
+                            'status': 'active', # or 'in_progress'
+                            'lawyerAcceptedAt': datetime.utcnow().isoformat(),
+                            'updatedAt': datetime.utcnow().isoformat()
+                        }
+                    }
+                )
+                logger.info(f"Updated case {case_id} status to active (Accepted by lawyer)")
+            else:
+                logger.warning(f"Case {case_id} not found for acceptance update")
+        except Exception as e:
+            logger.error(f"Error updating case acceptance status: {e}")
+
+    def _update_case_denied_status(self, notification_data):
+        """Update case status when lawyer denies assignment"""
+        try:
+            case_id = notification_data.get('caseId')
+            if not case_id:
+                return
+            
+            collection = get_db_collection('case_requests')
+            case = self._find_case(collection, case_id)
+            
+            if case:
+                metadata = notification_data.get('metadata', {})
+                lawyer_id = metadata.get('lawyerId')
+                
+                update_op = {
+                    '$set': {
+                        'status': 'pending_admin_review', # Return to admin pool
+                        'assignedLawyer': None, # Clear current assignment
+                        'assignedLawyerId': None,
+                        'updatedAt': datetime.utcnow().isoformat()
+                    }
+                }
+                
+                # Add to denied list
+                if lawyer_id:
+                    update_op['$addToSet'] = {
+                        'deniedLawyerIds': lawyer_id
+                    }
+                
+                collection.update_one({'_id': case['_id']}, update_op)
+                logger.info(f"Updated case {case_id} status to pending_admin_review (Denied by lawyer {lawyer_id})")
+            else:
+                logger.warning(f"Case {case_id} not found for denial update")
+        except Exception as e:
+            logger.error(f"Error updating case denial status: {e}")
+
+    def _find_case(self, collection, case_id):
+        """Helper to find case by id string or ObjectId"""
+        # from bson.objectid import ObjectId (Moved to top)
+        try:
+            return collection.find_one({'id': case_id})
+        except:
+            pass
+        
+        try:
+            return collection.find_one({'_id': ObjectId(case_id)})
+        except:
+            return None
 
 # Global notification processor instance
 notification_processor = NotificationProcessor()

@@ -188,7 +188,16 @@ export async function POST(req) {
     }
 
     const text = [title, description].filter(Boolean).join(". ");
-    const lawyers = await loadLawyers();
+    // Get excluded lawyers from request
+    const excludedLawyerIds = Array.isArray(body?.excludedLawyerIds) ? body.excludedLawyerIds : [];
+    
+    let lawyers = await loadLawyers();
+    
+    // Filter out excluded lawyers
+    if (excludedLawyerIds.length > 0) {
+      lawyers = lawyers.filter(l => !excludedLawyerIds.includes(l.lawyer_id));
+    }
+    
     const allCategories = [...new Set(lawyers.flatMap((l) => l.case_types))];
 
     let predictions = await classifyCaseWithHF(text, allCategories);

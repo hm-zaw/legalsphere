@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import CasesView from "./CasesView";
 import LegalTeamView from "./LegalTeamView";
+import { withRoleProtection } from "@/hooks/useAuth";
 
 // --- Design Tokens ---
 const THEME = {
@@ -34,7 +35,7 @@ const THEME = {
   gold: "#af9164",
 };
 
-export default function AdminDashboardPage() {
+function AdminDashboardPage() {
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"overview" | "cases" | "legal-team">("overview");
 
@@ -426,3 +427,6 @@ function ActionButton({ icon, label, shortcut }: any) {
     </button>
   )
 }
+
+// Export the protected component
+export default withRoleProtection(AdminDashboardPage, ['admin']);

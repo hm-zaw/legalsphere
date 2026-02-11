@@ -510,15 +510,47 @@ export default function MyCasesView({ onNavigate }) {
                     <div className="flex flex-col gap-1.5">
                         <span className="text-[9px] uppercase font-bold text-slate-400 tracking-[0.15em]">Counsel</span>
                         <div className="flex items-center gap-2">
-                            {item.lawyer?.includes("Pending") ? (
-                                <span className="text-xs text-slate-400 italic">Assigning...</span>
+                            {item.lawyer === "Assigning..." || item.lawyer.includes("Pending") ? (
+                                <span className="text-xs text-slate-400 italic">
+                                    {item.status === 'Lawyer Reviewing' ? 'Reviewing...' : 'Assigning...'}
+                                </span>
                             ) : (
-                                <>
-                                    <div className="w-5 h-5 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-[9px] font-bold text-slate-600">
-                                        {item.lawyer?.charAt(0)}
+                                <div className="group/lawyer relative">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-5 h-5 rounded-full bg-[#1a2238] border border-[#1a2238] flex items-center justify-center text-[9px] font-bold text-[#af9164]">
+                                            {item.lawyer?.charAt(0)}
+                                        </div>
+                                        <span className="text-xs font-bold text-[#1a2238] border-b border-dashed border-[#af9164]/30 cursor-help">
+                                            {item.lawyer}
+                                        </span>
                                     </div>
-                                    <span className="text-xs font-medium text-slate-800 truncate">{item.lawyer}</span>
-                                </>
+                                    
+                                    {/* Lawyer Details Hover Card */}
+                                    <div className="absolute bottom-full left-0 mb-2 w-56 bg-white p-3 rounded-lg shadow-xl border border-[#af9164]/20 opacity-0 invisible group-hover/lawyer:opacity-100 group-hover/lawyer:visible transition-all duration-200 z-50">
+                                        <div className="flex items-center gap-3 mb-2 pb-2 border-b border-zinc-100">
+                                            <div className="w-8 h-8 rounded-full bg-[#1a2238] text-[#af9164] flex items-center justify-center text-xs font-bold">
+                                                 {item.lawyer?.charAt(0)}
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-bold text-[#1a2238]">{item.lawyer}</p>
+                                                <p className="text-[9px] text-[#af9164] uppercase tracking-wider">Lead Counsel</p>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <div className="flex items-center gap-2 text-[10px] text-slate-500">
+                                                <div className="w-4 h-4 rounded bg-slate-50 flex items-center justify-center text-slate-400">@</div>
+                                                <span className="truncate">{item.lawyerDetails?.email || (item.lawyer.split(',')[0].toLowerCase().replace(/\s/g,'.') + '@legalsphere.com')}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2 text-[10px] text-slate-500">
+                                                <div className="w-4 h-4 rounded bg-slate-50 flex items-center justify-center text-slate-400">#</div>
+                                                <span>+1 (555) 012-3456</span>
+                                            </div>
+                                        </div>
+                                        <div className="mt-2 pt-2 border-t border-zinc-50 text-center">
+                                            <span className="text-[9px] text-[#af9164] font-bold uppercase tracking-widest">Available</span>
+                                        </div>
+                                    </div>
+                                </div>
                             )}
                         </div>
                     </div>

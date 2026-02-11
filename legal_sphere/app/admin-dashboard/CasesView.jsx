@@ -127,7 +127,8 @@ export default function CasesView() {
           case: { 
             title: selectedApp?.case?.title || "", 
             description: combined || selectedApp?.case?.title 
-          } 
+          },
+          excludedLawyerIds: selectedApp?.deniedLawyerIds || []
         }),
       });
       
@@ -189,9 +190,47 @@ export default function CasesView() {
     startAILoad();
   }
 
-  function onConfirmAssign() {
-    // Optimistic close
-    setClassifyOpen(false);
+  async function onConfirmAssign() {
+    if (!selectedLawyerId || !selectedAppId) return;
+    
+    const lawyer = aiResult?.topLawyers?.find(l => l.lawyer_id === selectedLawyerId);
+    if (!lawyer) {
+        alert("Selected lawyer details not found.");
+        return;
+    }
+
+    try {
+        const res = await fetch(`/api/admin/case-requests/${selectedAppId}/assign`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                lawyerId: lawyer.lawyer_id,
+                lawyerName: lawyer.lawyer_name
+            })
+        });
+
+        if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.error || "Failed to assign case");
+        }
+
+        // Success: optimistic update or refresh
+        // Remove assigned case from list or update status
+        setApps(prev => prev.map(a => {
+            if (String(a.id || a._id) === selectedAppId) {
+                return { ...a, status: "lawyer_assigned", assignedLawyer: { id: lawyer.lawyer_id, name: lawyer.lawyer_name } };
+            }
+            return a;
+        }));
+        
+        // Close drawer
+        setClassifyOpen(false);
+        alert(`Case assigned to ${lawyer.lawyer_name} successfully.`);
+        
+    } catch (error) {
+        console.error("Assign Error:", error);
+        alert(`Failed to assign: ${error.message}`);
+    }
   }
 
   function handleLawyerSelect(lawyerId) {

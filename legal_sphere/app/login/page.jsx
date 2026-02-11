@@ -48,6 +48,9 @@ export default function LoginPage() {
 
       if (normalizedUserData) {
         localStorage.setItem("userData", JSON.stringify(normalizedUserData));
+        
+        // Set cookie for middleware access
+        document.cookie = `userData=${encodeURIComponent(JSON.stringify(normalizedUserData))}; path=/; max-age=86400; SameSite=Lax`;
       }
 
       // ✅ Extract role safely from normalized user object
@@ -58,10 +61,14 @@ export default function LoginPage() {
       if (token) {
         // always store in userToken (apiClient looks for userToken/adminToken)
         localStorage.setItem("userToken", token);
+        
+        // Set cookie for middleware access
+        document.cookie = `userToken=${token}; path=/; max-age=86400; SameSite=Lax`;
 
         // also store adminToken if admin (optional, kept for compatibility)
         if (userRole === "admin") {
           localStorage.setItem("adminToken", token);
+          document.cookie = `adminToken=${token}; path=/; max-age=86400; SameSite=Lax`;
         }
       }
 

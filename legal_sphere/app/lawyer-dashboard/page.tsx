@@ -28,8 +28,9 @@ import { SettingsView } from "./SettingsView";
 import { TasksView } from "./TasksView";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Notifications } from "@/components/lawyer_dashboard/notifications";
+import { withRoleProtection } from "@/hooks/useAuth";
 
-export default function LawyerDashboardPage() {
+function LawyerDashboardPage() {
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
 
@@ -203,6 +204,8 @@ const LogoIcon = () => (
   </div>
 );
 
+import { IncomingAssignments } from "./IncomingAssignments";
+
 function OverviewContent() {
   return (
     <motion.div 
@@ -211,6 +214,9 @@ function OverviewContent() {
       transition={{ duration: 0.4 }}
       className="space-y-8"
     >
+      {/* Incoming Assignments Section */}
+      <IncomingAssignments />
+
       {/* 1. Firm Intelligence Hero */}
       <FirmIntelligenceHero />
 
@@ -503,3 +509,6 @@ function ClientProfileSnapshot() {
         </div>
     );
 }
+
+// Export the protected component
+export default withRoleProtection(LawyerDashboardPage, ['lawyer']);
