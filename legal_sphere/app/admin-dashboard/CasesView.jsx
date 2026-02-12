@@ -636,7 +636,7 @@ export default function CasesView() {
                                                 <div>
                                                   <h5 className="text-base font-semibold text-amber-100">{l.lawyer_name}</h5>
                                                   <p className="text-sm text-zinc-400">
-                                                    Score: {l.total.toFixed(2)} | Success: {(l.success_rate * 100).toFixed(0)}%
+                                                    Score: {l.total.toFixed(2)} | Success: {(l.success_rate * 100).toFixed(0)}% | {l.years_experience || 'N/A'} years
                                                   </p>
                                                 </div>
                                               </div>
@@ -649,8 +649,12 @@ export default function CasesView() {
                                                 <p className="mt-1 text-zinc-200">{l.case_types.join(", ")}</p>
                                               </div>
                                               <div>
+                                                <span className="text-xs uppercase tracking-[0.1em] text-zinc-500">Case History</span>
+                                                <p className="mt-1 text-zinc-200 text-xs leading-relaxed">{l.case_history_summary || "No case history available"}</p>
+                                              </div>
+                                              <div>
                                                 <span className="text-xs uppercase tracking-[0.1em] text-zinc-500">Experience</span>
-                                                <p className="mt-1 text-zinc-200">{l.years_experience || 'N/A'} years</p>
+                                                <p className="mt-1 text-zinc-200 text-xs">{l.years_experience || 'N/A'} years</p>
                                               </div>
                                             </div>
                                           </div>
