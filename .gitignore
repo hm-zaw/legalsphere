@@ -1,2 +1,10 @@
 # env files (can opt-in for committing if needed)
 .env*
+
+# SSL/TLS certificates and keys (SECURITY: never commit these)
+*.pem
+*.cert
+*.key
+ca.pem
+service.cert
+service.key

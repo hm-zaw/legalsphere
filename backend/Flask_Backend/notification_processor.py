@@ -1,10 +1,12 @@
 import threading
 import time
 import logging
+import json
 from datetime import datetime
 from kafka_config import kafka_service
 from mongodb_client import get_db_collection
 from bson.objectid import ObjectId
+from confluent_kafka import KafkaError
 
 logger = logging.getLogger(__name__)
 
@@ -43,28 +45,34 @@ class NotificationProcessor:
             
             while self.running:
                 try:
-                    # Poll for messages with timeout
-                    message_batch = consumer.poll(timeout_ms=1000)
+                    # Poll for messages with timeout (1.0 second)
+                    msg = consumer.poll(1.0)
                     
-                    if not message_batch:
+                    if msg is None:
                         continue
+                        
+                    if msg.error():
+                        if msg.error().code() == KafkaError._PARTITION_EOF:
+                            # End of partition event
+                            continue
+                        else:
+                            logger.error(f"Consumer error: {msg.error()}")
+                            continue
                     
-                    for topic_partition, messages in message_batch.items():
-                        for message in messages:
-                            try:
-                                # Log metadata about the consumed record
-                                try:
-                                    tp = f"{topic_partition.topic}:{topic_partition.partition}"
-                                    logger.info(f"Consumed notification from {tp} at offset {message.offset}, key={message.key}")
-                                except Exception:
-                                    pass
-                                self._process_notification_message(message)
-                            except Exception as e:
-                                logger.error(f"Error processing notification message: {e}")
-                                continue
+                    try:
+                        # Log metadata about the consumed record
+                        try:
+                            logger.info(f"Consumed notification from {msg.topic()}:{msg.partition()} at offset {msg.offset()}")
+                        except Exception:
+                            pass
+                        
+                        self._process_notification_message(msg)
+                    except Exception as e:
+                        logger.error(f"Error processing notification message: {e}")
+                        continue
                             
                 except Exception as e:
-                    logger.error(f"Error in consumer poll: {e}")
+                    logger.error(f"Error in consumer poll loop: {e}")
                     time.sleep(5)  # Wait before retrying
                     
         except Exception as e:
@@ -75,15 +83,26 @@ class NotificationProcessor:
     def _process_notification_message(self, message):
         """Process a single notification message"""
         try:
-            logger.info(f"Processing notification message: {message.key}")
-            
             # Extract notification data
-            message_data = message.value
+            # confluent-kafka returns bytes, need to deserialize
+            raw_value = message.value()
+            if not raw_value:
+                logger.warning("Received empty message value")
+                return
+
+            message_data = json.loads(raw_value.decode('utf-8'))
             notification_data = message_data.get('data', {})
             
             if not notification_data:
                 logger.error("No notification data found in message")
                 return
+            
+            # Key might be bytes
+            kafka_key = message.key()
+            if isinstance(kafka_key, bytes):
+                kafka_key = kafka_key.decode('utf-8')
+
+            logger.info(f"Processing notification message: {kafka_key}")
             
             # Store in MongoDB notifications collection
             collection = get_db_collection('notifications')
@@ -99,7 +118,7 @@ class NotificationProcessor:
                 'read': False,
                 'createdAt': datetime.utcnow().isoformat(),
                 'kafkaTimestamp': message_data.get('timestamp'),
-                'kafkaKey': message.key
+                'kafkaKey': kafka_key
             }
             
             result = collection.insert_one(notification_doc)
@@ -132,7 +151,6 @@ class NotificationProcessor:
             collection = get_db_collection('case_requests')
             
             # Find the case by either id or _id
-            # from bson.objectid import ObjectId (Moved to top)
             
             # Try to find by string ID first, then by ObjectId
             case = None
@@ -272,7 +290,6 @@ class NotificationProcessor:
 
     def _find_case(self, collection, case_id):
         """Helper to find case by id string or ObjectId"""
-        # from bson.objectid import ObjectId (Moved to top)
         try:
             return collection.find_one({'id': case_id})
         except:

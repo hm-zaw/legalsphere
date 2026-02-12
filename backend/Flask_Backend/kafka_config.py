@@ -1,105 +1,71 @@
 import os
-import ssl
-from kafka import KafkaProducer, KafkaConsumer
-from kafka.errors import KafkaError
 import json
 import logging
+from confluent_kafka import Producer, Consumer, KafkaError, KafkaException
+from dotenv import load_dotenv
+
+# Ensure env vars are loaded
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class KafkaConfig:
-    """Kafka configuration and connection management"""
+    """Kafka configuration and connection management using confluent-kafka"""
     
     def __init__(self):
-        self.bootstrap_servers = os.getenv('KAFKA_BOOTSTRAP_SERVERS', '127.0.0.1:9092')
-        logger.info(f"Kafka bootstrap servers: {self.bootstrap_servers}")
+        self.bootstrap_servers = os.getenv('KAFKA_BOOTSTRAP_SERVERS', '127.0.0.1:9092').strip('"')
         self.case_notifications_topic = os.getenv('KAFKA_CASE_NOTIFICATIONS_TOPIC', 'case-notifications')
         self.group_id = os.getenv('KAFKA_CONSUMER_GROUP_ID', 'notification-processors')
         
-        # Cloud authentication configuration
-        self.security_protocol = os.getenv('KAFKA_SECURITY_PROTOCOL', 'PLAINTEXT')
-        self.sasl_mechanism = os.getenv('KAFKA_SASL_MECHANISM', 'PLAIN')
-        self.sasl_username = os.getenv('KAFKA_USERNAME')
-        self.sasl_password = os.getenv('KAFKA_PASSWORD')
+        # CHANGED: Default to 'SSL' for Aiven mTLS
+        self.security_protocol = os.getenv('KAFKA_SECURITY_PROTOCOL', 'SSL')
         
-        # Log authentication mode (without credentials)
-        if self.security_protocol != 'PLAINTEXT':
-            logger.info(f"Kafka security protocol: {self.security_protocol}, SASL mechanism: {self.sasl_mechanism}")
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        # Path formatting for Windows/librdkafka
+        self.ca_path = os.path.join(current_dir, 'ca.pem').replace('\\', '/')
+        self.cert_path = os.path.join(current_dir, 'service.cert').replace('\\', '/')
+        self.key_path = os.path.join(current_dir, 'service.key').replace('\\', '/')
+
+    def get_common_config(self):
+        conf = {'bootstrap.servers': self.bootstrap_servers}
         
+        if self.security_protocol == 'SSL':
+            conf.update({
+                'security.protocol': 'SSL',
+                'ssl.ca.location': self.ca_path,
+                'ssl.certificate.location': self.cert_path,
+                'ssl.key.location': self.key_path,
+                # Required for Aiven SNI routing
+                'ssl.endpoint.identification.algorithm': 'https',
+            })
+        elif self.security_protocol == 'SASL_SSL':
+            conf.update({
+                'security.protocol': 'SASL_SSL',
+                'sasl.mechanism': os.getenv('KAFKA_SASL_MECHANISM', 'SCRAM-SHA-256'),
+                'sasl.username': os.getenv('KAFKA_USERNAME'),
+                'sasl.password': os.getenv('KAFKA_PASSWORD'),
+                'ssl.ca.location': self.ca_path,
+                'ssl.endpoint.identification.algorithm': 'https',
+            })
+        
+        return conf
+
     def get_producer_config(self):
-        """Get Kafka producer configuration"""
-        config = {
-            'bootstrap_servers': self.bootstrap_servers,
-            'value_serializer': lambda v: json.dumps(v).encode('utf-8'),
-            'key_serializer': lambda k: k.encode('utf-8') if k else None,
-            'acks': 'all',  # Wait for all replicas to acknowledge
-            'retries': 3,
-            'retry_backoff_ms': 100,
-            'batch_size': 16384,
-            'linger_ms': 10,
-            'buffer_memory': 33554432,
-        }
-        
-        # Add security configuration for cloud Kafka
-        if self.security_protocol != 'PLAINTEXT':
-            config['security_protocol'] = self.security_protocol
-            config['sasl_mechanism'] = self.sasl_mechanism
-            config['sasl_plain_username'] = self.sasl_username
-            config['sasl_plain_password'] = self.sasl_password
-            
-            # Add SSL configuration for SASL_SSL
-            if self.security_protocol == 'SASL_SSL':
-                config['ssl_check_hostname'] = False  # Disable hostname check for Aiven
-                config['ssl_cafile'] = None  # Use system CA certificates
-                config['ssl_certfile'] = None
-                config['ssl_keyfile'] = None
-                # Create unverified SSL context for development
-                ssl_context = ssl.create_default_context()
-                ssl_context.check_hostname = False
-                ssl_context.verify_mode = ssl.CERT_NONE
-                config['ssl_context'] = ssl_context
-        
-        return config
+        conf = self.get_common_config()
+        conf.update({'client.id': 'flask-producer', 'acks': 'all'})
+        return conf
     
     def get_consumer_config(self):
         """Get Kafka consumer configuration"""
-        config = {
-            'bootstrap_servers': self.bootstrap_servers,
-            'group_id': self.group_id,
-            'value_deserializer': lambda m: json.loads(m.decode('utf-8')),
-            'key_deserializer': lambda k: k.decode('utf-8') if k else None,
-            'auto_offset_reset': 'earliest',
-            'enable_auto_commit': True,
-            'auto_commit_interval_ms': 1000,
-            'session_timeout_ms': 10000,
-            'heartbeat_interval_ms': 3000,
-            'request_timeout_ms': 30000,
-            'reconnect_backoff_ms': 1000,
-            'retry_backoff_ms': 100,
-        }
-        
-        # Add security configuration for cloud Kafka
-        if self.security_protocol != 'PLAINTEXT':
-            config['security_protocol'] = self.security_protocol
-            config['sasl_mechanism'] = self.sasl_mechanism
-            config['sasl_plain_username'] = self.sasl_username
-            config['sasl_plain_password'] = self.sasl_password
-            
-            # Add SSL configuration for SASL_SSL
-            if self.security_protocol == 'SASL_SSL':
-                config['ssl_check_hostname'] = False  # Disable hostname check for Aiven
-                config['ssl_cafile'] = None  # Use system CA certificates
-                config['ssl_certfile'] = None
-                config['ssl_keyfile'] = None
-                # Create unverified SSL context for development
-                ssl_context = ssl.create_default_context()
-                ssl_context.check_hostname = False
-                ssl_context.verify_mode = ssl.CERT_NONE
-                config['ssl_context'] = ssl_context
-        
-        return config
+        conf = self.get_common_config()
+        conf.update({
+            'group.id': self.group_id,
+            'auto.offset.reset': 'earliest',
+            'enable.auto.commit': True
+        })
+        return conf
 
 class KafkaService:
     """Kafka service for producing and consuming messages"""
@@ -107,80 +73,85 @@ class KafkaService:
     def __init__(self):
         self.config = KafkaConfig()
         self.producer = None
-        self.consumer = None
+        # Consumer is typically created on demand or in a separate thread/process
         
     def get_producer(self):
-        """Get or create Kafka producer"""
         if self.producer is None:
             try:
                 producer_config = self.config.get_producer_config()
-                self.producer = KafkaProducer(**producer_config)
+                self.producer = Producer(producer_config)
                 logger.info("Kafka producer created successfully")
             except Exception as e:
                 logger.error(f"Failed to create Kafka producer: {e}")
-                raise
         return self.producer
     
     def get_consumer(self, topics=None):
-        """Get or create Kafka consumer"""
-        if self.consumer is None:
-            try:
-                consumer_config = self.config.get_consumer_config()
-                self.consumer = KafkaConsumer(**consumer_config)
-                if topics:
-                    if isinstance(topics, str):
-                        topics = [topics]
-                    self.consumer.subscribe(topics)
+        """
+        Create and return a new Kafka consumer using confluent-kafka.
+        Note: The caller is responsible for polling the consumer.
+        """
+        try:
+            consumer_config = self.config.get_consumer_config()
+            consumer = Consumer(consumer_config)
+            
+            if topics:
+                if isinstance(topics, str):
+                    topics = [topics]
+                consumer.subscribe(topics)
                 logger.info(f"Kafka consumer created and subscribed to topics: {topics}")
-            except Exception as e:
-                logger.error(f"Failed to create Kafka consumer: {e}")
-                raise
-        return self.consumer
-    
+            
+            return consumer
+        except Exception as e:
+            logger.error(f"Failed to create Kafka consumer: {e}")
+            raise
+
     def publish_notification(self, notification_data):
-        """Publish notification to Kafka topic"""
         try:
             producer = self.get_producer()
-            
+            if not producer:
+                return False
+
             message = {
                 'event_type': 'case_notification',
                 'timestamp': notification_data.get('timestamp'),
                 'data': notification_data
             }
             
-            # Use user ID as key for partitioning
             user_id = notification_data.get('user_id', 'unknown')
             
-            future = producer.send(
+            # confluent-kafka uses callback for delivery reports
+            def delivery_report(err, msg):
+                if err is not None:
+                    logger.error(f"Message delivery failed: {err}")
+                else:
+                    logger.debug(f"Message delivered to {msg.topic()} [{msg.partition()}]")
+
+            # Produce message
+            # Note: value and key must be bytes (or serialized)
+            json_value = json.dumps(message).encode('utf-8')
+            key_value = str(user_id).encode('utf-8') if user_id else None
+
+            producer.produce(
                 topic=self.config.case_notifications_topic,
-                key=user_id,
-                value=message
+                key=key_value,
+                value=json_value,
+                callback=delivery_report
             )
             
-            record_metadata = future.get(timeout=10)
-            
-            logger.info(f"Notification published to Kafka: "
-                       f"Topic: {record_metadata.topic}, "
-                       f"Partition: {record_metadata.partition}, "
-                       f"Offset: {record_metadata.offset}")
-            
+            # Flush to ensure delivery (sync) - typically unnecessary for high throughput but good for critical single messages
+            producer.flush(timeout=5)
             return True
             
-        except KafkaError as e:
-            logger.error(f"Failed to publish notification: {e}")
-            return False
         except Exception as e:
-            logger.error(f"Unexpected error publishing notification: {e}")
+            logger.error(f"Failed to publish notification: {e}")
             return False
     
     def close(self):
-        """Close Kafka connections"""
         if self.producer:
-            self.producer.close()
-            logger.info("Kafka producer closed")
-        if self.consumer:
-            self.consumer.close()
-            logger.info("Kafka consumer closed")
+            self.producer.flush()
+            # Producer doesn't have close() in confluent-kafka, it handles cleanup
+            pass
+        # Consumer close happens in the consumer loop code usually
 
 # Global Kafka service instance
 kafka_service = KafkaService()
