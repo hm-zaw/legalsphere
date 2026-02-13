@@ -76,6 +76,12 @@ export default function ApplyNewView({ onNavigate }: { onNavigate?: (view: strin
     client: {
       fullName: "",
       idNumber: "",
+      nrc: {
+        state: "",
+        township: "",
+        citizen: "",
+        number: ""
+      },
       email: "",
       phone: "",
       address: "",
@@ -99,6 +105,41 @@ export default function ApplyNewView({ onNavigate }: { onNavigate?: (view: strin
       privacy: false
     }
   });
+  // NRC Township data
+  const nrcTownships = {
+    "1": ["AhGaYa", "BaMaNa", "DaPhaYa", "HaPaNa", "KhaPhaNa", "KaMaNa", "KaMaTa", "KaPaTa", "KhaLaPha", "LaGaNa", "MaKaTa", "MaKhaBa", "MaLaNa", "MaNyaNa", "MaSaNa", "PaNaDa", "PaWaNa", "SaDaNa", "YaBaYa"],
+    "2": ["BaLaKha", "DaMaSa", "LaKaNa", "MaSaNa", "PhaSaNa", "PhaYaSa", "YaTaNa", "YaThaNa"],
+    "3": ["BaAhNa", "BaGaLa", "BaThaSa", "KaDaNa", "KaKaYa", "KaMaMa", "KaSaKa", "LaBaNa", "LaThaNa", "MaWaTa", "PhaAhNa", "PhaPaNa", "SaKaLa", "ThaMaKa", "ThaTaNa", "ThaTaKa", "YaNaTha", "YaNaYa", "YaPaWa"],
+    "4": ["BaMaNa", "HaKhaNa", "HtaTaLa", "KaPaLa", "MaTaNa", "MaTaPa", "PaLaWa", "PhaLaNa", "TaTaNa", "TaZaNa"],
+    "5": ["AhTaNa", "AhYaTa", "BaMaNa", "BaTaLa", "DaMaYa", "DaPaYa", "HaMaLa", "HtaKhaNa", "KaBaLa", "KaLaHta", "KaLaNa", "KaLaTa", "KaLaWa", "KaNaNa", "KaSaNa", "KaThaNa", "KhaOuNa", "KhaOuTa", "KhaTaNa", "LaThaKa", "MaGaLa", "MaKaNa", "MaLaNa", "MaMaNa", "MaYaNa", "NaDaSa", "NaYaNa", "NgaZaNa", "PaLaNa", "PaLanBa", "PaThaKa", "PhaPaNa", "SaKaNa", "SaLaKa", "TaKaMa", "TaMaNa", "TaSaNa", "ThaSaNa", "WaLaNa", "WaThaNa", "YaBaNa", "YaMaKa", "YaMaPa", "YaOuNa", "YaSaKa", "YaThaKa"],
+    "6": ["BaPaNa", "HtaWaNa", "KaThaNa", "KaSaNa", "LaLaNa", "MaMaNa", "MaAhYa", "NgaYaKa", "PaLaNa", "TaNaTha", "TaThaYa", "ThaYaKha", "YaPhaNa", "DaDaMa", "KaMaLa", "KaNaLa", "LaBaNa", "LaThaNa", "MaKaNa", "MaLaTha", "MaMaNa", "PaMaDa", "PaNaLa", "TaMaKa", "ThaNaKa", "KhaMaKa"],
+    "7": ["AhPhaNa", "AhTaNa", "DaOuNa", "HtaTaPa", "KaTaTa", "KaPaKa", "KaKaNa", "KaTaKha", "MaDaNa", "MaLaNa", "MaNyaNa", "NaTaLa", "NyaLaPa", "PaNaKa", "PaKhaNa", "PaTaNa", "PaKhaTa", "PaTaTa", "PhaMaNa", "PaMaNa", "PaTaSa", "YaKaNa", "YaTaNa", "TaNgaNa", "ThaNaPa", "ThaKaNa", "ThaWaTa", "ThaSaNa", "WaMaNa", "YaTaYa", "ZaKaNa", "BaLaKa", "DaNaSa", "KaLaMa", "KaNaDa", "KaRaBa", "KaTaLa", "LaBaNa", "LaThaNa", "NaKaMa", "NaRaSa", "PaRaDa", "SaLaNa", "ThaNaMa", "YaKaLa"],
+    "8": ["AhLaNa", "KhaMaNa", "GaGaNa", "SaPhaNa", "SaPaWa", "HtaLaNa", "KaMaNa", "MaKaNa", "MaBaNa", "MaLaNa", "MaTaNa", "MaMaNa", "MaHtaNa", "MaThaNa", "NaMaNa", "NgaPhaNa", "PaKhaKa", "PaMaNa", "PaPhaNa", "SaLaNa", "SaTaYa", "SaKaNa", "TaTaKa", "ThaYaNa", "SaMaNa", "YaNakha", "YaSaKa", "AyeYaKa", "BaNaMa", "KaDaNa", "KaLaNa", "KaRaBa", "LaBaNa", "LaYaKa", "MaMaLa", "NaKaMa", "NaRaSa", "PaRaDa", "SaKaLa", "TaLaMa", "YaKaLa", "YaMaTa"],
+    "9": ["DaKhaTha", "LaWaNa", "OuTaTha", "PaBaTha", "PaMaNa", "TaKaNa", "ZaBaTha", "ZaYaTha", "AhMaYa", "AhMaZa", "KhaAhZa", "KhaMaSa", "KaPaTa", "KaSaNa", "MaLaNa", "MaHaMa", "MaNaMa", "MaNaTa", "MaYaMa", "MaYaTa", "MaTaYa", "MaMaNa", "MaHtaLa", "MaKaNa", "MaKhaNa", "MaThaNa", "NaHtaKa", "NgaTaYa", "NyaOuNa", "PaLaNa", "PaThaKa", "PaBaNa", "PaKaKha", "PaOuLa", "PaMaNa", "SaKaTa", "SaKaNa", "TaKaNa", "TaTaOu", "TaThaNa", "ThaPaKa", "ThaSaNa", "WaTaNa", "YaMaTha", "BaDaNa", "KaLaNa", "KaRaBa", "LaMaNa", "MaKaNa", "NaKaMa", "NaRaSa", "PaMaNa", "RaDaNa", "SaBaNa", "TaKaLa", "ThaKaLa", "YaKaTa"],
+    "10": ["BaLaNa", "KhaSaNa", "KaMaYa", "KaHtaNa", "MaLaMa", "MaDaNa", "PaMaNa", "ThaPhaYa", "ThaHtaNa", "KhaZaNa", "LaMaNa", "YaMaNa", "BaRaDa", "KaLaNa", "KaRaBa", "LaMaNa", "MaKaNa", "NaKaMa", "NaRaSa", "PaMaNa", "RaDaNa", "SaBaNa", "TaKaLa", "ThaKaLa", "YaKaTa"],
+    "11": ["AaMaNa", "BaThaTa", "GaMaNa", "KaPhaNa", "KaTaNa", "MaAhNa", "MaTaNa", "MaPaNa", "MaOuNa", "MaPaTa", "PaTaNa", "PaNaKa", "SaTaNa", "TaKaNa", "ThaTaNa", "YaBaNa", "YaThaTa", "BaLaNa", "DaNaMa", "KaBaNa", "KaRaBa", "LaBaNa", "LaYaKa", "MaMaNa", "NaKaMa", "NaRaSa", "PaBaNa", "SaKaNa", "TaLaMa", "YaKaLa"],
+    "12": ["AaLaNa", "AhSaNa", "BaHaNa", "BaTaHta", "DaGaMa", "DaGaNa", "DaGaTa", "DaGaYa", "DaLaNa", "DaPaNa", "DaSaKa", "HtaTaPa", "KaKaKa", "KaKhaKa", "KaMaTa", "KaMaNa", "KaMaYa", "KaTaTa", "KaTaNa", "KhaYaNa", "LaKaNa", "LaMaNa", "LaMaTa", "LaThaNa", "LaThaYa", "MaBaNa", "MaGaDa", "MaGaTa", "MaYaKa", "OuKaMa", "OuKaTa", "PaBaTa", "PaZaDa", "SaKaKha", "SaKaNa", "SaKhaNa", "TaKaNa", "TaMaNa", "TaTaHta", "TaTaNa", "ThaKaTa", "ThaKhaNa", "ThaGaKa", "ThaLaNa", "YaKaNa", "YaPaKa", "YaPaTha"],
+    "13": ["HaPaTa", "HaPaNa", "KaLaNa", "KaLaTa", "KaHaNa", "KaThaNa", "KaTaTa", "KaTaNa", "KaMaNa", "KaKhaNa", "LaYaNa", "LaKaNa", "LaKhaTa", "LaKhaNa", "LaLaNa", "MaBaNa", "MaKaNa", "MaKhaNa", "MaPHaNa", "MaPaTa", "MaSaNa", "MaYaNa", "MaYaTa", "MaTaTa", "MaMaTa", "MaNaNa", "MaKaNa", "MaSaTa", "NaMaTa", "NaKhaNa", "NaSaNa", "NaPaNa", "NaKhaTa", "NyaYaNa", "PhaKhaNa", "PaLaNa", "PaTaYa", "SaSaNa", "YaNyaNa", "TaYaNa", "TaMaNya", "TaKhaLa", "TaLaNa", "TaKaNa", "ThaNaNa", "ThaPaNa", "YaNgaNa", "YaSaNa", "AhPaNa", "AhTaNa", "AhTaYa", "HaHaNa", "HaMaNa", "KaLaHta", "KaLaNa", "MaHtaNa", "MaKhaTa", "MaNgaNa", "MaPhaHta", "NaTaYa", "PaPaKa", "PaWaNa", "TaTaNa"],
+    "14": ["BaKaLa", "DaNaPha", "DaDaYa", "PaThaYa", "AhMaNa", "HaKaKa", "HaThaTa", "AhGaPa", "KaNaNa", "KaLaNa", "KaKhaNa", "KaKaNa", "KaPaNa", "LaPaTa", "LaMaNa", "MaAhPa", "MaMaKa", "MaAhaNa", "MaMaNa", "NgaPaTa", "NgaThaKha", "NyaTaNa", "PaTaNa", "PhaPaNa", "ThaPaNa", "WaKhaMa", "PaThaNa", "YaKaNa", "ZaLaNa", "KaKaHta", "AhMaTa", "NgaYaKa", "PaSaLa", "YaThaYa"]
+  };
+
+  const citizenTypes = [
+    { value: "(နိုင်)", label: "နိုင်" },
+    { value: "(ဧည့်)", label: "ဧည့်" },
+    { value: "(ပြု)", label: "ပြု" },
+    { value: "(သာသနာ)", label: "သာသနာ" },
+    { value: "(ယာယီ)", label: "ယာယီ" }
+  ];
+
+  // NRC Assembly function
+  const assembleNRC = () => {
+    const { state, township, citizen, number } = form.client.nrc;
+    if (state && township && citizen && number) {
+      return `${state}/${township}${citizen}${number}`;
+    }
+    return "";
+  };
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const next = () => {
@@ -122,14 +163,68 @@ export default function ApplyNewView({ onNavigate }: { onNavigate?: (view: strin
     const e: Record<string, string> = {};
     if (stepIndex === 0) {
       if (!form.client.fullName.trim()) e.fullName = "Full Name is required.";
-      if (!form.client.idNumber.trim()) e.idNumber = "National ID / Passport Number is required.";
+      
+      // NRC Validation
+      if (!form.client.nrc.state) e.nrcState = "State/Region is required.";
+      if (!form.client.nrc.township) e.nrcTownship = "Township is required.";
+      if (!form.client.nrc.citizen) e.nrcCitizen = "Citizen type is required.";
+      if (!form.client.nrc.number.trim()) {
+        e.nrcNumber = "NRC number is required.";
+      } else if (!/^[0-9]{6}$/.test(form.client.nrc.number)) {
+        e.nrcNumber = "NRC number must be exactly 6 digits.";
+      }
+      
       if (!form.client.email.trim()) e.email = "Email is required.";
-      if (!form.client.phone.trim()) e.phone = "Phone Number is required.";
+      if (!form.client.phone.trim()) {
+        e.phone = "Phone Number is required.";
+      } else {
+        const phoneDigits = form.client.phone.replace(/\D/g, '');
+        if (phoneDigits.length < 7) {
+          e.phone = "Phone number must be at least 7 digits.";
+        } else if (phoneDigits.length > 10) {
+          e.phone = "Phone number cannot exceed 10 digits.";
+        }
+      }
+      if (form.client.dob) {
+        const dob = new Date(form.client.dob);
+        const today = new Date();
+        const age = today.getFullYear() - dob.getFullYear();
+        const monthDiff = today.getMonth() - dob.getMonth();
+        const actualAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate()) ? age - 1 : age;
+        
+        if (actualAge < 18) {
+          e.dob = "Must be at least 18 years old to use our legal services.";
+        } else if (actualAge > 100) {
+          e.dob = "Please enter a valid date of birth.";
+        }
+      }
     }
     if (stepIndex === 1) {
       if (!form.case.title.trim()) e.title = "Case Title is required.";
       if (!form.case.category) e.category = "Please select a case category.";
       if (!form.case.description.trim()) e.description = "Case Description is required.";
+      if (form.case.incidentDate) {
+        const incidentDate = new Date(form.case.incidentDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        incidentDate.setHours(0, 0, 0, 0);
+        
+        if (incidentDate > today) {
+          e.incidentDate = "Incident date cannot be in the future.";
+        }
+      }
+    }
+    if (stepIndex === 3) {
+      if (form.consultation.date) {
+        const consultationDate = new Date(form.consultation.date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        consultationDate.setHours(0, 0, 0, 0);
+        
+        if (consultationDate <= today) {
+          e.consultationDate = "Consultation date must be in the future.";
+        }
+      }
     }
     if (stepIndex === 4) {
       if (!form.acknowledgements.accurate) e.accurate = "You must confirm the information is accurate.";
@@ -228,7 +323,13 @@ export default function ApplyNewView({ onNavigate }: { onNavigate?: (view: strin
       const payload = {
           client: {
               ...form.client,
-              id: userData?.id || userData?._id // Add user ID to link case
+              id: userData?.id || userData?._id, // Add user ID to link case
+              idNumber: assembleNRC(), // Use assembled NRC as idNumber
+              // Keep individual NRC parts for backend storage
+              nrcState: form.client.nrc.state,
+              nrcTownship: form.client.nrc.township,
+              nrcCitizen: form.client.nrc.citizen,
+              nrcNumber: form.client.nrc.number
           },
           clientId: userData?.id || userData?._id || userData?.email, // Helper for direct lookup
           case: form.case,
@@ -352,17 +453,6 @@ export default function ApplyNewView({ onNavigate }: { onNavigate?: (view: strin
                         )}
                       </div>
                       <div className="group relative">
-                        <label className="text-[10px] font-bold uppercase text-slate-500 group-focus-within:text-amber-700 transition-colors">ID / Passport Number</label>
-                        <input 
-                          className="w-full border-b border-slate-300 py-2 focus:border-slate-900 outline-none transition-colors bg-transparent font-mono"
-                          value={form.client.idNumber}
-                          onChange={(e) => setForm({...form, client: {...form.client, idNumber: e.target.value}})}
-                        />
-                        {attempted && errors.idNumber && (
-                          <p className="text-xs text-red-600 mt-1">{errors.idNumber}</p>
-                        )}
-                      </div>
-                      <div className="group relative">
                         <label className="text-[10px] font-bold uppercase text-slate-500 group-focus-within:text-amber-700 transition-colors">Email Address</label>
                         <input 
                           type="email"
@@ -376,16 +466,129 @@ export default function ApplyNewView({ onNavigate }: { onNavigate?: (view: strin
                         )}
                       </div>
                       <div className="group relative">
-                        <label className="text-[10px] font-bold uppercase text-slate-500 group-focus-within:text-amber-700 transition-colors">Phone Number</label>
+                        <label className="text-[10px] font-bold uppercase text-slate-500 group-focus-within:text-amber-700 transition-colors">Date of Birth</label>
                         <input 
+                          type="date"
                           className="w-full border-b border-slate-300 py-2 focus:border-slate-900 outline-none transition-colors bg-transparent"
-                          placeholder="e.g. +1-555-0123"
-                          value={form.client.phone}
-                          onChange={(e) => setForm({...form, client: {...form.client, phone: e.target.value}})}
+                          value={form.client.dob}
+                          onChange={(e) => setForm({...form, client: {...form.client, dob: e.target.value}})}
+                          max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split('T')[0]}
+                          min={new Date(new Date().setFullYear(new Date().getFullYear() - 100)).toISOString().split('T')[0]}
                         />
+                        {attempted && errors.dob && (
+                          <p className="text-xs text-red-600 mt-1">{errors.dob}</p>
+                        )}
+                      </div>
+                      <div className="group relative">
+                        <label className="text-[10px] font-bold uppercase text-slate-500 group-focus-within:text-amber-700 transition-colors">Phone Number</label>
+                        <div className="relative">
+                          <span className="absolute left-0 top-2 text-slate-600 text-sm">+95</span>
+                          <input 
+                            className="w-full border-b border-slate-300 py-2 pl-10 focus:border-slate-900 outline-none transition-colors bg-transparent text-sm"
+                            placeholder="9xxxxxxxxx"
+                            value={form.client.phone}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                              setForm({...form, client: {...form.client, phone: value}});
+                            }}
+                          />
+                        </div>
                         {attempted && errors.phone && (
                           <p className="text-xs text-red-600 mt-1">{errors.phone}</p>
                         )}
+                      </div>
+                      <div className="group relative sm:col-span-2">
+                        <label className="text-[10px] font-bold uppercase text-slate-500 group-focus-within:text-amber-700 transition-colors">National Registration Card (NRC)</label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 mt-2">
+                          {/* State/Region Dropdown */}
+                          <select 
+                            className="w-full border-b border-slate-300 py-2 focus:border-slate-900 outline-none transition-colors bg-transparent text-sm"
+                            value={form.client.nrc.state}
+                            onChange={(e) => setForm({
+                              ...form, 
+                              client: {
+                                ...form.client, 
+                                nrc: { ...form.client.nrc, state: e.target.value, township: "" }
+                              }
+                            })}
+                          >
+                            <option value="">State</option>
+                            {[...Array(14)].map((_, i) => (
+                              <option key={i + 1} value={i + 1}>{i + 1}</option>
+                            ))}
+                          </select>
+                          
+                          {/* Township Dropdown (dynamically populated) */}
+                          <select 
+                            className="w-full border-b border-slate-300 py-2 focus:border-slate-900 outline-none transition-colors bg-transparent text-sm"
+                            value={form.client.nrc.township}
+                            onChange={(e) => setForm({
+                              ...form, 
+                              client: {
+                                ...form.client, 
+                                nrc: { ...form.client.nrc, township: e.target.value }
+                              }
+                            })}
+                            disabled={!form.client.nrc.state}
+                          >
+                            <option value="">Township</option>
+                            {form.client.nrc.state && nrcTownships[form.client.nrc.state as keyof typeof nrcTownships]?.map((township) => (
+                              <option key={township} value={township}>{township}</option>
+                            ))}
+                          </select>
+                          
+                          {/* Citizen Type Dropdown */}
+                          <select 
+                            className="w-full border-b border-slate-300 py-2 focus:border-slate-900 outline-none transition-colors bg-transparent text-sm"
+                            value={form.client.nrc.citizen}
+                            onChange={(e) => setForm({
+                              ...form, 
+                              client: {
+                                ...form.client, 
+                                nrc: { ...form.client.nrc, citizen: e.target.value }
+                              }
+                            })}
+                          >
+                            <option value="">Citizen</option>
+                            {citizenTypes.map((type) => (
+                              <option key={type.value} value={type.value}>{type.label}</option>
+                            ))}
+                          </select>
+                          
+                          {/* 6-digit Number Input */}
+                          <input 
+                            type="text"
+                            placeholder="NRC No"
+                            className="w-full border-b border-slate-300 py-2 focus:border-slate-900 outline-none transition-colors bg-transparent font-mono text-sm"
+                            value={form.client.nrc.number}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                              setForm({
+                                ...form, 
+                                client: {
+                                  ...form.client, 
+                                  nrc: { ...form.client.nrc, number: value }
+                                }
+                              });
+                            }}
+                          />
+                        </div>
+                        
+                        {/* NRC Error Display */}
+                        <div className="mt-1 space-y-1">
+                          {attempted && errors.nrcState && (
+                            <p className="text-xs text-red-600">{errors.nrcState}</p>
+                          )}
+                          {attempted && errors.nrcTownship && (
+                            <p className="text-xs text-red-600">{errors.nrcTownship}</p>
+                          )}
+                          {attempted && errors.nrcCitizen && (
+                            <p className="text-xs text-red-600">{errors.nrcCitizen}</p>
+                          )}
+                          {attempted && errors.nrcNumber && (
+                            <p className="text-xs text-red-600">{errors.nrcNumber}</p>
+                          )}
+                        </div>
                       </div>
                       <div className="group relative sm:col-span-2">
                         <label className="text-[10px] font-bold uppercase text-slate-500 group-focus-within:text-amber-700 transition-colors">Residential Address</label>
@@ -395,15 +598,6 @@ export default function ApplyNewView({ onNavigate }: { onNavigate?: (view: strin
                           placeholder="Full residential address..."
                           value={form.client.address}
                           onChange={(e) => setForm({...form, client: {...form.client, address: e.target.value}})}
-                        />
-                      </div>
-                      <div className="group relative">
-                        <label className="text-[10px] font-bold uppercase text-slate-500 group-focus-within:text-amber-700 transition-colors">Date of Birth</label>
-                        <input 
-                          type="date"
-                          className="w-full border-b border-slate-300 py-2 focus:border-slate-900 outline-none transition-colors bg-transparent"
-                          value={form.client.dob}
-                          onChange={(e) => setForm({...form, client: {...form.client, dob: e.target.value}})}
                         />
                       </div>
                     </div>
@@ -456,7 +650,11 @@ export default function ApplyNewView({ onNavigate }: { onNavigate?: (view: strin
                           className="w-full border-b border-slate-300 py-2 focus:border-slate-900 outline-none transition-colors bg-transparent"
                           value={form.case.incidentDate}
                           onChange={(e) => setForm({...form, case: {...form.case, incidentDate: e.target.value}})}
+                          max={new Date().toISOString().split('T')[0]}
                         />
+                        {attempted && errors.incidentDate && (
+                          <p className="text-xs text-red-600 mt-1">{errors.incidentDate}</p>
+                        )}
                       </div>
                       <div className="group relative sm:col-span-2">
                         <label className="text-[10px] font-bold uppercase text-slate-500 group-focus-within:text-amber-700 transition-colors">Case Description</label>
@@ -516,7 +714,9 @@ export default function ApplyNewView({ onNavigate }: { onNavigate?: (view: strin
                       }}
                     >
                       <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 group-hover:bg-amber-100 transition-colors">
-                        <span className="text-xl">⚓</span>
+                        <svg className="h-6 w-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
                       </div>
                       <p className="text-sm font-semibold text-slate-900">Secure File Depository</p>
                       <p className="text-xs text-slate-500 mt-1">Files are encrypted upon submission. PDF, DOCX, or Images accepted.</p>
@@ -588,7 +788,11 @@ export default function ApplyNewView({ onNavigate }: { onNavigate?: (view: strin
                           className="w-full border-b border-slate-300 py-2 focus:border-slate-900 outline-none transition-colors bg-transparent"
                           value={form.consultation.date}
                           onChange={(e) => setForm({...form, consultation: {...form.consultation, date: e.target.value}})}
+                          min={new Date(new Date().setDate(new Date().getDate() + 1)).toISOString().split('T')[0]}
                         />
+                        {attempted && errors.consultationDate && (
+                          <p className="text-xs text-red-600 mt-1">{errors.consultationDate}</p>
+                        )}
                       </div>
                       <div className="group relative">
                         <label className="text-[10px] font-bold uppercase text-slate-500 group-focus-within:text-amber-700 transition-colors">Preferred Time Slot</label>
@@ -629,7 +833,7 @@ export default function ApplyNewView({ onNavigate }: { onNavigate?: (view: strin
                         <h3 className="font-semibold text-slate-900 mb-3">Client Information</h3>
                         <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
                           <div><span className="text-slate-500">Name:</span> {form.client.fullName || "—"}</div>
-                          <div><span className="text-slate-500">ID:</span> {form.client.idNumber || "—"}</div>
+                          <div><span className="text-slate-500">NRC:</span> {assembleNRC() || "—"}</div>
                           <div><span className="text-slate-500">Email:</span> {form.client.email || "—"}</div>
                           <div><span className="text-slate-500">Phone:</span> {form.client.phone || "—"}</div>
                           <div className="sm:col-span-2"><span className="text-slate-500">Address:</span> {form.client.address || "—"}</div>

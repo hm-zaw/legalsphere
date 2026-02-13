@@ -147,8 +147,8 @@ function AdminDashboardPage() {
         </header>
 
         {/* Dense Content Area */}
-        <main className="flex-1 overflow-y-auto p-5 scroll-smooth">
-          <div className="mx-auto max-w-[1600px]">
+        <main className="flex-1 overflow-y-auto p-0 scroll-smooth">
+          <div className="w-full">
             {activeTab === "overview" && <OverviewContent />}
             {activeTab === "cases" && <div className="animate-in fade-in duration-300"><CasesView /></div>}
             {activeTab === "legal-team" && <div className="animate-in fade-in duration-300"><LegalTeamView /></div>}
