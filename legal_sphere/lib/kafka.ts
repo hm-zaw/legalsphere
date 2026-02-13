@@ -39,10 +39,38 @@ function getSecurityConfig() {
     return undefined;
   }
 
-  // Return security config for cloud Kafka
+  // Return security config for cloud Kafka (Aiven)
   const config: any = {
     ssl: securityProtocol.includes("SSL"),
   };
+
+  // Add SSL certificates for Aiven
+  if (securityProtocol.includes("SSL")) {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      
+      // Read certificate files
+      const caPath = process.env.KAFKA_SSL_CA_PATH || "./ca.pem";
+      const certPath = process.env.KAFKA_SSL_CERT_PATH || "./service.cert";
+      const keyPath = process.env.KAFKA_SSL_KEY_PATH || "./service.key";
+      
+      const ca = fs.readFileSync(path.resolve(caPath));
+      const cert = fs.readFileSync(path.resolve(certPath));
+      const key = fs.readFileSync(path.resolve(keyPath));
+      
+      config.ssl = {
+        ca,
+        cert,
+        key,
+        // Important for Aiven: reject unauthorized certificates
+        rejectUnauthorized: false,
+      };
+    } catch (error) {
+      console.error("Failed to load SSL certificates:", error);
+      throw new Error("SSL certificates not found or invalid");
+    }
+  }
 
   if (username && password) {
     config.sasl = {
@@ -93,7 +121,7 @@ export async function publishCaseNotification(message: CaseNotificationMessage, 
       topic,
       messages: [
         {
-          key: key || message.data.clientId,
+          key: key || String(message.data.clientId), // Convert to string
           value: payload,
         },
       ],

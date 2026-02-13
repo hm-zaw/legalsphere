@@ -89,7 +89,7 @@ export async function PATCH(request, { params }) {
     }
 
     // Persist notification to MongoDB (must happen even if Kafka is down)
-    const clientIdentifier = caseRequest.clientId || caseRequest.client?.id || caseRequest.client?.email;
+    const clientIdentifier = String(caseRequest.clientId || caseRequest.client?.id || caseRequest.client?.email || 'unknown');
     const clientEmail = caseRequest.client?.email;
     try {
       const notificationsCollection = db.collection("notifications");
@@ -120,7 +120,7 @@ export async function PATCH(request, { params }) {
         event_type: "case_notification",
         timestamp: new Date().toISOString(),
         data: {
-          clientId: clientIdentifier,
+          clientId: String(clientIdentifier), // Ensure string for Kafka
           caseId: id,
           notificationType: "case_rejected",
           title: "Case Rejected",
@@ -132,7 +132,7 @@ export async function PATCH(request, { params }) {
         }
       };
 
-      await publishCaseNotification(notificationMessage, clientIdentifier);
+      await publishCaseNotification(notificationMessage, String(clientIdentifier));
     } catch (kafkaErr) {
       console.error("Failed to publish rejection notification to Kafka:", kafkaErr);
     }

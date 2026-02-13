@@ -17,6 +17,11 @@ class KafkaConfig:
     def __init__(self):
         self.bootstrap_servers = os.getenv('KAFKA_BOOTSTRAP_SERVERS', '127.0.0.1:9092').strip('"')
         self.case_notifications_topic = os.getenv('KAFKA_CASE_NOTIFICATIONS_TOPIC', 'case-notifications')
+        # New topics for lawyer assignment workflow
+        self.lawyer_assignments_topic = os.getenv('KAFKA_LAWYER_ASSIGNMENTS_TOPIC', 'lawyer-assignments')
+        self.lawyer_responses_topic = os.getenv('KAFKA_LAWYER_RESPONSES_TOPIC', 'lawyer-responses')
+        self.case_connections_topic = os.getenv('KAFKA_CASE_CONNECTIONS_TOPIC', 'case-connections')
+        self.admin_reassignments_topic = os.getenv('KAFKA_ADMIN_REASSIGNMENTS_TOPIC', 'admin-reassignments')
         self.group_id = os.getenv('KAFKA_CONSUMER_GROUP_ID', 'notification-processors')
         
         # CHANGED: Default to 'SSL' for Aiven mTLS
@@ -144,6 +149,158 @@ class KafkaService:
             
         except Exception as e:
             logger.error(f"Failed to publish notification: {e}")
+            return False
+
+    def publish_lawyer_assignment(self, assignment_data):
+        """Publish lawyer assignment notification"""
+        try:
+            producer = self.get_producer()
+            if not producer:
+                return False
+
+            message = {
+                'event_type': 'lawyer_assignment',
+                'timestamp': assignment_data.get('timestamp'),
+                'data': assignment_data
+            }
+            
+            lawyer_id = assignment_data.get('lawyerId', 'unknown')
+            
+            def delivery_report(err, msg):
+                if err is not None:
+                    logger.error(f"Lawyer assignment delivery failed: {err}")
+                else:
+                    logger.debug(f"Lawyer assignment delivered to {msg.topic()} [{msg.partition()}]")
+
+            json_value = json.dumps(message).encode('utf-8')
+            key_value = str(lawyer_id).encode('utf-8') if lawyer_id else None
+
+            producer.produce(
+                topic=self.config.lawyer_assignments_topic,
+                key=key_value,
+                value=json_value,
+                callback=delivery_report
+            )
+            
+            producer.flush(timeout=5)
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to publish lawyer assignment: {e}")
+            return False
+
+    def publish_lawyer_response(self, response_data):
+        """Publish lawyer accept/reject response"""
+        try:
+            producer = self.get_producer()
+            if not producer:
+                return False
+
+            message = {
+                'event_type': 'lawyer_response',
+                'timestamp': response_data.get('timestamp'),
+                'data': response_data
+            }
+            
+            case_id = response_data.get('caseId', 'unknown')
+            
+            def delivery_report(err, msg):
+                if err is not None:
+                    logger.error(f"Lawyer response delivery failed: {err}")
+                else:
+                    logger.debug(f"Lawyer response delivered to {msg.topic()} [{msg.partition()}]")
+
+            json_value = json.dumps(message).encode('utf-8')
+            key_value = str(case_id).encode('utf-8') if case_id else None
+
+            producer.produce(
+                topic=self.config.lawyer_responses_topic,
+                key=key_value,
+                value=json_value,
+                callback=delivery_report
+            )
+            
+            producer.flush(timeout=5)
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to publish lawyer response: {e}")
+            return False
+
+    def publish_case_connection(self, connection_data):
+        """Publish case connection notification when lawyer accepts"""
+        try:
+            producer = self.get_producer()
+            if not producer:
+                return False
+
+            message = {
+                'event_type': 'case_connection',
+                'timestamp': connection_data.get('timestamp'),
+                'data': connection_data
+            }
+            
+            case_id = connection_data.get('caseId', 'unknown')
+            
+            def delivery_report(err, msg):
+                if err is not None:
+                    logger.error(f"Case connection delivery failed: {err}")
+                else:
+                    logger.debug(f"Case connection delivered to {msg.topic()} [{msg.partition()}]")
+
+            json_value = json.dumps(message).encode('utf-8')
+            key_value = str(case_id).encode('utf-8') if case_id else None
+
+            producer.produce(
+                topic=self.config.case_connections_topic,
+                key=key_value,
+                value=json_value,
+                callback=delivery_report
+            )
+            
+            producer.flush(timeout=5)
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to publish case connection: {e}")
+            return False
+
+    def publish_admin_reassignment(self, reassignment_data):
+        """Publish admin reassignment notification when lawyer rejects"""
+        try:
+            producer = self.get_producer()
+            if not producer:
+                return False
+
+            message = {
+                'event_type': 'admin_reassignment',
+                'timestamp': reassignment_data.get('timestamp'),
+                'data': reassignment_data
+            }
+            
+            admin_id = reassignment_data.get('adminId', 'admin')
+            
+            def delivery_report(err, msg):
+                if err is not None:
+                    logger.error(f"Admin reassignment delivery failed: {err}")
+                else:
+                    logger.debug(f"Admin reassignment delivered to {msg.topic()} [{msg.partition()}]")
+
+            json_value = json.dumps(message).encode('utf-8')
+            key_value = str(admin_id).encode('utf-8') if admin_id else None
+
+            producer.produce(
+                topic=self.config.admin_reassignments_topic,
+                key=key_value,
+                value=json_value,
+                callback=delivery_report
+            )
+            
+            producer.flush(timeout=5)
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to publish admin reassignment: {e}")
             return False
     
     def close(self):
