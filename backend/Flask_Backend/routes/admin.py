@@ -176,7 +176,7 @@ def _classify_with_huggingface(text):
         import os
         
         api_key = os.getenv('HF_TOKEN') or os.getenv('HUGGINGFACE_API_KEY')
-        model = os.getenv('HF_MODEL_ID', 'facebook/bart-large-mnli')
+        model = os.getenv('HF_MODEL_ID', 'MoritzLaurer/deberta-v3-large-zeroshot-v2.0')
         
         if not api_key:
             logger.warning("No HuggingFace API key found, using fallback classification")

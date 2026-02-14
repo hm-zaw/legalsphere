@@ -906,36 +906,28 @@ export default function CasesView() {
                                     Classification
                                   </h4>
                                   <div className="mt-4 space-y-3">
-                                    <label className="text-sm text-zinc-300">
+                                    <div className="text-sm text-zinc-300">
                                       Case Category
-                                    </label>
-                                    <select
-                                      value={overrideCategory}
-                                      onChange={(e) =>
-                                        setOverrideCategory(e.target.value)
-                                      }
-                                      className="w-full rounded-md bg-zinc-950/60 px-3 py-2 text-sm ring-1 ring-zinc-800 focus:outline-none focus:ring-amber-500/50"
-                                    >
-                                      {aiResult.predictions &&
-                                      aiResult.predictions.length > 0 ? (
-                                        aiResult.predictions
-                                          .slice(0, 5)
-                                          .map((p) => (
-                                            <option
-                                              key={p.label}
-                                              value={p.label}
-                                            >
-                                              {p.label} (
-                                              {(p.score * 100).toFixed(1)}%
-                                              confidence)
-                                            </option>
-                                          ))
-                                      ) : (
-                                        <option value="">
-                                          No categories available
-                                        </option>
-                                      )}
-                                    </select>
+                                    </div>
+                                    {aiResult.predictions &&
+                                    aiResult.predictions.length > 0 ? (
+                                      <div className="rounded-md bg-zinc-950/60 px-3 py-2 ring-1 ring-zinc-800">
+                                        <div className="flex items-center justify-between">
+                                          <span className="text-sm font-medium">
+                                            {aiResult.predictions[0].label}
+                                          </span>
+                                          <span className="text-xs text-zinc-400">
+                                            {(aiResult.predictions[0].score * 100).toFixed(1)}% confidence
+                                          </span>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div className="rounded-md bg-zinc-950/60 px-3 py-2 ring-1 ring-zinc-800">
+                                        <span className="text-sm text-zinc-500">
+                                          No category available
+                                        </span>
+                                      </div>
+                                    )}
                                     <div className="mt-2">
                                       {aiResult.predictions &&
                                         aiResult.predictions.length > 0 && (
