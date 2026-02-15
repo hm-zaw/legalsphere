@@ -591,7 +591,8 @@ export default function CasesView() {
                               onClick={() =>
                                 handleClassify(String(a.id || a._id))
                               }
-                              className="cursor-pointer text-xs font-medium"
+                              disabled={a.status === "lawyer_assigned"}
+                              className={`cursor-pointer text-xs font-medium ${a.status === "lawyer_assigned" ? "opacity-50 cursor-not-allowed" : ""}`}
                             >
                               <span className="text-[#af9164]">✦</span> &nbsp;
                               AI Analysis & Assign

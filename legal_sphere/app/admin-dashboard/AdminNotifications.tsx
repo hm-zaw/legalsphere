@@ -107,6 +107,8 @@ export function AdminNotifications() {
     switch (type) {
       case "lawyer_denied_case":
         return <AlertCircle className="h-4 w-4 text-red-500" />;
+      case "lawyer_accepted_case":
+        return <Check className="h-4 w-4 text-green-500" />;
       default:
         return <Bell className="h-4 w-4 text-blue-500" />;
     }
@@ -190,7 +192,13 @@ export function AdminNotifications() {
                                   : notification.lawyerId
                                     ? `Lawyer ${notification.lawyerId} has declined the case: ${notification.title}`
                                     : notification.message
-                                : notification.message}
+                                : notification.type === "lawyer_accepted_case"
+                                  ? notification.lawyerName
+                                    ? `${notification.lawyerName} has accepted the case: ${notification.title}`
+                                    : notification.lawyerId
+                                      ? `Lawyer ${notification.lawyerId} has accepted the case: ${notification.title}`
+                                      : notification.message
+                                  : notification.message}
                             </p>
                             {notification.denialReason && (
                               <p className="text-xs text-zinc-500 mt-1 italic">

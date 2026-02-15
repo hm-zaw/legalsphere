@@ -120,7 +120,7 @@ def get_lawyer_assignments():
     except Exception as e:
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
-@lawyer_bp.route('/api/lawyer/case-requests/<case_id>/respond', methods=['POST'])
+@lawyer_bp.route('/api/lawyer/cases/<case_id>/respond', methods=['POST'])
 @lawyer_token_required
 def respond_to_case_request(case_id):
     """Respond to a case request (accept or deny)"""
@@ -163,7 +163,10 @@ def accept_case(case_id):
             return jsonify({'error': 'Case not found'}), 404
         
         # Verify this case is assigned to the current lawyer
-        if case.get('assignedLawyerId') != request.user_id:
+        case_lawyer_id = str(case.get('assignedLawyerId', ''))
+        user_id = str(request.user_id)
+        
+        if case_lawyer_id != user_id:
             return jsonify({'error': 'Case not assigned to you'}), 403
         
         # Verify case is in lawyer_assigned status
