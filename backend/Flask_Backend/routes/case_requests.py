@@ -8,26 +8,27 @@ from mongodb_client import get_db_collection
 
 case_requests_bp = Blueprint('case_requests', __name__)
 
+
 def token_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         token = request.headers.get('Authorization')
         if not token:
             return jsonify({"Error": "Authorization token is missing"}), 401
-        
+
         try:
             # Remove 'Bearer ' prefix if present
             if token.startswith('Bearer '):
                 token = token[7:]
-            
+
             secret_key = os.getenv('JWT_SECRET_KEY', 'your-secret-key')
             decoded = jwt.decode(token, secret_key, algorithms=['HS256'])
-            
+
             # Add user info to request context
             request.user_email = decoded.get('email')
             request.user_name = decoded.get('name')
             request.user_role = decoded.get('role')
-                
+
             return f(*args, **kwargs)
         except jwt.ExpiredSignatureError:
             return jsonify({"Error": "Token has expired"}), 401
@@ -35,8 +36,9 @@ def token_required(f):
             return jsonify({"Error": "Invalid token"}), 401
         except Exception as e:
             return jsonify({"Error": f"Authentication error: {str(e)}"}), 401
-    
+
     return decorated_function
+
 
 @case_requests_bp.route('/api/case-requests', methods=['POST'])
 def create_case_request():
@@ -44,16 +46,16 @@ def create_case_request():
     try:
         # Get the case request data
         case_data = request.get_json()
-        
+
         if not case_data:
             return jsonify({'error': 'No data provided'}), 400
-        
+
         # Validate required fields
         required_fields = ['client', 'case']
         for field in required_fields:
             if field not in case_data:
                 return jsonify({'error': f'Missing required field: {field}'}), 400
-        
+
         # Add metadata
         case_data.update({
             'id': str(uuid.uuid4()),
@@ -62,7 +64,7 @@ def create_case_request():
             'status': 'pending_submission',
             'source': 'web_form'
         })
-        
+
         # Store directly in MongoDB
         try:
             collection = get_db_collection('case_requests')
@@ -75,9 +77,10 @@ def create_case_request():
             }), 201
         except Exception as db_error:
             return jsonify({'error': f'Failed to process case: {str(db_error)}'}), 500
-        
+
     except Exception as e:
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+
 
 @case_requests_bp.route('/api/case-requests/<case_id>', methods=['GET'])
 def get_case_request(case_id):
@@ -85,18 +88,19 @@ def get_case_request(case_id):
     try:
         collection = get_db_collection('case_requests')
         case = collection.find_one({'id': case_id})
-        
+
         if not case:
             return jsonify({'error': 'Case not found'}), 404
-        
+
         # Convert ObjectId to string
         if '_id' in case:
             case['_id'] = str(case['_id'])
-        
+
         return jsonify(case), 200
-        
+
     except Exception as e:
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+
 
 @case_requests_bp.route('/api/case-requests', methods=['GET'])
 def list_case_requests():
@@ -105,29 +109,29 @@ def list_case_requests():
         page = int(request.args.get('page', 1))
         limit = int(request.args.get('limit', 10))
         status = request.args.get('status', None)
-        
+
         collection = get_db_collection('case_requests')
-        
+
         # Build query
         query = {}
         if status:
             query['status'] = status
-        
+
         # Get total count
         total = collection.count_documents(query)
-        
+
         # Get paginated results
         skip = (page - 1) * limit
         cases = list(collection.find(query)
-                    .sort('createdAt', -1)
-                    .skip(skip)
-                    .limit(limit))
-        
+                     .sort('createdAt', -1)
+                     .skip(skip)
+                     .limit(limit))
+
         # Convert ObjectId to string
         for case in cases:
             if '_id' in case:
                 case['_id'] = str(case['_id'])
-        
+
         return jsonify({
             'cases': cases,
             'pagination': {
@@ -137,9 +141,10 @@ def list_case_requests():
                 'pages': (total + limit - 1) // limit
             }
         }), 200
-        
+
     except Exception as e:
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+
 
 @case_requests_bp.route('/api/lawyer/cases', methods=['GET'])
 def get_lawyer_cases():
@@ -147,14 +152,14 @@ def get_lawyer_cases():
     try:
         lawyer_id = request.args.get('lawyerId')
         status = request.args.get('status')
-        
+
         collection = get_db_collection('case_requests')
-        
+
         # Build query
         query = {}
         if lawyer_id:
             query['assignedLawyerId'] = lawyer_id
-        
+
         if status:
             if status == 'incoming':
                 query['status'] = 'lawyer_assigned'
@@ -162,14 +167,14 @@ def get_lawyer_cases():
                 query['status'] = 'active'
             else:
                 query['status'] = status
-                
+
         cases = list(collection.find(query).sort('updatedAt', -1))
-        
+
         formatted_cases = []
         for case in cases:
             if '_id' in case:
                 case['_id'] = str(case['_id'])
-            
+
             formatted_case = {
                 'id': case.get('id', ''),
                 '_id': case.get('_id'),
@@ -183,11 +188,12 @@ def get_lawyer_cases():
                 'documents': case.get('documents', [])
             }
             formatted_cases.append(formatted_case)
-            
+
         return jsonify({'cases': formatted_cases}), 200
-        
+
     except Exception as e:
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+
 
 @case_requests_bp.route('/api/my-cases', methods=['GET'])
 @token_required
@@ -197,39 +203,41 @@ def get_user_cases():
         page = int(request.args.get('page', 1))
         limit = int(request.args.get('limit', 10))
         status = request.args.get('status', None)
-        
+
         collection = get_db_collection('case_requests')
-        
+
         # Build query for user-specific cases
         query = {'client.email': request.user_email}
-        
+
         # Add status filter if provided
         if status:
             if status == 'pending':
-                query['status'] = {'$in': ['pending_submission', 'pending_admin_review', 'lawyer_assigned']}
+                query['status'] = {'$in': ['pending_submission',
+                                           'pending_admin_review', 'lawyer_assigned']}
             elif status == 'active':
-                query['status'] = {'$nin': ['completed', 'rejected', 'pending_submission']}
+                query['status'] = {
+                    '$nin': ['completed', 'rejected', 'pending_submission']}
             elif status == 'completed':
                 query['status'] = 'completed'
             else:
                 query['status'] = status
-        
+
         # Get total count
         total = collection.count_documents(query)
-        
+
         # Get paginated results
         skip = (page - 1) * limit
         cases = list(collection.find(query)
-                    .sort('createdAt', -1)
-                    .skip(skip)
-                    .limit(limit))
-        
+                     .sort('createdAt', -1)
+                     .skip(skip)
+                     .limit(limit))
+
         # Convert ObjectId to string and format cases for frontend
         formatted_cases = []
         for case in cases:
             if '_id' in case:
                 case['_id'] = str(case['_id'])
-            
+
             # Format case for frontend consumption
             formatted_case = {
                 'id': case.get('id', ''),
@@ -253,7 +261,7 @@ def get_user_cases():
                 'predictions': case.get('predictions', [])
             }
             formatted_cases.append(formatted_case)
-        
+
         return jsonify({
             'cases': formatted_cases,
             'pagination': {
@@ -263,9 +271,10 @@ def get_user_cases():
                 'pages': (total + limit - 1) // limit
             }
         }), 200
-        
+
     except Exception as e:
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+
 
 def _format_status(status):
     """Format backend status to frontend-friendly status"""
@@ -273,8 +282,8 @@ def _format_status(status):
         'pending_submission': 'Pending Submission',
         'pending_admin_review': 'Pending Review',
         'under_review': 'Under Review',
-        'lawyer_assigned': 'Lawyer Reviewing', # Changed for client visibility
-        'active': 'Active', 
+        'lawyer_assigned': 'Lawyer Reviewing',  # Changed for client visibility
+        'active': 'Active',
         'in_progress': 'In Progress',
         'document_required': 'Document Required',
         'completed': 'Completed',
@@ -284,6 +293,7 @@ def _format_status(status):
         'analyzed': 'Analyzed'
     }
     return status_mapping.get(status, 'Pending')
+
 
 def _calculate_progress(status):
     """Calculate progress percentage based on status"""
@@ -303,6 +313,7 @@ def _calculate_progress(status):
     }
     return progress_mapping.get(status, 10)
 
+
 def _format_date(date_string):
     """Format ISO date to readable format"""
     try:
@@ -317,6 +328,7 @@ def _format_date(date_string):
         print(f"Date formatting error: {e}")
         return "Unknown"
 
+
 def _format_relative_time(date_string):
     """Format ISO date to relative time"""
     try:
@@ -327,13 +339,13 @@ def _format_relative_time(date_string):
             date_string = date_string[:-1] + '+00:00'
         date = datetime.fromisoformat(date_string)
         now = datetime.utcnow()
-        
+
         # Make both timezone-aware or both naive
         if date.tzinfo is not None:
             now = datetime.utcnow().replace(tzinfo=date.tzinfo)
-        
+
         diff = now - date
-        
+
         if diff.days > 0:
             return f"{diff.days}d ago"
         elif diff.seconds > 3600:
@@ -348,16 +360,18 @@ def _format_relative_time(date_string):
         print(f"Date formatting error: {e}")
         return "Unknown"
 
+
 def _get_lawyer_info(case):
     """Get lawyer information from case"""
     lawyer = case.get('assignedLawyer')
     status = case.get('status')
     if lawyer:
         if status in ['active', 'in_progress', 'completed']:
-             return f"{lawyer.get('name', 'Unknown')}, Esq."
+            return f"{lawyer.get('name', 'Unknown')}, Esq."
         else:
-             return "Assigning..." # Don't reveal name until accepted
+            return "Assigning..."  # Don't reveal name until accepted
     return "Pending Assignment"
+
 
 @case_requests_bp.route('/api/debug/cases', methods=['GET'])
 def debug_cases():
@@ -365,7 +379,7 @@ def debug_cases():
     try:
         collection = get_db_collection('case_requests')
         cases = list(collection.find({}).limit(1))
-        
+
         if cases:
             case = cases[0]
             # Convert ObjectId to string
@@ -382,3 +396,37 @@ def debug_cases():
             return jsonify({'message': 'No cases found'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@case_requests_bp.route('/api/case-requests/<case_id>/notes', methods=['POST'])
+@token_required
+def add_case_note(case_id):
+    """Add a note to an existing case request"""
+    try:
+        payload = request.get_json() or {}
+        content = payload.get('content')
+        is_private = bool(payload.get('isPrivate', False))
+
+        if not content:
+            return jsonify({'error': 'Note content is required'}), 400
+
+        collection = get_db_collection('case_requests')
+        case = collection.find_one({'id': case_id})
+        if not case:
+            return jsonify({'error': 'Case not found'}), 404
+
+        note = {
+            'id': str(uuid.uuid4()),
+            'content': content,
+            'createdAt': datetime.utcnow().isoformat(),
+            'createdBy': getattr(request, 'user_name', 'Unknown'),
+            'isPrivate': is_private,
+        }
+
+        # Push the note and update timestamp
+        collection.update_one({'id': case_id}, {'$push': {'notes': note}, '$set': {
+                              'updatedAt': datetime.utcnow().isoformat()}})
+
+        return jsonify({'note': note}), 201
+    except Exception as e:
+        return jsonify({'error': f'Internal server error: {str(e)}'}), 500

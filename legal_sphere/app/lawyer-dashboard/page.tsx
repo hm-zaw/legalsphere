@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   LayoutDashboard,
   Briefcase,
@@ -31,6 +32,7 @@ import { motion } from "framer-motion";
 import { SettingsView } from "./SettingsView";
 import { TasksView } from "./TasksView";
 import LawyerCasesView from "./LawyerCasesView";
+import LawyerCaseDetailView from "./LawyerCaseDetailView";
 import {
   Popover,
   PopoverContent,
@@ -42,6 +44,10 @@ import { withRoleProtection, useAuth } from "@/hooks/useAuth";
 function LawyerDashboardPage() {
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
+  const searchParams = useSearchParams();
+  const view = searchParams.get("view");
+  const caseId = searchParams.get("id");
+  const isCaseDetail = view === "case-details" && caseId;
   const { user } = useAuth();
   const initials = user?.name
     ? user.name
@@ -213,31 +219,37 @@ function LawyerDashboardPage() {
         {/* Dense Content Area */}
         <main className="flex-1 overflow-y-auto p-6 scroll-smooth">
           <div className="mx-auto max-w-[1600px] space-y-8">
-            {activeTab === "overview" && <OverviewContent />}
-            {activeTab === "settings" && (
-              <div className="animate-in fade-in duration-500">
-                <SettingsView />
-              </div>
-            )}
-            {activeTab === "tasks" && (
-              <div className="animate-in fade-in duration-500">
-                <TasksView />
-              </div>
-            )}
-            {activeTab === "matters" && (
-              <div className="animate-in fade-in duration-500 -mx-6 -mt-6">
-                <LawyerCasesView />
-              </div>
-            )}
-            {activeTab === "calendar" && (
-              <div className="flex h-[60vh] items-center justify-center text-slate-400 font-serif italic">
-                Calendar Module Loading...
-              </div>
-            )}
-            {activeTab === "documents" && (
-              <div className="flex h-[60vh] items-center justify-center text-slate-400 font-serif italic">
-                Document Vault Loading...
-              </div>
+            {isCaseDetail ? (
+              <LawyerCaseDetailView caseId={caseId} />
+            ) : (
+              <>
+                {activeTab === "overview" && <OverviewContent />}
+                {activeTab === "settings" && (
+                  <div className="animate-in fade-in duration-500">
+                    <SettingsView />
+                  </div>
+                )}
+                {activeTab === "tasks" && (
+                  <div className="animate-in fade-in duration-500">
+                    <TasksView />
+                  </div>
+                )}
+                {activeTab === "matters" && (
+                  <div className="animate-in fade-in duration-500 -mx-6 -mt-6">
+                    <LawyerCasesView />
+                  </div>
+                )}
+                {activeTab === "calendar" && (
+                  <div className="flex h-[60vh] items-center justify-center text-slate-400 font-serif italic">
+                    Calendar Module Loading...
+                  </div>
+                )}
+                {activeTab === "documents" && (
+                  <div className="flex h-[60vh] items-center justify-center text-slate-400 font-serif italic">
+                    Document Vault Loading...
+                  </div>
+                )}
+              </>
             )}
           </div>
         </main>
