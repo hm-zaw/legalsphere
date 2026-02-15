@@ -85,6 +85,10 @@ def get_lawyer_assignments():
             query['status'] = {'$in': ['active', 'in_progress']}
         elif status == 'completed':
             query['status'] = 'completed'
+        elif status == 'all':
+            # Return all cases assigned to lawyer regardless of status
+            query['status'] = {'$in': ['lawyer_assigned', 'active', 'in_progress', 'completed']}
+        # If no status specified, default to incoming (lawyer_assigned)
         
         print(f"DEBUG: Final Query: {query}")
         

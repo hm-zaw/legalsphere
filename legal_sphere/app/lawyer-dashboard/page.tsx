@@ -30,6 +30,7 @@ import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { SettingsView } from "./SettingsView";
 import { TasksView } from "./TasksView";
+import LawyerCasesView from "./LawyerCasesView";
 import {
   Popover,
   PopoverContent,
@@ -224,8 +225,8 @@ function LawyerDashboardPage() {
               </div>
             )}
             {activeTab === "matters" && (
-              <div className="flex h-[60vh] items-center justify-center text-slate-400 font-serif italic">
-                Matters Registry Module Loading...
+              <div className="animate-in fade-in duration-500 -mx-6 -mt-6">
+                <LawyerCasesView />
               </div>
             )}
             {activeTab === "calendar" && (
