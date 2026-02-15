@@ -913,11 +913,14 @@ const SPECIALIZATION_MAP = {
   "Constitutional Challenge": ["Government Law", "Constitutional Law"],
 };
 
-// Load lawyers from Supabase database
+// Load lawyers from Supabase database (lawyers table)
 async function loadLawyersFromSupabase() {
   try {
     const supabase = getSupabaseClient();
-    const { data, error } = await supabase.from("lawyers").select("*");
+    // Fetch from lawyers table which contains lawyer-specific data
+    const { data, error } = await supabase
+      .from("lawyers")
+      .select("*");
 
     if (error) {
       console.error("Supabase lawyers fetch error:", error);
@@ -925,47 +928,37 @@ async function loadLawyersFromSupabase() {
     }
 
     if (!data || data.length === 0) {
-      console.warn("No lawyers found in Supabase database");
+      console.warn("No lawyers found in Supabase lawyers table");
       return [];
     }
 
+    console.log("DEBUG - Fetched lawyers from lawyers table:", data.length);
+    console.log("DEBUG - First lawyer sample:", data[0]);
+
     // Transform Supabase data to match expected format
-    return data.map((l) => ({
-      lawyer_id: l.id,
-      lawyer_name: l.name,
-      specializations: (l.specialization || "")
-        .split(";")
-        .map((s) => s.trim())
-        .filter(Boolean),
-      case_types: (l.specialization || "")
-        .split(";")
-        .map((s) => s.trim())
-        .filter(Boolean), // Use specialization as case_types
-      years_experience:
-        l.experience === "0-2 years"
-          ? 1
-          : l.experience === "2-5 years"
-            ? 3.5
-            : l.experience === "5-10 years"
-              ? 7.5
-              : l.experience === "10+ years"
-                ? 15
-                : 0,
-      past_case_count: 0, // Not available in current schema
-      average_case_duration_months: 0, // Not available in current schema
-      success_rate: 0.85, // Default assumption
-      complex_case_ratio: 0.2, // Default assumption
-      availability_score:
-        l.availability === "Available"
-          ? 0.9
-          : l.availability === "Busy"
-            ? 0.5
-            : 0.1,
-      case_history_summary: l.case_history_summary || "",
-      email: l.email || "",
-      phone: l.phone || "",
-      barNumber: l.barNumber || "",
-    }));
+    return data.map((l) => {
+      console.log(`DEBUG - Lawyer ${l.name}: specialization="${l.specialization}", experience="${l.experience}"`);
+      
+      return {
+        lawyer_id: l.user_id, // Use the user_id from lawyers table
+        lawyer_name: l.name,
+        specializations: (l.specialization || "")
+          .split(";")
+          .map((s) => s.trim())
+          .filter(Boolean),
+        case_types: (l.specialization || "")
+          .split(";")
+          .map((s) => s.trim())
+          .filter(Boolean),
+        years_experience: l.experience ? parseInt(l.experience) || 5 : 5,
+        success_rate: 0.95,
+        availability_score: l.availability === "Available" ? 0.8 : 0.4,
+        case_history_summary: l.case_history_summary || `${l.name} - ${l.specialization || "General Law"} specialist`,
+        email: l.email,
+        phone: l.phone || "+1-555-0000",
+        barNumber: l.barNumber || "BAR000",
+      };
+    });
   } catch (e) {
     console.error("Failed to load lawyers from Supabase:", e);
     return [];
@@ -1085,7 +1078,14 @@ export async function POST(req) {
     console.log("DEBUG - Lawyers loaded:", lawyers.length);
 
     if (excludedLawyerIds.length > 0) {
-      lawyers = lawyers.filter((l) => !excludedLawyerIds.includes(l.lawyer_id));
+      console.log("DEBUG - Excluding lawyer IDs:", excludedLawyerIds);
+      lawyers = lawyers.filter((l) => {
+        const lawyerIdStr = String(l.lawyer_id);
+        const isExcluded = excludedLawyerIds.some(id => String(id) === lawyerIdStr);
+        console.log(`DEBUG - Lawyer ${l.lawyer_name} (ID: ${lawyerIdStr}) excluded: ${isExcluded}`);
+        return !isExcluded;
+      });
+      console.log("DEBUG - Lawyers after exclusion:", lawyers.length);
     }
 
     // Map predicted case types to lawyer specializations

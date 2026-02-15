@@ -124,6 +124,21 @@ export default function CasesView() {
     }, 1600);
 
     try {
+      // Refresh the selected case from the server to pick up recent deniedLawyerIds
+      try {
+        const caseRes = await fetch(
+          `/api/admin/case-requests/${selectedAppId}?t=` + Date.now(),
+        );
+        const caseData = await caseRes.json().catch(() => null);
+        if (caseRes.ok && caseData?.item) {
+          // update selectedApp locally so UI reflects latest state
+          setSelectedApp(caseData.item);
+        }
+      } catch (e) {
+        // ignore refresh failure and continue with current selectedApp
+        console.debug("Failed to refresh case before classification", e);
+      }
+
       // 1. Fetch document content from R2
       const desc = String(selectedApp?.case?.description || "");
       const docs = Array.isArray(selectedApp?.documents)
@@ -152,7 +167,12 @@ export default function CasesView() {
         throw new Error("No case content available");
 
       // 2. Call BART classification API
-      const res = await fetch("/api/admin/classify-case", {
+      // Use the freshest denied list available on selectedApp (fallback to empty)
+      const excluded = Array.isArray(selectedApp?.deniedLawyerIds)
+        ? selectedApp.deniedLawyerIds
+        : [];
+
+      const res = await fetch("/api/admin/classify-case?t=" + Date.now(), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -160,7 +180,7 @@ export default function CasesView() {
             title: selectedApp?.case?.title || "",
             description: combined || selectedApp?.case?.title,
           },
-          excludedLawyerIds: selectedApp?.deniedLawyerIds || [],
+          excludedLawyerIds: excluded,
         }),
       });
 
@@ -216,7 +236,23 @@ export default function CasesView() {
     setAiResult(null);
   }
 
-  function onReanalyze() {
+  async function onReanalyze() {
+    // Refresh case data to get latest deniedLawyerIds
+    if (selectedAppId) {
+      try {
+        const caseRes = await fetch(
+          `/api/admin/case-requests/${selectedAppId}?t=` + Date.now(),
+        );
+        const caseData = await caseRes.json().catch(() => null);
+        if (caseRes.ok && caseData?.item) {
+          setSelectedApp(caseData.item);
+          console.log("DEBUG: Refreshed case data, deniedLawyerIds:", caseData.item.deniedLawyerIds);
+        }
+      } catch (e) {
+        console.error("Failed to refresh case data:", e);
+      }
+    }
+    
     setAiLoading(true);
     startAILoad();
   }
@@ -231,6 +267,13 @@ export default function CasesView() {
       alert("Selected lawyer details not found.");
       return;
     }
+
+    console.log("DEBUG: Assigning case with data:");
+    console.log("  - Case ID:", selectedAppId);
+    console.log("  - Selected Lawyer ID:", selectedLawyerId);
+    console.log("  - Lawyer from AI result:", lawyer);
+    console.log("  - lawyer.lawyer_id:", lawyer.lawyer_id);
+    console.log("  - lawyer.lawyer_name:", lawyer.lawyer_name);
 
     try {
       const res = await fetch(
@@ -917,7 +960,11 @@ export default function CasesView() {
                                             {aiResult.predictions[0].label}
                                           </span>
                                           <span className="text-xs text-zinc-400">
-                                            {(aiResult.predictions[0].score * 100).toFixed(1)}% confidence
+                                            {(
+                                              aiResult.predictions[0].score *
+                                              100
+                                            ).toFixed(1)}
+                                            % confidence
                                           </span>
                                         </div>
                                       </div>

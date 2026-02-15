@@ -66,7 +66,7 @@ export async function POST(request, { params }) {
       }
     };
 
-    await publishCaseNotification(notificationMessage, clientIdentifier || lawyerId);
+    await publishCaseNotification(notificationMessage, String(clientIdentifier || lawyerId));
 
     return NextResponse.json({
       message: "Case assigned successfully",

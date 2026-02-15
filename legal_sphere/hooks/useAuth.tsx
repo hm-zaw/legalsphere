@@ -24,12 +24,28 @@ export function useAuth() {
       const token = localStorage.getItem('userToken') || localStorage.getItem('adminToken');
       const userDataStr = localStorage.getItem('userData');
       
+      console.log("DEBUG: checkAuth - token exists:", !!token);
+      console.log("DEBUG: checkAuth - userDataStr:", userDataStr);
+      
+      // Debug: Check all localStorage items
+      console.log("DEBUG: All localStorage items:");
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key) {
+          const value = localStorage.getItem(key);
+          console.log(`  ${key}:`, value);
+        }
+      }
+      
       if (!token || !userDataStr) {
         setLoading(false);
         return;
       }
 
       const userData = JSON.parse(userDataStr);
+      console.log("DEBUG: checkAuth - parsed userData:", userData);
+      console.log("DEBUG: checkAuth - userData.id:", userData.id);
+      console.log("DEBUG: checkAuth - userData keys:", Object.keys(userData));
       setUser(userData);
     } catch (error) {
       console.error('Error checking authentication:', error);
@@ -41,6 +57,11 @@ export function useAuth() {
       setLoading(false);
     }
   };
+
+  // Debug: Log user object changes
+  useEffect(() => {
+    console.log("DEBUG: useAuth - user object changed:", user);
+  }, [user]);
 
   const logout = () => {
     localStorage.removeItem('userToken');

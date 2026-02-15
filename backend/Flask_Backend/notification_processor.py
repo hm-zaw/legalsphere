@@ -283,10 +283,41 @@ class NotificationProcessor:
                 
                 collection.update_one({'_id': case['_id']}, update_op)
                 logger.info(f"Updated case {case_id} status to pending_admin_review (Denied by lawyer {lawyer_id})")
+                
+                # Create admin notification
+                self._create_admin_notification(case, lawyer_id, metadata)
             else:
                 logger.warning(f"Case {case_id} not found for denial update")
         except Exception as e:
             logger.error(f"Error updating case denial status: {e}")
+
+    def _create_admin_notification(self, case, lawyer_id, metadata):
+        """Create an admin notification when lawyer denies a case"""
+        try:
+            collection = get_db_collection('admin_notifications')
+            
+            # Get lawyer name if available
+            lawyer_name = f"Lawyer {lawyer_id}"
+            if hasattr(self, '_lawyers_cache') and lawyer_id in self._lawyers_cache:
+                lawyer_name = self._lawyers_cache[lawyer_id].get('name', lawyer_name)
+            
+            notification = {
+                'type': 'lawyer_denied_case',
+                'title': 'Lawyer Declined Case Assignment',
+                'message': f"{lawyer_name} has declined the case: {case.get('case', {}).get('title', case.get('id', 'Unknown'))}",
+                'caseId': case.get('id') or str(case.get('_id')),
+                'lawyerId': lawyer_id,
+                'lawyerName': lawyer_name,
+                'denialReason': metadata.get('denialReason', 'No reason provided'),
+                'read': False,
+                'createdAt': datetime.utcnow().isoformat()
+            }
+            
+            collection.insert_one(notification)
+            logger.info(f"Created admin notification for case denial: {case.get('id')}")
+            
+        except Exception as e:
+            logger.error(f"Error creating admin notification: {e}")
 
     def _find_case(self, collection, case_id):
         """Helper to find case by id string or ObjectId"""

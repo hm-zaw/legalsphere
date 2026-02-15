@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import CasesView from "./CasesView";
 import LegalTeamView from "./LegalTeamView";
+import { AdminNotifications } from "./AdminNotifications";
 import { withRoleProtection } from "@/hooks/useAuth";
 
 // --- Design Tokens ---
@@ -135,10 +136,7 @@ function AdminDashboardPage() {
             
             <div className="h-8 w-[1px] bg-zinc-200 mx-1"></div>
 
-            <button className="relative p-1.5 rounded text-zinc-500 hover:text-[#1a2238] hover:bg-zinc-100 transition-all">
-              <Bell className="h-4 w-4" />
-              <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-[#af9164] ring-1 ring-white"></span>
-            </button>
+            <AdminNotifications />
             
             <div className="h-7 w-7 rounded bg-[#1a2238] text-white flex items-center justify-center text-[10px] font-bold tracking-wider cursor-pointer hover:opacity-90">
               AD

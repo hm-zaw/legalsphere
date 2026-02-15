@@ -260,55 +260,49 @@ def _fallback_classification(text):
     return [{'label': 'General Legal Matter', 'score': 0.5}]
 
 def _get_lawyers_from_database(excluded_lawyers):
-    """Get lawyers from database (mock implementation)"""
-    # This should be replaced with actual database call
-    all_lawyers = [
-        {
-            'lawyer_id': 'lawyer_001',
-            'lawyer_name': 'John Smith',
-            'lawyer_email': 'john.smith@legalsphere.com',
-            'specializations': ['Corporate Law', 'Contract Law'],
-            'case_types': ['Corporate Law', 'Contract Law', 'M&A'],
-            'years_experience': 8,
-            'success_rate': 0.92,
-            'availability_score': 0.8,
-            'case_history_summary': 'Specialized in corporate contracts and M&A deals with high success rate.',
-            'email': 'john.smith@legalsphere.com',
-            'phone': '+1-555-0101',
-            'barNumber': 'BAR001'
-        },
-        {
-            'lawyer_id': 'lawyer_002',
-            'lawyer_name': 'Sarah Johnson',
-            'lawyer_email': 'sarah.johnson@legalsphere.com',
-            'specializations': ['Contract Law', 'Commercial Litigation'],
-            'case_types': ['Contract Law', 'Commercial Litigation', 'Employment Law'],
-            'years_experience': 6,
-            'success_rate': 0.88,
-            'availability_score': 0.9,
-            'case_history_summary': 'Expert in contract disputes and commercial litigation with proven track record.',
-            'email': 'sarah.johnson@legalsphere.com',
-            'phone': '+1-555-0102',
-            'barNumber': 'BAR002'
-        },
-        {
-            'lawyer_id': 'lawyer_003',
-            'lawyer_name': 'Michael Chen',
-            'lawyer_email': 'michael.chen@legalsphere.com',
-            'specializations': ['Corporate Law', 'Intellectual Property'],
-            'case_types': ['Corporate Law', 'IP Law', 'Technology Law'],
-            'years_experience': 10,
-            'success_rate': 0.95,
-            'availability_score': 0.7,
-            'case_history_summary': 'Senior corporate attorney with expertise in technology and IP matters.',
-            'email': 'michael.chen@legalsphere.com',
-            'phone': '+1-555-0103',
-            'barNumber': 'BAR003'
-        }
-    ]
-    
-    # Filter out excluded lawyers
-    return [lawyer for lawyer in all_lawyers if lawyer['lawyer_id'] not in excluded_lawyers]
+    """Get lawyers from database"""
+    try:
+        from service.user_service import User_Service
+        
+        user_service = User_Service()
+        lawyers_result = user_service.get_all_lawyers()
+        
+        if not lawyers_result.get('Success'):
+            logger.warning(f"Failed to get lawyers from database: {lawyers_result.get('Message')}")
+            return _fallback_lawyers(excluded_lawyers)
+        
+        # Format lawyers for the classification system
+        formatted_lawyers = []
+        for lawyer in lawyers_result.get('Lawyers', []):
+            # Skip excluded lawyers
+            if str(lawyer.get('id', '')) in [str(id) for id in excluded_lawyers]:
+                continue
+                
+            formatted_lawyers.append({
+                'lawyer_id': str(lawyer.get('id', '')),
+                'lawyer_name': lawyer.get('name', 'Unknown'),
+                'lawyer_email': lawyer.get('email', ''),
+                'specializations': lawyer.get('specialization', ['General Law']),
+                'case_types': lawyer.get('specialization', ['General Law']),
+                'years_experience': lawyer.get('experience', 5),
+                'success_rate': 0.95,  # Default value
+                'availability_score': 0.8,
+                'case_history_summary': f'Experienced lawyer specializing in {", ".join(lawyer.get("specialization", ["General Law"]))}',
+                'email': lawyer.get('email', ''),
+                'phone': lawyer.get('phone', '+1-555-0000'),
+                'barNumber': lawyer.get('barNumber', 'BAR000')
+            })
+        
+        return formatted_lawyers
+        
+    except Exception as e:
+        logger.error(f"Error getting lawyers from database: {str(e)}")
+        return _fallback_lawyers(excluded_lawyers)
+
+def _fallback_lawyers(excluded_lawyers):
+    """Fallback lawyers if database fails"""
+    # Return empty list to avoid using mock data
+    return []
 
 def _score_and_rank_lawyers(lawyers, predictions):
     """Score and rank lawyers based on specialization match and performance"""
@@ -380,6 +374,9 @@ def assign_case(case_id):
     try:
         assignment_data = request.get_json()
         
+        print(f"DEBUG: assign_case called for case_id: {case_id}")
+        print(f"DEBUG: Assignment data: {assignment_data}")
+        
         if not assignment_data or not assignment_data.get('lawyerId'):
             return jsonify({'error': 'Lawyer ID is required'}), 400
         
@@ -390,12 +387,17 @@ def assign_case(case_id):
         if not case:
             return jsonify({'error': 'Case not found'}), 404
         
+        print(f"DEBUG: Lawyer ID from request: {assignment_data.get('lawyerId')}")
+        print(f"DEBUG: Lawyer name from request: {assignment_data.get('lawyerName')}")
+        
         # Update case with lawyer assignment
         lawyer_info = {
             'id': assignment_data.get('lawyerId'),
             'name': assignment_data.get('lawyerName'),
             'assignedAt': datetime.utcnow().isoformat()
         }
+        
+        print(f"DEBUG: Lawyer info to store: {lawyer_info}")
         
         collection.update_one(
             {'_id': case['_id']},
@@ -492,44 +494,31 @@ def reject_case(case_id):
 @admin_bp.route('/api/admin/get-lawyers', methods=['GET'])
 @admin_token_required
 def get_available_lawyers():
-    """Get list of available lawyers for assignment (existing endpoint)"""
+    """Get list of available lawyers for assignment"""
     try:
-        # This would typically come from a users collection or service
-        # For now, returning mock data structure
-        lawyers = [
-            {
-                'id': 'lawyer_001',
-                'name': 'John Smith',
-                'email': 'john.smith@legalsphere.com',
-                'specialization': ['Corporate Law', 'Contract Law'],
-                'active': True,
-                'currentCases': 3,
-                'years_experience': 8,
-                'success_rate': 0.92
-            },
-            {
-                'id': 'lawyer_002', 
-                'name': 'Sarah Johnson',
-                'email': 'sarah.johnson@legalsphere.com',
-                'specialization': ['Family Law', 'Estate Planning'],
-                'active': True,
-                'currentCases': 2,
-                'years_experience': 6,
-                'success_rate': 0.88
-            },
-            {
-                'id': 'lawyer_003',
-                'name': 'Michael Chen',
-                'email': 'michael.chen@legalsphere.com',
-                'specialization': ['Intellectual Property', 'Technology Law'],
-                'active': True,
-                'currentCases': 4,
-                'years_experience': 10,
-                'success_rate': 0.95
-            }
-        ]
+        from service.user_service import User_Service
         
-        return jsonify(lawyers), 200
+        user_service = User_Service()
+        lawyers = user_service.get_all_lawyers()
+        
+        if not lawyers.get('Success'):
+            return jsonify({'Success': False, 'Message': lawyers.get('Message', 'Failed to get lawyers')}), 500
+        
+        # Format lawyers for frontend
+        formatted_lawyers = []
+        for lawyer in lawyers.get('Lawyers', []):
+            formatted_lawyers.append({
+                'id': str(lawyer.get('id', '')),  # Use actual user ID
+                'name': lawyer.get('name', 'Unknown'),
+                'email': lawyer.get('email', ''),
+                'specialization': lawyer.get('specialization', []),
+                'active': True,
+                'currentCases': 0,  # Could be calculated from database
+                'years_experience': lawyer.get('experience', 0),
+                'success_rate': 0.95  # Default value
+            })
+        
+        return jsonify({'Success': True, 'Lawyers': formatted_lawyers}), 200
         
     except Exception as e:
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500

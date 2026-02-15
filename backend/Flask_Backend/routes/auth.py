@@ -51,11 +51,17 @@ def login():
         # Generate JWT token
         user_data = result.get("User Data", {})
         
+        print(f"DEBUG: Login user data: {user_data}")
+        print(f"DEBUG: User data keys: {list(user_data.keys()) if user_data else 'None'}")
+        
         token_payload = {
             'email': user_data.get('email'),
             'role': user_data.get('role'),
-            'name': user_data.get('name')
+            'name': user_data.get('name'),
+            'id': str(user_data.get('id', ''))  # Add user ID to token
         }
+        
+        print(f"DEBUG: Token payload: {token_payload}")
         
         secret_key = os.getenv('JWT_SECRET_KEY', 'your-secret-key')
         token = jwt.encode(token_payload, secret_key, algorithm='HS256')
