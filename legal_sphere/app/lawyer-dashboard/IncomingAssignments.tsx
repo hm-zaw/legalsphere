@@ -61,12 +61,12 @@ export function IncomingAssignments() {
       // Get auth token from localStorage (useAuth uses userToken)
       const token = localStorage.getItem('userToken') || localStorage.getItem('token');
       
-      // Fetch incoming assignments for the logged-in lawyer
+      // Fetch incoming assignments for logged-in lawyer
       const lawyerIdParam = user?.id
         ? `&lawyerId=${encodeURIComponent(user.id)}`
         : "";
       const res = await fetch(
-        `http://127.0.0.1:5000/api/lawyer/cases?status=incoming${lawyerIdParam}`,
+        `http://127.0.0.1:5000/api/lawyer/assignments?status=incoming${lawyerIdParam}`,
         {
           headers: {
             'Authorization': token ? `Bearer ${token}` : '',

@@ -72,7 +72,9 @@ def get_lawyer_assignments():
         collection = get_db_collection('case_requests')
         
         # Build query for lawyer-specific cases
-        query = {'assignedLawyerId': request.user_id}
+        # Handle both string and number types for assignedLawyerId
+        lawyer_id = str(request.user_id)
+        query = {'assignedLawyerId': {'$in': [lawyer_id, int(lawyer_id) if lawyer_id.isdigit() else lawyer_id]}}
         
         print(f"DEBUG: MongoDB Query: {query}")
         
