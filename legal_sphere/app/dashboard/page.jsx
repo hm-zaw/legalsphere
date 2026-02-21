@@ -6,6 +6,7 @@ import { AceternitySidebarDemo } from "@/components/aceternity-sidebar-demo";
 import OverviewView from "./OverviewView";
 import MyCasesView from "./MyCasesView";
 import CaseDetailsView from "./CaseDetailsView";
+import LawyerCommunicationView from "./LawyerCommunicationView";
 import ApplyNewView from "./ApplyNewView";
 import ProfileView from "./ProfileView";
 import { withRoleProtection } from "@/hooks/useAuth";
@@ -22,7 +23,7 @@ function DashboardContent() {
   // Sync state with URL
   useEffect(() => {
     const view = searchParams.get("view");
-    if (view && ["overview", "my-cases", "profile", "case-details", "apply-new"].includes(view)) {
+    if (view && ["overview", "my-cases", "profile", "case-details", "apply-new", "lawyer-communication"].includes(view)) {
       setActiveView(view);
     }
   }, [searchParams]);
@@ -45,6 +46,7 @@ function DashboardContent() {
       {activeView === "profile" && <ProfileView />}
       {activeView === "case-details" && <CaseDetailsView caseId={caseId} onNavigate={customNavigate} />}
       {activeView === "apply-new" && <ApplyNewView onNavigate={customNavigate} />}
+      {activeView === "lawyer-communication" && <LawyerCommunicationView onNavigate={customNavigate} />}
     </AceternitySidebarDemo>
   );
 }

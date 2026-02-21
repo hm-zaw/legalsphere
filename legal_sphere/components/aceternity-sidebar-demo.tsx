@@ -10,6 +10,7 @@ import {
   IconFileText,
   IconHome,
   IconPlus,
+  IconMessage,
 } from "@tabler/icons-react";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
@@ -44,6 +45,13 @@ export function AceternitySidebarDemo({ children }: { children: React.ReactNode 
       href: "/dashboard?view=my-cases",
       icon: (
         <IconFileText className="h-5 w-5 shrink-0 text-neutral-500 group-hover/sidebar:text-[#af9164] transition-colors" />
+      ),
+    },
+    {
+      label: "Counsel Chat",
+      href: "/dashboard?view=lawyer-communication",
+      icon: (
+        <IconMessage className="h-5 w-5 shrink-0 text-neutral-500 group-hover/sidebar:text-[#af9164] transition-colors" />
       ),
     },
     {

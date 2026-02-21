@@ -377,9 +377,9 @@ export default function CaseDetailsView({ caseId, onNavigate }) {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 pt-2">
               <MetadataField icon={Gavel} label="Current Status" value={caseData?.status || "Active Litigation"} subValue="On Track" />
-              <MetadataField icon={User} label="Lead Counsel" value={caseData?.lawyer || "Sarah Jenkins, Esq."} />
+              <MetadataField icon={User} label="Lead Counsel" value={caseData?.assignedLawyer?.name || "Assigning..."} subValue={caseData?.assignedLawyer?.name ? "Assigned" : "Pending Assignment"} />
               <MetadataField icon={Tag} label="Classification" value={caseData?.case?.category || "Civil Litigation"} subValue="Contract" />
-              <MetadataField icon={Users} label="Legal Team" value="S. Jenkins, M. Chen" />
+              <MetadataField icon={Users} label="Legal Team" value={caseData?.assignedLawyer?.name ? `${caseData.assignedLawyer.name.split(' ').slice(-1).join(', ')}, M. Chen` : "Team Formation"} subValue={caseData?.assignedLawyer?.name ? "Active" : "In Progress"} />
           </div>
         </header>
 

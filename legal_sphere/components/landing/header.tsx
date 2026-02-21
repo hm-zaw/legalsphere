@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import Logo from "../../public/logo.png";
+import Logo from "../../public/logo-nobg.png";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/landing/ui/button";
 import React from "react";
@@ -97,7 +97,7 @@ export const HeroHeader = () => {
                   size="sm"
                   className={cn(isScrolled && "lg:hidden")}
                 >
-                  <Link href="#">
+                  <Link href="/login">
                     <span>Login</span>
                   </Link>
                 </Button>
@@ -106,7 +106,7 @@ export const HeroHeader = () => {
                   size="sm"
                   className={cn(isScrolled && "lg:hidden")}
                 >
-                  <Link href="#">
+                  <Link href="/signup">
                     <span>Sign Up</span>
                   </Link>
                 </Button>
@@ -115,7 +115,7 @@ export const HeroHeader = () => {
                   size="sm"
                   className={cn(isScrolled ? "lg:inline-flex" : "hidden")}
                 >
-                  <Link href="#">
+                  <Link href="/signup">
                     <span>Get Started</span>
                   </Link>
                 </Button>
