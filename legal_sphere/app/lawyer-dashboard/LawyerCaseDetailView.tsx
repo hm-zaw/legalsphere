@@ -184,6 +184,22 @@ const MOCK_CASE: CaseDetail = {
       billable: true,
     },
   ],
+  notes: [
+    {
+      id: "NOTE-001",
+      content: "Client expressed concerns about potential IP conflicts with existing patents. Need to conduct thorough patent search.",
+      createdAt: "2024-01-16T14:30:00Z",
+      createdBy: "Sarah Jenkins",
+      isPrivate: false,
+    },
+    {
+      id: "NOTE-002",
+      content: "Regulatory review complete. No major compliance issues identified, but recommend additional due diligence on international subsidiaries.",
+      createdAt: "2024-01-18T11:15:00Z",
+      createdBy: "You",
+      isPrivate: true,
+    },
+  ],
   activities: [
     {
       id: "ACT-001",

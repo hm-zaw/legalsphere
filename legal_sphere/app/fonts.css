@@ -1,0 +1,35 @@
+/* Homepage-specific font definitions */
+@font-face {
+  font-family: 'NeueMontreal';
+  src: url('/fonts/NeueMontreal-Light.woff') format('woff');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'NeueMontreal';
+  src: url('/fonts/NeueMontreal-Regular.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Override global fonts with higher specificity */
+.font-neue-montreal,
+.font-neue-montreal html,
+.font-neue-montreal body {
+  font-family: 'NeueMontreal', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif !important;
+  font-weight: 300;
+}
+
+.font-neue-montreal h1,
+.font-neue-montreal h2,
+.font-neue-montreal h3,
+.font-neue-montreal h4,
+.font-neue-montreal h5,
+.font-neue-montreal h6,
+.font-neue-montreal .heading-font {
+  font-family: 'NeueMontreal', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif !important;
+  font-weight: 400;
+}
