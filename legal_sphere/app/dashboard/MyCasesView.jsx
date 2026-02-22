@@ -518,7 +518,7 @@ export default function MyCasesView({ onNavigate }) {
                                 <div className="group/lawyer relative">
                                     <div className="flex items-center gap-2">
                                         <div className="w-5 h-5 rounded-full bg-[#1a2238] border border-[#1a2238] flex items-center justify-center text-[9px] font-bold text-[#af9164]">
-                                            {item.lawyer?.charAt(0)}
+                                            {typeof item.lawyer === 'string' ? item.lawyer.charAt(0) : "L"}
                                         </div>
                                         <span className="text-xs font-bold text-[#1a2238] border-b border-dashed border-[#af9164]/30 cursor-help">
                                             {item.lawyer}
@@ -529,7 +529,7 @@ export default function MyCasesView({ onNavigate }) {
                                     <div className="absolute bottom-full left-0 mb-2 w-56 bg-white p-3 rounded-lg shadow-xl border border-[#af9164]/20 opacity-0 invisible group-hover/lawyer:opacity-100 group-hover/lawyer:visible transition-all duration-200 z-50">
                                         <div className="flex items-center gap-3 mb-2 pb-2 border-b border-zinc-100">
                                             <div className="w-8 h-8 rounded-full bg-[#1a2238] text-[#af9164] flex items-center justify-center text-xs font-bold">
-                                                 {item.lawyer?.charAt(0)}
+                                                 {typeof item.lawyer === 'string' ? item.lawyer.charAt(0) : "L"}
                                             </div>
                                             <div>
                                                 <p className="text-xs font-bold text-[#1a2238]">{item.lawyer}</p>

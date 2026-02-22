@@ -127,7 +127,7 @@ export default function ProfileView() {
                     <div className="px-6 pb-6 text-center -mt-10 relative z-10">
                         <div className="relative inline-block mb-3 group">
                             <div className="w-20 h-20 rounded-full border-4 border-white shadow-md bg-slate-200 flex items-center justify-center text-xl font-serif text-slate-600 relative overflow-hidden">
-                                {userData?.name ? userData.name.charAt(0) : "U"}
+                                {typeof userData?.name === 'string' ? userData.name.charAt(0) : "U"}
                             </div>
                             <button className="absolute bottom-0 right-0 p-1.5 bg-[#af9164] text-white rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
                                 <Camera className="w-3 h-3" />

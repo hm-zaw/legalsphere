@@ -21,6 +21,7 @@ import {
   Mail,
   MapPin,
   ArrowRight,
+  MessageCircle,
 } from "lucide-react";
 import {
   AceternitySidebar,
@@ -33,6 +34,7 @@ import { SettingsView } from "./SettingsView";
 import { TasksView } from "./TasksView";
 import LawyerCasesView from "./LawyerCasesView";
 import LawyerCaseDetailView from "./LawyerCaseDetailView";
+import ClientCommunicationView from "./ClientCommunicationView";
 import {
   Popover,
   PopoverContent,
@@ -91,6 +93,14 @@ function LawyerDashboardPage() {
       onClick: () => setActiveTab("documents"),
     },
     {
+      label: "Client Communications",
+      href: "#",
+      icon: (
+        <MessageCircle className="h-4 w-4 shrink-0 text-slate-500 group-hover/sidebar:text-[#1a2238]" />
+      ),
+      onClick: () => setActiveTab("communications"),
+    },
+    {
       label: "Firm Settings",
       href: "#",
       icon: (
@@ -146,7 +156,10 @@ function LawyerDashboardPage() {
       {/* Main Content */}
       <div className="relative flex flex-1 flex-col overflow-hidden h-full z-10 bg-[#efefec]">
         {/* Glassmorphism Header */}
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-zinc-200/50 bg-[#efefec]/80 px-8 backdrop-blur-md">
+        <header className={cn(
+          "sticky top-0 z-30 flex h-16 items-center justify-between border-b border-zinc-200/50 bg-[#efefec]/80 px-8 backdrop-blur-md",
+          activeTab === "communications" && !isCaseDetail ? "hidden" : ""
+        )}>
           <div className="flex items-center gap-4">
             <div className="flex flex-col">
               <h2 className="font-serif text-lg text-[#1a2238] tracking-tight">
@@ -155,6 +168,7 @@ function LawyerDashboardPage() {
                 {activeTab === "calendar" && "Court Schedule"}
                 {activeTab === "tasks" && "Task Delegation"}
                 {activeTab === "documents" && "Secure Document Vault"}
+                {activeTab === "communications" && "Client Communications"}
                 {activeTab === "settings" && "Firm Configuration"}
               </h2>
               <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-[#af9164] font-bold">
@@ -217,8 +231,17 @@ function LawyerDashboardPage() {
         </header>
 
         {/* Dense Content Area */}
-        <main className="flex-1 overflow-y-auto p-6 scroll-smooth">
-          <div className="mx-auto max-w-[1600px] space-y-8">
+        <main className={cn(
+          "flex-1 overflow-y-auto scroll-smooth flex flex-col min-h-0", 
+          (activeTab === "communications" && !isCaseDetail) ? "p-0" : "p-6"
+        )}>
+          {/* ADDED: flex-1 flex flex-col min-h-0 so the child stretches properly */}
+          <div className={cn(
+            "mx-auto flex-1 flex flex-col w-full min-h-0", 
+            (activeTab === "communications" && !isCaseDetail) 
+              ? "h-full" // CHANGED: Removed h-[calc(100vh-64px)]
+              : "max-w-[1600px] space-y-8"
+          )}>
             {isCaseDetail ? (
               <LawyerCaseDetailView caseId={caseId} />
             ) : (
@@ -247,6 +270,11 @@ function LawyerDashboardPage() {
                 {activeTab === "documents" && (
                   <div className="flex h-[60vh] items-center justify-center text-slate-400 font-serif italic">
                     Document Vault Loading...
+                  </div>
+                )}
+                {activeTab === "communications" && (
+                  <div className="animate-in fade-in duration-500 h-full w-full">
+                    <ClientCommunicationView />
                   </div>
                 )}
               </>

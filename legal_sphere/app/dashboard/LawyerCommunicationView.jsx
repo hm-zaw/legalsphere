@@ -45,7 +45,7 @@ const LawyerCard = ({ caseItem, onSelect, isActive }) => {
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-[#1a2238] flex items-center justify-center text-sm font-bold text-[#af9164]">
-            {caseItem.assignedLawyer?.name?.charAt(0) || "L"}
+            {typeof caseItem.assignedLawyer?.name === 'string' ? caseItem.assignedLawyer.name.charAt(0) : "L"}
           </div>
           <div>
             <h3 className="font-serif text-sm font-semibold text-[#1a2238]">
@@ -171,7 +171,7 @@ export default function LawyerCommunicationView({ onNavigate }) {
   }
 
   return (
-    <div className="flex-1 w-full min-h-screen bg-[#efefec] overflow-hidden">
+    <div className="flex-1 w-full h-full bg-[#efefec] overflow-hidden">
       <div className="flex h-full">
         {/* Left Sidebar - Cases List */}
         <div className="w-96 bg-white border-r border-slate-200 flex flex-col">
@@ -248,19 +248,19 @@ export default function LawyerCommunicationView({ onNavigate }) {
         </div>
 
         {/* Right Content - Communication Interface */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col min-w-0">
           {selectedCase ? (
-            <div className="flex-1 flex flex-col">
+            <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
               {/* Selected Case Header */}
-              <div className="bg-white border-b border-slate-200 p-4">
+              <div className="bg-white border-b border-slate-200 p-4 shrink-0">
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="font-serif text-lg text-[#1a2238]">
-                      {selectedCase.case?.title}
+                      {selectedCase.assignedLawyer?.name || selectedCase.lawyer}
                     </h2>
                     <div className="flex items-center gap-3 mt-1">
                       <span className="text-xs text-slate-500">
-                        Case ID: {selectedCase.id?.slice(0, 8)}
+                        Case: {selectedCase.case?.title}
                       </span>
                       <span className="w-1 h-1 rounded-full bg-slate-300" />
                       <span className="text-xs text-slate-500">
@@ -283,7 +283,7 @@ export default function LawyerCommunicationView({ onNavigate }) {
               </div>
 
               {/* Communication Interface */}
-              <div className="flex-1 p-6">
+              <div className="flex-1 bg-white flex flex-col min-h-0 overflow-hidden">
                 <LawyerCommunicationInterface 
                   caseData={{...selectedCase, lawyer: selectedCase.assignedLawyer?.name}} 
                   currentUser={JSON.parse(localStorage.getItem("userData") || "{}")} 
