@@ -20,87 +20,71 @@ import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { cn } from "@/lib/utils";
 import { apiClient } from "@/lib/api";
 import LawyerCommunicationInterface from "@/components/lawyer/LawyerCommunicationInterface";
+import { SchedulingModal } from "@shared/chat/components/scheduling-modal";
+import { io } from "socket.io-client";
 
 // Design Tokens
 const LEGAL_NAVY = "#1a2238";
 const ACCENT_GOLD = "#af9164";
 
 const LawyerCard = ({ caseItem, onSelect, isActive }) => {
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString(undefined, { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
-    });
+  const formatTime = (dateString) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    const today = new Date();
+    if (date.toDateString() === today.toDateString()) {
+      return date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+    }
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   };
+
+  const status = caseItem.status?.toLowerCase() || 'pending';
+  const isActiveStatus = status === "active";
 
   return (
     <div
       onClick={() => onSelect(caseItem)}
       className={cn(
-        "bg-white border rounded-lg p-4 cursor-pointer transition-all duration-200 hover:shadow-lg",
-        isActive ? "border-[#af9164] shadow-md" : "border-slate-200 hover:border-slate-300"
+        "group flex items-center gap-3 p-3 cursor-pointer transition-all duration-200 rounded-lg border",
+        isActive 
+          ? "bg-[#af9164]/[0.08] border-[#af9164]/30 shadow-sm" 
+          : "bg-white border-transparent hover:bg-slate-50 hover:border-slate-200"
       )}
     >
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-[#1a2238] flex items-center justify-center text-sm font-bold text-[#af9164]">
-            {typeof caseItem.assignedLawyer?.name === 'string' ? caseItem.assignedLawyer.name.charAt(0) : "L"}
-          </div>
-          <div>
-            <h3 className="font-serif text-sm font-semibold text-[#1a2238]">
-              {caseItem.assignedLawyer?.name || "Unknown Counsel"}
-            </h3>
-            <p className="text-xs text-slate-500">Lead Counsel</p>
-          </div>
-        </div>
+      <div className="relative flex-shrink-0">
         <div className={cn(
-          "text-[8px] font-bold uppercase tracking-[0.2em] px-2.5 py-1.5 border",
-          caseItem.status?.toLowerCase() === "active" 
-            ? "text-green-700 border-green-200 bg-green-50" 
-            : "text-slate-500 border-slate-200 bg-slate-50"
+          "w-11 h-11 rounded-full flex items-center justify-center text-[14px] font-bold font-serif transition-colors shadow-sm",
+          isActive ? "bg-[#af9164] text-[#1a2238]" : "bg-[#1a2238] text-[#af9164]"
         )}>
-          {caseItem.status}
+          {typeof caseItem.assignedLawyer?.name === 'string' ? caseItem.assignedLawyer.name.charAt(0) : "L"}
         </div>
+        {isActiveStatus && (
+          <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full"></span>
+        )}
       </div>
 
-      <div className="space-y-2 mb-3">
-        <div>
-          <p className="text-xs font-bold uppercase text-slate-400 tracking-wider mb-1">Case Title</p>
-          <p className="text-sm text-slate-800 font-medium line-clamp-2">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between mb-0.5">
+          <h3 className={cn(
+            "font-serif text-[14px] truncate",
+            isActive ? "text-[#1a2238] font-bold" : "text-[#1a2238] font-semibold"
+          )}>
+            {caseItem.assignedLawyer?.name || "Unknown Counsel"}
+          </h3>
+          <span className="text-[10px] text-slate-400 flex-shrink-0 font-medium">
+            {formatTime(caseItem.updatedAt || caseItem.assignedLawyer?.assignedAt || Date.now())}
+          </span>
+        </div>
+        <div className="flex items-center justify-between">
+          <p className={cn(
+            "text-[12px] truncate",
+            isActive ? "text-[#1a2238]/70" : "text-slate-500"
+          )}>
             {caseItem.case?.title || "Untitled Case"}
           </p>
-        </div>
-        
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <p className="text-xs font-bold uppercase text-slate-400 tracking-wider mb-1">Category</p>
-            <p className="text-xs text-slate-600">{caseItem.case?.category || "Other"}</p>
-          </div>
-          <div>
-            <p className="text-xs font-bold uppercase text-slate-400 tracking-wider mb-1">Assigned</p>
-            <p className="text-xs text-slate-600">
-              {formatDate(caseItem.assignedLawyer?.assignedAt)}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-        <div className="flex items-center gap-1 text-xs text-slate-500">
-          <Calendar className="w-3 h-3" />
-          <span>Last updated: {formatDate(caseItem.updatedAt)}</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <button className="p-1.5 text-slate-400 hover:text-[#1a2238] transition-colors">
-            <Phone className="w-3 h-3" />
-          </button>
-          <button className="p-1.5 text-slate-400 hover:text-[#1a2238] transition-colors">
-            <Video className="w-3 h-3" />
-          </button>
-          <button className="p-1.5 text-slate-400 hover:text-[#1a2238] transition-colors">
-            <Mail className="w-3 h-3" />
-          </button>
+          {status === "pending" && (
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0 ml-2"></span>
+          )}
         </div>
       </div>
     </div>
@@ -114,6 +98,30 @@ export default function LawyerCommunicationView({ onNavigate }) {
   const [selectedCase, setSelectedCase] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [isSchedulingModalOpen, setIsSchedulingModalOpen] = useState(false);
+  const [socket, setSocket] = useState(null);
+
+  const currentUser = typeof window !== 'undefined' 
+    ? JSON.parse(localStorage.getItem("userData") || "{}")
+    : {};
+
+  // Initialize socket connection
+  useEffect(() => {
+    const token = localStorage.getItem("userToken");
+    if (!token) return;
+
+    const SOCKET_BASE = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:5000";
+    const newSocket = io(SOCKET_BASE, {
+      auth: { token },
+      transports: ["websocket", "polling"],
+    });
+
+    setSocket(newSocket);
+
+    return () => {
+      newSocket.disconnect();
+    };
+  }, []);
 
   useEffect(() => {
     fetchCases();
@@ -155,6 +163,32 @@ export default function LawyerCommunicationView({ onNavigate }) {
     
     return matchesSearch && matchesFilter;
   });
+
+  // Handle appointment proposal submission
+  const handleAppointmentSubmit = async (data) => {
+    if (!socket || !selectedCase) {
+      throw new Error("Socket not connected or no case selected");
+    }
+
+    return new Promise((resolve, reject) => {
+      socket.emit(
+        "appointment_proposal",
+        {
+          ...data,
+          chat_id: selectedCase.id,
+        },
+        (response) => {
+          if (response.success) {
+            console.log("✅ Appointment request sent successfully!");
+            alert("Appointment request sent successfully!");
+            resolve();
+          } else {
+            reject(new Error(response.error || "Failed to send appointment proposal"));
+          }
+        }
+      );
+    });
+  };
 
   if (loading) {
     return (
@@ -275,7 +309,11 @@ export default function LawyerCommunicationView({ onNavigate }) {
                     <button className="p-2 text-slate-400 hover:text-[#1a2238] transition-colors">
                       <Video className="w-4 h-4" />
                     </button>
-                    <button className="p-2 text-slate-400 hover:text-[#1a2238] transition-colors">
+                    <button
+                      onClick={() => setIsSchedulingModalOpen(true)}
+                      className="p-2 text-slate-400 hover:text-[#1a2238] transition-colors"
+                      title="Request Appointment"
+                    >
                       <Calendar className="w-4 h-4" />
                     </button>
                   </div>
@@ -286,9 +324,20 @@ export default function LawyerCommunicationView({ onNavigate }) {
               <div className="flex-1 bg-white flex flex-col min-h-0 overflow-hidden">
                 <LawyerCommunicationInterface 
                   caseData={{...selectedCase, lawyer: selectedCase.assignedLawyer?.name}} 
-                  currentUser={JSON.parse(localStorage.getItem("userData") || "{}")} 
+                  currentUser={currentUser} 
                 />
               </div>
+
+              {/* Scheduling Modal */}
+              <SchedulingModal
+                isOpen={isSchedulingModalOpen}
+                onClose={() => setIsSchedulingModalOpen(false)}
+                caseId={selectedCase.id || ""}
+                clientId={currentUser.id || currentUser._id || ""}
+                lawyerId={selectedCase.assignedLawyer?.id || selectedCase.lawyer_id || ""}
+                userRole="client"
+                onSubmit={handleAppointmentSubmit}
+              />
             </div>
           ) : (
             <div className="flex-1 flex items-center justify-center bg-slate-50">

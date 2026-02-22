@@ -17,15 +17,18 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import { AppointmentChatCard } from "@shared/chat/components/appointment-chat-card";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000";
 
 const LawyerCommunicationInterface = ({ caseData, currentUser }) => {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
+  const [appointmentMessages, setAppointmentMessages] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
   const [showActions, setShowActions] = useState(false);
   const [chatId, setChatId] = useState(null);
+  const socketRef = useRef(null);
   
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -132,10 +135,32 @@ const LawyerCommunicationInterface = ({ caseData, currentUser }) => {
       socket = io(API_BASE_URL, {
         auth: { token }
       });
+      socketRef.current = socket;
 
       socket.on("connect", () => {
         console.log("🟢 Connected to SocketIO!");
         socket.emit("join_chat", { chat_id: chatId });
+        socket.emit("get_appointments", { user_id: userId, role: "client" }, (response) => {
+          if (response && response.success && response.appointments) {
+            const caseAppointments = response.appointments.filter(apt => String(apt.case_id) === String(caseData.id) || String(apt.case_id) === String(caseData.case_id));
+            setAppointmentMessages(caseAppointments);
+          }
+        });
+      });
+
+      socket.on("appointment_notification", (payload) => {
+        if (!isSubscribed) return;
+        setAppointmentMessages(prev => {
+          if (prev.some(apt => String(apt.appointment_id) === String(payload.appointment_id))) return prev;
+          return [...prev, payload];
+        });
+      });
+
+      socket.on("appointment_updated", (payload) => {
+        if (!isSubscribed) return;
+        setAppointmentMessages(prev => 
+          prev.map(apt => String(apt.appointment_id) === String(payload.appointment_id) ? payload : apt)
+        );
       });
 
       socket.on("new_message", (payload) => {
@@ -176,8 +201,9 @@ const LawyerCommunicationInterface = ({ caseData, currentUser }) => {
       if (socket) {
         socket.disconnect();
       }
+      socketRef.current = null;
     };
-  }, [chatId, token, userId]);
+  }, [chatId, token, userId, caseData]);
 
   const handleSendMessage = async () => {
     if (message.trim() && chatId) {
@@ -227,6 +253,40 @@ const LawyerCommunicationInterface = ({ caseData, currentUser }) => {
     }
   };
 
+  const handleAppointmentResponse = async (payload) => {
+    return new Promise((resolve, reject) => {
+      if (socketRef.current) {
+        socketRef.current.emit("appointment_response", payload, (response) => {
+          if (response && response.success) resolve();
+          else reject(new Error(response?.error || 'Failed to act on appointment'));
+        });
+      } else reject(new Error("Socket not connected"));
+    });
+  };
+
+  const handleProposeNewTimes = async (newTimes) => {
+    return new Promise((resolve, reject) => {
+      if (socketRef.current && appointmentMessages.length > 0) {
+        const lastApt = appointmentMessages[appointmentMessages.length - 1];
+        if (!lastApt) return reject(new Error("No appointment"));
+        socketRef.current.emit("appointment_response", {
+          appointment_id: lastApt.appointment_id,
+          case_id: lastApt.case_id,
+          response: "propose_new",
+          new_proposed_times: newTimes
+        }, (response) => {
+          if (response && response.success) resolve();
+          else reject(new Error(response?.error || 'Failed'));
+        });
+      } else reject(new Error("Socket not connected or no appointment"));
+    });
+  };
+
+  const combinedItems = [
+    ...messages.map(m => ({ type: 'message', data: m, timestamp: m.timestamp })),
+    ...appointmentMessages.map(a => ({ type: 'appointment', data: a, timestamp: new Date(a.created_at || a.updated_at || Date.now()) }))
+  ].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+
   if (!caseData?.lawyer || caseData?.status?.toLowerCase() !== "active") {
     return null;
   }
@@ -234,51 +294,75 @@ const LawyerCommunicationInterface = ({ caseData, currentUser }) => {
   return (
     <div className="bg-white flex flex-col h-full overflow-hidden">
 
-
-
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 min-h-[300px]">
-        {messages.map((msg) => (
-          <motion.div
-            key={msg.id || Math.random()}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={cn(
-              "flex gap-3",
-              msg.sender === "client" ? "justify-end" : "justify-start"
-            )}
-          >
-            {msg.sender === "lawyer" && (
-              <div className="w-8 h-8 rounded-full bg-[#1a2238] flex items-center justify-center text-xs font-bold text-[#af9164] flex-shrink-0 shadow-sm">
-                {typeof caseData.lawyer === 'string' ? caseData.lawyer.charAt(0) : "L"}
-              </div>
-            )}
-            
-            <div className={cn(
-              "max-w-xs lg:max-w-md px-4 py-2.5 rounded-2xl shadow-sm",
-              msg.sender === "client" 
-                ? "bg-[#1a2238] text-white rounded-tr-sm" 
-                : "bg-white border border-slate-100 text-slate-800 rounded-tl-sm"
-            )}>
-              <p className="text-[13px] leading-relaxed">{msg.content}</p>
-              <div className={cn(
-                "flex items-center gap-1.5 mt-1.5 text-[10px]",
-                msg.sender === "client" ? "text-slate-400" : "text-slate-400"
-              )}>
-                <span>{formatTimestamp(msg.timestamp)}</span>
-                {msg.sender === "client" && msg.read && (
-                  <CheckCircle2 className="w-3 h-3 text-green-400 ml-1" />
-                )}
-              </div>
-            </div>
-            
-            {msg.sender === "client" && (
-              <div className="w-8 h-8 rounded-full bg-[#af9164] flex items-center justify-center text-xs font-bold text-[#1a2238] flex-shrink-0 shadow-sm">
-                {typeof userObj?.name === 'string' ? userObj.name.charAt(0) : "U"}
-              </div>
-            )}
-          </motion.div>
-        ))}
+        <AnimatePresence>
+          {combinedItems.map((item) => {
+            if (item.type === 'appointment') {
+              const apt = item.data;
+              return (
+                <motion.div
+                  key={`apt-${apt.appointment_id}`}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="flex w-full mb-6 justify-center"
+                >
+                  <AppointmentChatCard
+                    appointment={apt}
+                    currentUserId={String(userId)}
+                    userRole="client"
+                    onRespond={handleAppointmentResponse}
+                    onProposeNew={handleProposeNewTimes}
+                  />
+                </motion.div>
+              );
+            } else {
+              const msg = item.data;
+              return (
+                <motion.div
+                  key={`msg-${msg.id || Math.random()}`}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={cn(
+                    "flex gap-3",
+                    msg.sender === "client" ? "justify-end" : "justify-start"
+                  )}
+                >
+                  {msg.sender === "lawyer" && (
+                    <div className="w-8 h-8 rounded-full bg-[#1a2238] flex items-center justify-center text-xs font-bold text-[#af9164] flex-shrink-0 shadow-sm">
+                      {typeof caseData.lawyer === 'string' ? caseData.lawyer.charAt(0) : "L"}
+                    </div>
+                  )}
+                  
+                  <div className={cn(
+                    "max-w-xs lg:max-w-md px-4 py-2.5 rounded-2xl shadow-sm",
+                    msg.sender === "client" 
+                      ? "bg-[#1a2238] text-white rounded-tr-sm" 
+                      : "bg-white border border-slate-100 text-slate-800 rounded-tl-sm"
+                  )}>
+                    <p className="text-[13px] leading-relaxed">{msg.content}</p>
+                    <div className={cn(
+                      "flex items-center gap-1.5 mt-1.5 text-[10px]",
+                      msg.sender === "client" ? "text-slate-400" : "text-slate-400"
+                    )}>
+                      <span>{formatTimestamp(msg.timestamp)}</span>
+                      {msg.sender === "client" && msg.read && (
+                        <CheckCircle2 className="w-3 h-3 text-green-400 ml-1" />
+                      )}
+                    </div>
+                  </div>
+                  
+                  {msg.sender === "client" && (
+                    <div className="w-8 h-8 rounded-full bg-[#af9164] flex items-center justify-center text-xs font-bold text-[#1a2238] flex-shrink-0 shadow-sm">
+                      {typeof userObj?.name === 'string' ? userObj.name.charAt(0) : "U"}
+                    </div>
+                  )}
+                </motion.div>
+              );
+            }
+          })}
+        </AnimatePresence>
         
         {isTyping && (
           <div className="flex gap-3 justify-start">

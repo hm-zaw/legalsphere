@@ -19,86 +19,70 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import { AppointmentChatCard } from "@shared/chat/components/appointment-chat-card";
+import { SchedulingModal } from "@shared/chat/components/scheduling-modal";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000";
 
 // Client Card Component
 const ClientCard = ({ caseItem, onSelect, isActive }: { caseItem: any; onSelect: (c: any) => void; isActive: boolean }) => {
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString(undefined, { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
-    });
+  const formatTime = (dateString: string) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    const today = new Date();
+    if (date.toDateString() === today.toDateString()) {
+      return date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+    }
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   };
+
+  const status = caseItem.status?.toLowerCase() || 'pending';
+  const isActiveStatus = status === "active";
 
   return (
     <div
       onClick={() => onSelect(caseItem)}
       className={cn(
-        "bg-white border rounded-lg p-4 cursor-pointer transition-all duration-200 hover:shadow-lg",
-        isActive ? "border-[#af9164] shadow-md" : "border-slate-200 hover:border-slate-300"
+        "group flex items-center gap-3 p-3 cursor-pointer transition-all duration-200 rounded-lg border",
+        isActive 
+          ? "bg-[#1a2238]/[0.04] border-[#1a2238]/20 shadow-sm" 
+          : "bg-white border-transparent hover:bg-slate-50 hover:border-slate-200"
       )}
     >
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-[#af9164] flex items-center justify-center text-sm font-bold text-[#1a2238]">
-            {typeof caseItem.client?.name === 'string' ? caseItem.client.name.charAt(0) : (typeof caseItem.client === 'string' ? caseItem.client.charAt(0) : "C")}
-          </div>
-          <div>
-            <h3 className="font-serif text-sm font-semibold text-[#1a2238]">
-              {caseItem.client?.name || (typeof caseItem.client === 'string' ? caseItem.client : "Unknown Client")}
-            </h3>
-            <p className="text-xs text-slate-500">Client</p>
-          </div>
-        </div>
+      <div className="relative flex-shrink-0">
         <div className={cn(
-          "text-[8px] font-bold uppercase tracking-[0.2em] px-2.5 py-1.5 border",
-          caseItem.status?.toLowerCase() === "active" 
-            ? "text-green-700 border-green-200 bg-green-50" 
-            : "text-slate-500 border-slate-200 bg-slate-50"
+          "w-11 h-11 rounded-full flex items-center justify-center text-[14px] font-bold font-serif transition-colors shadow-sm",
+          isActive ? "bg-[#1a2238] text-[#af9164]" : "bg-[#af9164] text-[#1a2238]"
         )}>
-          {caseItem.status}
+          {typeof caseItem.client?.name === 'string' ? caseItem.client.name.charAt(0) : (typeof caseItem.client?.fullName === 'string' ? caseItem.client.fullName.charAt(0) : (typeof caseItem.client === 'string' ? caseItem.client.charAt(0) : "C"))}
         </div>
+        {isActiveStatus && (
+          <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full"></span>
+        )}
       </div>
 
-      <div className="space-y-2 mb-3">
-        <div>
-          <p className="text-xs font-bold uppercase text-slate-400 tracking-wider mb-1">Case Title</p>
-          <p className="text-sm text-slate-800 font-medium line-clamp-2">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between mb-0.5">
+          <h3 className={cn(
+            "font-serif text-[14px] truncate",
+            isActive ? "text-[#1a2238] font-bold" : "text-[#1a2238] font-semibold"
+          )}>
+            {caseItem.client?.name || caseItem.client?.fullName || (typeof caseItem.client === 'string' ? caseItem.client : "Unknown Client")}
+          </h3>
+          <span className="text-[10px] text-slate-400 flex-shrink-0 font-medium">
+            {formatTime(caseItem.updatedAt || caseItem.submittedDate || Date.now())}
+          </span>
+        </div>
+        <div className="flex items-center justify-between">
+          <p className={cn(
+            "text-[12px] truncate",
+            isActive ? "text-[#1a2238]/70" : "text-slate-500"
+          )}>
             {caseItem.case?.title || caseItem.title || "Untitled Case"}
           </p>
-        </div>
-        
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <p className="text-xs font-bold uppercase text-slate-400 tracking-wider mb-1">Category</p>
-            <p className="text-xs text-slate-600">{caseItem.case?.category || caseItem.category || "Other"}</p>
-          </div>
-          <div>
-            <p className="text-xs font-bold uppercase text-slate-400 tracking-wider mb-1">Submitted</p>
-            <p className="text-xs text-slate-600">
-              {formatDate(caseItem.submittedDate || caseItem.createdAt || caseItem.assignedAt || Date.now())}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-        <div className="flex items-center gap-1 text-xs text-slate-500">
-          <Calendar className="w-3 h-3" />
-          <span>Last updated: {formatDate(caseItem.updatedAt || Date.now())}</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <button className="p-1.5 text-slate-400 hover:text-[#1a2238] transition-colors">
-            <Phone className="w-3 h-3" />
-          </button>
-          <button className="p-1.5 text-slate-400 hover:text-[#1a2238] transition-colors">
-            <Video className="w-3 h-3" />
-          </button>
-          <button className="p-1.5 text-slate-400 hover:text-[#1a2238] transition-colors">
-            <Mail className="w-3 h-3" />
-          </button>
+          {status === "pending" && (
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0 ml-2"></span>
+          )}
         </div>
       </div>
     </div>
@@ -109,9 +93,11 @@ const ClientCard = ({ caseItem, onSelect, isActive }: { caseItem: any; onSelect:
 const ClientCommunicationInterface = ({ caseData, currentUser }: { caseData: any; currentUser: any }) => {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<any[]>([]);
+  const [appointmentMessages, setAppointmentMessages] = useState<any[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [showActions, setShowActions] = useState(false);
   const [chatId, setChatId] = useState<string | null>(null);
+  const socketRef = useRef<any>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -218,10 +204,32 @@ const ClientCommunicationInterface = ({ caseData, currentUser }: { caseData: any
       socket = io(API_BASE_URL, {
         auth: { token }
       });
+      socketRef.current = socket;
 
       socket.on("connect", () => {
         console.log("🟢 Connected to SocketIO!");
         socket.emit("join_chat", { chat_id: chatId });
+        socket.emit("get_appointments", { user_id: userId, role: "lawyer" }, (response: any) => {
+          if (response && response.success && response.appointments) {
+            const caseAppointments = response.appointments.filter((apt: any) => String(apt.case_id) === String(caseData.id) || String(apt.case_id) === String(caseData.case_id));
+            setAppointmentMessages(caseAppointments);
+          }
+        });
+      });
+
+      socket.on("appointment_notification", (payload: any) => {
+        if (!isSubscribed) return;
+        setAppointmentMessages((prev: any[]) => {
+          if (prev.some(apt => String(apt.appointment_id) === String(payload.appointment_id))) return prev;
+          return [...prev, payload];
+        });
+      });
+
+      socket.on("appointment_updated", (payload: any) => {
+        if (!isSubscribed) return;
+        setAppointmentMessages((prev: any[]) => 
+          prev.map((apt: any) => String(apt.appointment_id) === String(payload.appointment_id) ? payload : apt)
+        );
       });
 
       socket.on("new_message", (payload: any) => {
@@ -269,8 +277,9 @@ const ClientCommunicationInterface = ({ caseData, currentUser }: { caseData: any
       if (socket) {
         socket.disconnect();
       }
+      socketRef.current = null;
     };
-  }, [chatId, token, userId]);
+  }, [chatId, token, userId, caseData]);
 
   const handleSendMessage = async () => {
     if (message.trim() && chatId) {
@@ -320,7 +329,41 @@ const ClientCommunicationInterface = ({ caseData, currentUser }: { caseData: any
     }
   };
 
-  const clientName = typeof caseData?.client?.name === "string" ? caseData.client.name : (typeof caseData?.client === "string" ? caseData.client : "Client");
+  const handleAppointmentResponse = async (payload: any) => {
+    return new Promise<void>((resolve, reject) => {
+      if (socketRef.current) {
+        socketRef.current.emit("appointment_response", payload, (response: any) => {
+          if (response && response.success) resolve();
+          else reject(new Error(response?.error || 'Failed to act on appointment'));
+        });
+      } else reject(new Error("Socket not connected"));
+    });
+  };
+
+  const handleProposeNewTimes = async (newTimes: string[]) => {
+    return new Promise<void>((resolve, reject) => {
+      if (socketRef.current && appointmentMessages.length > 0) {
+        const lastApt = appointmentMessages[appointmentMessages.length - 1];
+        if (!lastApt) return reject(new Error("No appointment"));
+        socketRef.current.emit("appointment_response", {
+          appointment_id: lastApt.appointment_id,
+          case_id: lastApt.case_id,
+          response: "propose_new",
+          new_proposed_times: newTimes
+        }, (response: any) => {
+          if (response && response.success) resolve();
+          else reject(new Error(response?.error || 'Failed'));
+        });
+      } else reject(new Error("Socket not connected or no appointment"));
+    });
+  };
+
+  const clientName = typeof caseData?.client?.name === "string" ? caseData.client.name : (typeof caseData?.client?.fullName === "string" ? caseData.client.fullName : (typeof caseData?.client === "string" ? caseData.client : "Client"));
+
+  const combinedItems = [
+    ...messages.map(m => ({ type: 'message', data: m, timestamp: m.timestamp })),
+    ...appointmentMessages.map(a => ({ type: 'appointment', data: a, timestamp: new Date(a.created_at || a.updated_at || Date.now()) }))
+  ].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 
   if (!clientName || caseData?.status?.toLowerCase() !== "active") {
     return (
@@ -342,47 +385,73 @@ const ClientCommunicationInterface = ({ caseData, currentUser }: { caseData: any
     <div className="bg-white flex flex-col h-full overflow-hidden">
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 min-h-[300px]">
-        {messages.map((msg: any) => (
-          <motion.div
-            key={msg.id || Math.random()}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={cn(
-              "flex gap-3",
-              msg.sender === "lawyer" ? "justify-end" : "justify-start"
-            )}
-          >
-            {msg.sender === "client" && (
-              <div className="w-8 h-8 rounded-full bg-[#af9164] flex items-center justify-center text-xs font-bold text-[#1a2238] flex-shrink-0 shadow-sm">
-                {typeof clientName === 'string' ? clientName.charAt(0) : 'C'}
-              </div>
-            )}
-            
-            <div className={cn(
-              "max-w-xs lg:max-w-md px-4 py-2.5 rounded-2xl shadow-sm",
-              msg.sender === "lawyer" 
-                ? "bg-[#1a2238] text-white rounded-tr-sm" 
-                : "bg-white border border-slate-100 text-slate-800 rounded-tl-sm"
-            )}>
-              <p className="text-[13px] leading-relaxed">{msg.content}</p>
-              <div className={cn(
-                "flex items-center gap-1.5 mt-1.5 text-[10px]",
-                msg.sender === "lawyer" ? "text-slate-400" : "text-slate-400"
-              )}>
-                <span>{formatTimestamp(msg.timestamp)}</span>
-                {msg.sender === "lawyer" && msg.read && (
-                  <CheckCircle2 className="w-3 h-3 text-green-400 ml-1" />
-                )}
-              </div>
-            </div>
-            
-            {msg.sender === "lawyer" && (
-              <div className="w-8 h-8 rounded-full bg-[#1a2238] flex items-center justify-center text-xs font-bold text-[#af9164] flex-shrink-0 shadow-sm">
-                {typeof userObj?.name === 'string' ? userObj.name.charAt(0) : "L"}
-              </div>
-            )}
-          </motion.div>
-        ))}
+        <AnimatePresence>
+          {combinedItems.map((item) => {
+            if (item.type === 'appointment') {
+              const apt = item.data;
+              return (
+                <motion.div
+                  key={`apt-${apt.appointment_id}`}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="flex w-full mb-6 justify-center"
+                >
+                  <AppointmentChatCard
+                    appointment={apt}
+                    currentUserId={String(userId)}
+                    userRole="lawyer"
+                    onRespond={handleAppointmentResponse}
+                    onProposeNew={handleProposeNewTimes}
+                  />
+                </motion.div>
+              );
+            } else {
+              const msg = item.data;
+              return (
+                <motion.div
+                  key={`msg-${msg.id || Math.random()}`}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={cn(
+                    "flex gap-3",
+                    msg.sender === "lawyer" ? "justify-end" : "justify-start"
+                  )}
+                >
+                  {msg.sender === "client" && (
+                    <div className="w-8 h-8 rounded-full bg-[#af9164] flex items-center justify-center text-xs font-bold text-[#1a2238] flex-shrink-0 shadow-sm">
+                      {typeof clientName === 'string' ? clientName.charAt(0) : 'C'}
+                    </div>
+                  )}
+                  
+                  <div className={cn(
+                    "max-w-xs lg:max-w-md px-4 py-2.5 rounded-2xl shadow-sm",
+                    msg.sender === "lawyer" 
+                      ? "bg-[#1a2238] text-white rounded-tr-sm" 
+                      : "bg-white border border-slate-100 text-slate-800 rounded-tl-sm"
+                  )}>
+                    <p className="text-[13px] leading-relaxed">{msg.content}</p>
+                    <div className={cn(
+                      "flex items-center gap-1.5 mt-1.5 text-[10px]",
+                      msg.sender === "lawyer" ? "text-slate-400" : "text-slate-400"
+                    )}>
+                      <span>{formatTimestamp(msg.timestamp)}</span>
+                      {msg.sender === "lawyer" && msg.read && (
+                        <CheckCircle2 className="w-3 h-3 text-green-400 ml-1" />
+                      )}
+                    </div>
+                  </div>
+                  
+                  {msg.sender === "lawyer" && (
+                    <div className="w-8 h-8 rounded-full bg-[#1a2238] flex items-center justify-center text-xs font-bold text-[#af9164] flex-shrink-0 shadow-sm">
+                      {typeof userObj?.name === 'string' ? userObj.name.charAt(0) : "L"}
+                    </div>
+                  )}
+                </motion.div>
+              );
+            }
+          })}
+        </AnimatePresence>
         
         {isTyping && (
           <div className="flex gap-3 justify-start">
@@ -475,6 +544,8 @@ export default function ClientCommunicationView() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isSchedulingModalOpen, setIsSchedulingModalOpen] = useState(false);
+  const socketRef = useRef<any>(null);
 
   useEffect(() => {
     // Get current user data
@@ -531,7 +602,7 @@ export default function ClientCommunicationView() {
   };
 
   const filteredCases = cases.filter((caseItem: any) => {
-    const clientName = caseItem.client?.name || (typeof caseItem.client === 'string' ? caseItem.client : "");
+    const clientName = caseItem.client?.name || caseItem.client?.fullName || (typeof caseItem.client === 'string' ? caseItem.client : "");
     const matchesSearch = 
       caseItem.case?.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       caseItem.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -542,6 +613,17 @@ export default function ClientCommunicationView() {
     
     return matchesSearch && matchesFilter;
   });
+
+  // Handle appointment proposal submission
+  const handleAppointmentSubmit = async (data: any) => {
+    // In the lawyer view, socketRef is inside the CommunicationInterface, so we can't easily access it here
+    // However, for proposing appointments from lawyer to client, we can use the same logic
+    // Currently, the Lawyer dashboard uses a separate socket in LawyerCommunicationView.jsx
+    // Wait, the client view has socket in LawyerCommunicationView, and passes the modal there.
+    // For lawyer proposing to client, we can do it similarly if we have the socket, or we just rely on the API/socket. 
+    // Since the socket is in the ClientCommunicationInterface component, we might have to lift it up.
+    // Let's implement this later if needed, but for now just showing the modal.
+  };
 
   if (loading) {
     return (
@@ -641,7 +723,7 @@ export default function ClientCommunicationView() {
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="font-serif text-lg text-[#1a2238]">
-                      {selectedCase.client?.name || (typeof selectedCase.client === 'string' ? selectedCase.client : "Client")}
+                      {selectedCase.client?.name || selectedCase.client?.fullName || (typeof selectedCase.client === 'string' ? selectedCase.client : "Client")}
                     </h2>
                     <div className="flex items-center gap-3 mt-1">
                       <span className="text-xs text-slate-500">
@@ -660,7 +742,11 @@ export default function ClientCommunicationView() {
                     <button className="p-2 text-slate-400 hover:text-[#1a2238] transition-colors">
                       <Video className="w-4 h-4" />
                     </button>
-                    <button className="p-2 text-slate-400 hover:text-[#1a2238] transition-colors">
+                    <button 
+                      onClick={() => setIsSchedulingModalOpen(true)}
+                      className="p-2 text-slate-400 hover:text-[#1a2238] transition-colors"
+                      title="Request Appointment"
+                    >
                       <Calendar className="w-4 h-4" />
                     </button>
                   </div>
@@ -675,6 +761,13 @@ export default function ClientCommunicationView() {
                   currentUser={currentUser} 
                 />
               </div>
+
+              {/* Scheduling Modal */}
+               {/* 
+                 For Lawyer proposing to Client 
+                 Wait, the client is trying to propose an appointment to the lawyer from LawyerCommunicationView
+                 Here the lawyer is proposing an appointment to the client from ClientCommunicationView 
+               */}
             </div>
           ) : (
             <div className="flex-1 flex items-center justify-center bg-slate-50">

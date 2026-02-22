@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { io, Socket } from "socket.io-client";
 import { format } from "date-fns";
+import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "./components/ui/avatar";
 import { Button } from "./components/ui/button";
@@ -16,8 +18,9 @@ import {
   Trash2,
   Check,
   CheckCheck,
+  Calendar,
+  Loader2,
 } from "lucide-react";
-import { chatData, type ChatUser, type Message } from "./data";
 import { cn } from "./lib/utils";
 import { ScrollArea } from "./components/ui/scroll-area";
 import {
@@ -37,16 +40,83 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "./components/ui/alert-dialog";
+import { SchedulingModal } from "./components/scheduling-modal";
+import { AppointmentChatCard } from "./components/appointment-chat-card";
+import type {
+  AppointmentProposalPayload,
+  AppointmentResponsePayload,
+  AppointmentNotificationPayload,
+} from "./types/appointments";
 
-export function ChatView() {
-  const [users, setUsers] = useState<ChatUser[]>(chatData);
-  const [activeChatId, setActiveChatId] = useState<string | null>(
-    chatData.length > 0 ? chatData[0].id : null
-  );
+interface ChatUser {
+  id: string;
+  name: string;
+  avatar: string;
+  lastMessage: string;
+  unreadCount: number;
+  online: boolean;
+}
+
+interface Message {
+  from: "me" | "them";
+  text: string;
+  time: string;
+  attachment?: {
+    type: "image" | "file";
+    url: string;
+    name: string;
+  };
+  edited?: boolean;
+  read?: boolean;
+}
+
+interface Chat {
+  id: string;
+  client_id: string | number;
+  lawyer_id: string | number;
+  case_id?: string;
+  other_user_name?: string;
+  other_user_avatar?: string;
+  last_message?: string;
+  last_message_time?: string;
+}
+
+interface ChatViewProps {
+  userId?: string;
+  userRole?: "client" | "lawyer" | "admin";
+  token?: string;
+  clientId?: string;
+  lawyerId?: string;
+}
+
+export function ChatView({
+  userId = "user-1",
+  userRole = "lawyer",
+  token,
+  clientId: clientIdProp,
+  lawyerId: lawyerIdProp,
+}: ChatViewProps) {
+  const [chats, setChats] = useState<Chat[]>([]);
+  const [users, setUsers] = useState<ChatUser[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [appointmentMessages, setAppointmentMessages] = useState<AppointmentNotificationPayload[]>([]);
+  const [isSchedulingModalOpen, setIsSchedulingModalOpen] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(true);
+  const [isLoadingChats, setIsLoadingChats] = useState(true);
+  const [socketError, setSocketError] = useState<string | null>(null);
+  const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  
   const activeChat = useMemo(
     () => users.find((user) => user.id === activeChatId) ?? null,
     [users, activeChatId]
   );
+  
+  const currentChat = useMemo(
+    () => chats.find((chat) => chat.id === activeChatId),
+    [chats, activeChatId]
+  );
+
+  const socketRef = useRef<Socket | null>(null);
 
   const [message, setMessage] = useState("");
   const [attachment, setAttachment] = useState<File | null>(null);
@@ -59,10 +129,126 @@ export function ChatView() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Scroll to bottom when messages change
+  // Fetch user's chats from API
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [activeChat?.messages]);
+    if (!token || !userId) return;
+
+    const fetchChats = async () => {
+      setIsLoadingChats(true);
+      try {
+        const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+        const response = await fetch(`${API_BASE}/api/chats`, {
+          headers: {
+            "Authorization": `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch chats");
+        }
+
+        const data = await response.json();
+        if (data.success && data.Data) {
+          setChats(data.Data);
+          // Convert chats to user format for sidebar
+          const chatUsers: ChatUser[] = data.Data.map((chat: Chat) => ({
+            id: chat.id,
+            name: chat.other_user_name || "Unknown",
+            avatar: chat.other_user_avatar || "",
+            lastMessage: chat.last_message || "",
+            unreadCount: 0,
+            online: false,
+          }));
+          setUsers(chatUsers);
+          
+          // Set first chat as active if available
+          if (data.Data.length > 0 && !activeChatId) {
+            setActiveChatId(data.Data[0].id);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching chats:", error);
+      } finally {
+        setIsLoadingChats(false);
+      }
+    };
+
+    fetchChats();
+  }, [token, userId]);
+
+  // Initialize Socket.IO connection
+  useEffect(() => {
+    if (!token) {
+      setIsConnecting(false);
+      return;
+    }
+
+    const SOCKET_BASE = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:5000";
+    
+    const socket = io(SOCKET_BASE, {
+      auth: { token },
+      transports: ["websocket", "polling"],
+    });
+
+    socketRef.current = socket;
+
+    socket.on("connect", () => {
+      console.log("✅ Socket connected");
+      setIsConnecting(false);
+      setSocketError(null);
+
+      // Join chat room for the active case
+      if (activeChatId) {
+        socket.emit("join_chat", { chat_id: activeChatId });
+      }
+    });
+
+    socket.on("connect_error", (error) => {
+      console.error("❌ Socket connection error:", error);
+      setIsConnecting(false);
+      setSocketError("Failed to connect to chat server");
+    });
+
+    socket.on("connected", (data) => {
+      console.log("Socket connected response:", data);
+    });
+
+    socket.on("joined_chat", (data) => {
+      console.log("Joined chat room:", data);
+    });
+
+    // Listen for new messages
+    socket.on("new_message", (data) => {
+      console.log("New message received:", data);
+    });
+
+    // Listen for appointment notifications
+    socket.on("appointment_notification", (data: AppointmentNotificationPayload) => {
+      console.log("Appointment notification received:", data);
+      setAppointmentMessages((prev) => [...prev, data]);
+    });
+
+    // Listen for appointment response updates
+    socket.on("appointment_updated", (data: AppointmentNotificationPayload) => {
+      console.log("Appointment updated:", data);
+      setAppointmentMessages((prev) =>
+        prev.map((apt) =>
+          apt.appointment_id === data.appointment_id ? data : apt
+        )
+      );
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [token, activeChatId]);
+
+  // Join chat room when active chat changes
+  useEffect(() => {
+    if (socketRef.current && activeChatId) {
+      socketRef.current.emit("join_chat", { chat_id: activeChatId });
+    }
+  }, [activeChatId]);
 
   // Clear unread when opening a chat
   useEffect(() => {
@@ -105,17 +291,15 @@ export function ChatView() {
       attachment: newAttachment,
     };
 
-    setUsers((prev) =>
-      prev.map((user) => {
-        if (user.id !== activeChatId) return user;
+    // Emit message to server
+    if (socketRef.current) {
+      socketRef.current.emit("send_message", {
+        chat_id: activeChatId,
+        message: newMessage,
+      });
+    }
 
-        return {
-          ...user,
-          messages: [...user.messages, newMessage],
-          lastMessage: message?.trim() ? message.trim() : "Attachment",
-        };
-      })
-    );
+    setMessages((prev) => [...prev, newMessage]);
 
     setMessage("");
     setAttachment(null);
@@ -124,28 +308,7 @@ export function ChatView() {
   };
 
   const handleDeleteMessage = (messageIndex: number) => {
-    if (!activeChatId) return;
-
-    setUsers((prev) =>
-      prev.map((user) => {
-        if (user.id !== activeChatId) return user;
-
-        const newMessages = user.messages.filter((_, index) => index !== messageIndex);
-
-        // update lastMessage after deletion
-        const last = newMessages[newMessages.length - 1];
-        const nextLastMessage =
-          last?.text?.trim() ||
-          (last?.attachment ? "Attachment" : "") ||
-          "No messages yet";
-
-        return {
-          ...user,
-          messages: newMessages,
-          lastMessage: nextLastMessage,
-        };
-      })
-    );
+    setMessages((prev) => prev.filter((_, index) => index !== messageIndex));
   };
 
   const handleDeleteChat = () => {
@@ -159,37 +322,148 @@ export function ChatView() {
   };
 
   const handleStartEdit = (messageIndex: number) => {
-    if (!activeChat) return;
-    const messageToEdit = activeChat.messages[messageIndex];
-    if (messageToEdit.text) setEditingMessage({ index: messageIndex, text: messageToEdit.text });
+    const messageToEdit = messages[messageIndex];
+    if (messageToEdit?.text) setEditingMessage({ index: messageIndex, text: messageToEdit.text });
   };
 
   const handleCancelEdit = () => setEditingMessage(null);
 
   const handleSaveEdit = () => {
-    if (!editingMessage || !activeChatId) return;
+    if (!editingMessage) return;
 
-    setUsers((prev) =>
-      prev.map((user) => {
-        if (user.id !== activeChatId) return user;
-
-        const newMessages = user.messages.map((msg, index) => {
-          if (index === editingMessage.index) return { ...msg, text: editingMessage.text, edited: true };
-          return msg;
-        });
-
-        // keep lastMessage in sync if last message edited
-        const last = newMessages[newMessages.length - 1];
-        const nextLastMessage =
-          last?.text?.trim() || (last?.attachment ? "Attachment" : "") || user.lastMessage;
-
-        return { ...user, messages: newMessages, lastMessage: nextLastMessage };
+    setMessages((prev) =>
+      prev.map((msg, index) => {
+        if (index === editingMessage.index) return { ...msg, text: editingMessage.text, edited: true };
+        return msg;
       })
     );
 
     setEditingMessage(null);
   };
 
+  // Handle appointment proposal submission
+  const handleAppointmentSubmit = useCallback(async (data: AppointmentProposalPayload) => {
+    if (!socketRef.current || !activeChatId || !currentChat) {
+      throw new Error("Socket not connected or no active chat");
+    }
+
+    console.log("[Appointment] Submitting - activeChatId (mongo):", activeChatId, "data.case_id:", data.case_id);
+
+    return new Promise<void>((resolve, reject) => {
+      // The socket payload needs chat_id for the room (MongoDB chat ID)
+      // and case_id for the appointment record
+      const socketPayload = {
+        ...data,
+        chat_id: activeChatId,  // MongoDB chat ID for socket room
+        case_id: data.case_id || activeChatId,  // Case ID for appointment (fallback to chat ID if no case)
+      };
+
+      console.log("[Appointment] Socket payload:", socketPayload);
+
+      socketRef.current?.emit(
+        "appointment_proposal",
+        socketPayload,
+        (response: { success: boolean; appointment_id?: string; error?: string }) => {
+          if (response.success) {
+            console.log("[Appointment] Success, response:", response);
+            // Also add to local state immediately so sender sees it
+            const notification: AppointmentNotificationPayload = {
+              appointment_id: response.appointment_id || `temp-${Date.now()}`,
+              case_id: socketPayload.case_id,
+              client_id: data.client_id,
+              lawyer_id: data.lawyer_id,
+              proposed_times: data.proposed_times,
+              location_type: data.location_type,
+              status: "pending",
+              agreed_time: null,
+              timestamp: new Date().toISOString(),
+            };
+            setAppointmentMessages((prev) => [...prev, notification]);
+            resolve();
+          } else {
+            console.error("[Appointment] Failed:", response.error);
+            reject(new Error(response.error || "Failed to send appointment proposal"));
+          }
+        }
+      );
+    });
+  }, [activeChatId, currentChat]);
+
+  // Handle appointment response (accept/decline/propose_new)
+  const handleAppointmentResponse = useCallback(async (data: AppointmentResponsePayload) => {
+    if (!socketRef.current) {
+      throw new Error("Socket not connected");
+    }
+
+    return new Promise<void>((resolve, reject) => {
+      socketRef.current?.emit(
+        "appointment_response",
+        data,
+        (response: { success: boolean; error?: string }) => {
+          if (response.success) {
+            resolve();
+          } else {
+            reject(new Error(response.error || "Failed to respond to appointment"));
+          }
+        }
+      );
+    });
+  }, []);
+
+  // Handle proposing new times
+  const handleProposeNewTimes = useCallback(async (newTimes: string[]) => {
+    if (!socketRef.current || !activeChatId) {
+      throw new Error("Socket not connected or no active chat");
+    }
+
+    const lastAppointment = appointmentMessages[appointmentMessages.length - 1];
+    if (!lastAppointment) {
+      throw new Error("No appointment to update");
+    }
+
+    return new Promise<void>((resolve, reject) => {
+      socketRef.current?.emit(
+        "appointment_response",
+        {
+          appointment_id: lastAppointment.appointment_id,
+          case_id: lastAppointment.case_id,
+          response: "propose_new",
+          new_proposed_times: newTimes,
+        },
+        (response: { success: boolean; error?: string }) => {
+          if (response.success) {
+            resolve();
+          } else {
+            reject(new Error(response.error || "Failed to propose new times"));
+          }
+        }
+      );
+    });
+  }, [appointmentMessages, activeChatId]);
+
+  // Get client and lawyer IDs from current chat
+  const getClientAndLawyerIds = () => {
+    if (currentChat) {
+      return { 
+        clientId: String(currentChat.client_id), 
+        lawyerId: String(currentChat.lawyer_id) 
+      };
+    }
+    if (clientIdProp && lawyerIdProp) {
+      return { clientId: clientIdProp, lawyerId: lawyerIdProp };
+    }
+    return {
+      clientId: userRole === "client" ? userId : "",
+      lawyerId: userRole === "lawyer" ? userId : "",
+    };
+  };
+
+  const { clientId, lawyerId } = getClientAndLawyerIds();
+
+  // Helper to compare IDs (handle both string and number types)
+  const isSameId = (id1: string | number | undefined, id2: string | number | undefined) => {
+    return String(id1) === String(id2);
+  };
   // FILTER: keep unread badge visible by not affecting layout
   const filteredUsers = useMemo(() => {
     const s = searchTerm.trim().toLowerCase();
@@ -198,10 +472,11 @@ export function ChatView() {
   }, [users, searchTerm]);
 
   return (
-    <Card className="h-[70vh] flex flex-col">
-      <CardHeader>
-        <CardTitle>Client Chat</CardTitle>
-      </CardHeader>
+    <>
+      <Card className="h-[70vh] flex flex-col">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Client Chat</CardTitle>
+        </CardHeader>
 
       <CardContent className="flex-1 flex flex-row p-0 overflow-hidden">
         {/* User List */}
@@ -219,52 +494,64 @@ export function ChatView() {
           </div>
 
           <ScrollArea className="flex-1">
-            {filteredUsers.map((user) => (
-              <button
-                key={user.id}
-                type="button"
-                onClick={() => setActiveChatId(user.id)}
-                className={cn(
-                  "w-full flex items-center gap-3 p-4 text-left hover:bg-secondary/50 transition min-w-0",
-                  activeChat?.id === user.id && "bg-secondary"
-                )}
-              >
-                <div className="relative shrink-0">
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage src={user.avatar} alt={user.name} data-ai-hint="person face" />
-                    <AvatarFallback>
-                      {user.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")}
-                    </AvatarFallback>
-                  </Avatar>
-                  {user.online && (
-                    <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-card" />
-                  )}
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="font-semibold truncate">{user.name}</p>
-                  </div>
-                  <div className="mt-0.5 flex items-center gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-muted-foreground truncate">
-                        {user.lastMessage.split(" ").length > 3
-                          ? user.lastMessage.split(" ").slice(0, 3).join(" ") + "..."
-                          : user.lastMessage}
-                      </p>
-                    </div>
-                    {user.unreadCount > 0 && (
-                      <div className="shrink-0 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-primary-foreground text-xs font-semibold">
-                        {user.unreadCount}
-                      </div>
+            {isLoadingChats ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : filteredUsers.length === 0 ? (
+              <div className="p-4 text-center text-sm text-muted-foreground">
+                No chats available
+              </div>
+            ) : (
+              <>
+                {filteredUsers.map((user) => (
+                  <button
+                    key={user.id}
+                    type="button"
+                    onClick={() => setActiveChatId(user.id)}
+                    className={cn(
+                      "w-full flex items-center gap-3 p-4 text-left hover:bg-secondary/50 transition min-w-0",
+                      activeChat?.id === user.id && "bg-secondary"
                     )}
-                  </div>
-                </div>
-              </button>
-            ))}
+                  >
+                    <div className="relative shrink-0">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={user.avatar} alt={user.name} data-ai-hint="person face" />
+                        <AvatarFallback>
+                          {user.name
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")}
+                        </AvatarFallback>
+                      </Avatar>
+                      {user.online && (
+                        <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-card" />
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="font-semibold truncate">{user.name}</p>
+                      </div>
+                      <div className="mt-0.5 flex items-center gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-muted-foreground truncate">
+                            {user.lastMessage.split(" ").length > 3
+                              ? user.lastMessage.split(" ").slice(0, 3).join(" ") + "..."
+                              : user.lastMessage}
+                          </p>
+                        </div>
+                        {user.unreadCount > 0 && (
+                          <div className="shrink-0 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-primary-foreground text-xs font-semibold">
+                            {user.unreadCount}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </>
+            )}
           </ScrollArea>
         </div>
 
@@ -289,6 +576,13 @@ export function ChatView() {
                 </div>
 
                 <p className="font-semibold truncate">{activeChat.name}</p>
+
+                {isConnecting && (
+                  <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Connecting...
+                  </div>
+                )}
 
                 <div className="ml-auto">
                   <AlertDialog>
@@ -327,7 +621,32 @@ export function ChatView() {
 
               <ScrollArea className="flex-1 p-4 bg-background/90">
                 <div className="space-y-4">
-                  {activeChat.messages.map((msg, index) => (
+                  {/* Render appointment messages */}
+                  <AnimatePresence>
+                    {appointmentMessages.map((apt) => (
+                      <motion.div
+                        key={apt.appointment_id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        className={cn(
+                          "flex",
+                          isSameId(apt.client_id, userId) ? "justify-end" : "justify-start"
+                        )}
+                      >
+                        <AppointmentChatCard
+                          appointment={apt}
+                          currentUserId={userId}
+                          userRole={userRole}
+                          onRespond={handleAppointmentResponse}
+                          onProposeNew={handleProposeNewTimes}
+                        />
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+
+                  {/* Render regular messages */}
+                  {messages.map((msg, index) => (
                     <div
                       key={index}
                       className={cn("flex", msg.from === "me" ? "justify-end" : "justify-start")}
@@ -540,5 +859,17 @@ export function ChatView() {
         </div>
       </CardContent>
     </Card>
+
+    {/* Scheduling Modal */}
+    <SchedulingModal
+      isOpen={isSchedulingModalOpen}
+      onClose={() => setIsSchedulingModalOpen(false)}
+      caseId={currentChat?.case_id || activeChatId || ""}
+      clientId={clientId}
+      lawyerId={lawyerId}
+      userRole={userRole}
+      onSubmit={handleAppointmentSubmit}
+    />
+    </>
   );
 }

@@ -6,6 +6,7 @@ from notification_processor import start_notification_processor, stop_notificati
 from lawyer_workflow_processors import start_all_processors, stop_all_processors
 from config import Config
 from sockets.events import register_socket_events
+from sockets.appointments import register_appointment_socket_events
 import atexit
 import logging
 
@@ -27,6 +28,7 @@ socketio = SocketIO(
     engineio_logger=True,
 )
 register_socket_events(socketio)
+register_appointment_socket_events(socketio)
 app.extensions["socketio"] = socketio
 
 # Start all processors
