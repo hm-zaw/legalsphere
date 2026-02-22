@@ -58,12 +58,16 @@ export async function GET(request) {
       progress: caseItem.progress || 0,
       submittedDate: caseItem.createdAt,
       lastUpdated: caseItem.updatedAt || caseItem.createdAt,
-      lawyer: caseItem.lawyer?.name || caseItem.lawyer || 'Pending Assignment',
+      lawyer: caseItem.assignedLawyer?.name || caseItem.lawyer?.name || caseItem.lawyer || 'Pending Assignment',
       amount: caseItem.amount || 'TBD',
       description: caseItem.case?.description || caseItem.description || 'No description available',
       client: caseItem.client,
       createdAt: caseItem.createdAt,
-      updatedAt: caseItem.updatedAt
+      updatedAt: caseItem.updatedAt,
+      // Pass nested properties through for views that expect them:
+      assignedLawyer: caseItem.assignedLawyer || null,
+      case: caseItem.case || null,
+      notes: caseItem.notes || []
     }));
 
     return NextResponse.json({

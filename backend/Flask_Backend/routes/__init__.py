@@ -4,6 +4,7 @@ from .case_requests import case_requests_bp
 from .admin import admin_bp
 from .lawyer import lawyer_bp
 from .notifications import notifications_bp
+from .chat import chat_bp
 
 def register_routes(app):
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
@@ -11,6 +12,7 @@ def register_routes(app):
     app.register_blueprint(admin_bp)
     app.register_blueprint(lawyer_bp)
     app.register_blueprint(notifications_bp)
+    app.register_blueprint(chat_bp, url_prefix="/api")
 
 
 

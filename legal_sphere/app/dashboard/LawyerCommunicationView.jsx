@@ -56,7 +56,7 @@ const LawyerCard = ({ caseItem, onSelect, isActive }) => {
         </div>
         <div className={cn(
           "text-[8px] font-bold uppercase tracking-[0.2em] px-2.5 py-1.5 border",
-          caseItem.status === "active" 
+          caseItem.status?.toLowerCase() === "active" 
             ? "text-green-700 border-green-200 bg-green-50" 
             : "text-slate-500 border-slate-200 bg-slate-50"
         )}>
@@ -151,7 +151,7 @@ export default function LawyerCommunicationView({ onNavigate }) {
       caseItem.assignedLawyer?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       caseItem.id?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesFilter = filterStatus === "all" || caseItem.status === filterStatus;
+    const matchesFilter = filterStatus === "all" || caseItem.status?.toLowerCase() === filterStatus.toLowerCase();
     
     return matchesSearch && matchesFilter;
   });

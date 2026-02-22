@@ -46,6 +46,7 @@ def client_sign_up():
 def login():
     data = request.json
     result = user_service.authenticate_client(email=data.get("email"), password=data.get("password"))
+    print(f"DEBUG LOGIN RESULT: {result}")
     
     if result.get("Success"):
         # Generate JWT token

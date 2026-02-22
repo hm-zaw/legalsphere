@@ -11,3 +11,5 @@ kafka-python
 confluent-kafka
 pymongo
 requests
+flask_socketio
+eventlet

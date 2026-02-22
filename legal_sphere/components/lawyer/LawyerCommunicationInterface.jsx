@@ -36,7 +36,7 @@ const LawyerCommunicationInterface = ({ caseData, currentUser }) => {
 
   // Mock initial messages
   useEffect(() => {
-    if (caseData?.lawyer && caseData?.status === "Active") {
+    if (caseData?.lawyer && caseData?.status?.toLowerCase() === "active") {
       setMessages([
         {
           id: 1,
@@ -117,7 +117,7 @@ const LawyerCommunicationInterface = ({ caseData, currentUser }) => {
     }
   };
 
-  if (!caseData?.lawyer || caseData?.status !== "Active") {
+  if (!caseData?.lawyer || caseData?.status?.toLowerCase() !== "active") {
     return null;
   }
 
