@@ -76,9 +76,9 @@ export function SchedulingModal({
 
     setIsSubmitting(true);
 
-    const proposedTimes = [formData.primaryDateTime];
+    const proposedTimes = [new Date(formData.primaryDateTime).toISOString()];
     if (formData.alternateDateTime) {
-      proposedTimes.push(formData.alternateDateTime);
+      proposedTimes.push(new Date(formData.alternateDateTime).toISOString());
     }
 
     const payload = {
@@ -113,8 +113,23 @@ export function SchedulingModal({
 
   const getMinDateTime = () => {
     const now = new Date();
-    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-    return now.toISOString().slice(0, 16);
+    const hours = formData.locationType === "in-person" ? 48 : 24;
+    now.setHours(now.getHours() + hours);
+    
+    // Round up to next 30 minutes
+    const ms = 1000 * 60 * 30;
+    const rounded = new Date(Math.ceil(now.getTime() / ms) * ms);
+    
+    rounded.setMinutes(rounded.getMinutes() - rounded.getTimezoneOffset());
+    return rounded.toISOString().slice(0, 16);
+  };
+
+  const getMaxDateTime = () => {
+    const max = new Date();
+    max.setDate(max.getDate() + 30);
+    
+    max.setMinutes(max.getMinutes() - max.getTimezoneOffset());
+    return max.toISOString().slice(0, 16);
   };
 
   return (
@@ -167,6 +182,8 @@ export function SchedulingModal({
                     type="datetime-local"
                     required
                     min={getMinDateTime()}
+                    max={getMaxDateTime()}
+                    step="1800"
                     value={formData.primaryDateTime}
                     onChange={(e) =>
                       setFormData((prev) => ({
@@ -198,6 +215,8 @@ export function SchedulingModal({
                     id="alternateDateTime"
                     type="datetime-local"
                     min={getMinDateTime()}
+                    max={getMaxDateTime()}
+                    step="1800"
                     value={formData.alternateDateTime}
                     onChange={(e) =>
                       setFormData((prev) => ({

@@ -375,6 +375,7 @@ export function ChatView({
               proposed_times: data.proposed_times,
               location_type: data.location_type,
               status: "pending",
+              waiting_for: "lawyer",
               agreed_time: null,
               timestamp: new Date().toISOString(),
             };
@@ -398,7 +399,11 @@ export function ChatView({
     return new Promise<void>((resolve, reject) => {
       socketRef.current?.emit(
         "appointment_response",
-        data,
+        {
+          ...data,
+          chat_id: activeChatId,
+          user_role: userRole,
+        },
         (response: { success: boolean; error?: string }) => {
           if (response.success) {
             resolve();
@@ -429,6 +434,8 @@ export function ChatView({
           case_id: lastAppointment.case_id,
           response: "propose_new",
           new_proposed_times: newTimes,
+          chat_id: activeChatId,
+          user_role: userRole,
         },
         (response: { success: boolean; error?: string }) => {
           if (response.success) {

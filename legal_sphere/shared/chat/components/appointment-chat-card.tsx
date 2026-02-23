@@ -17,6 +17,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type {
   AppointmentChatCardProps,
@@ -68,14 +69,25 @@ export function AppointmentChatCard({
 }: AppointmentChatCardProps) {
   const [isLoading, setIsLoading] = useState<string | null>(null);
   const [showProposeModal, setShowProposeModal] = useState(false);
-  const [newProposedTime, setNewProposedTime] = useState("");
+  const [proposedDate, setProposedDate] = useState("");
+  const [proposedTime, setProposedTime] = useState("");
+  const [selectedTimeIndex, setSelectedTimeIndex] = useState(0);
 
   const status = appointment.status || "pending";
+  // Fallback for legacy database records
+  const waitingFor = appointment.waiting_for || "lawyer";
   const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
   const StatusIcon = config.icon;
 
   const isClient = userRole === "client";
   const isLawyer = userRole === "lawyer";
+
+  // Generate standard 30-minute time slots from 8:00 AM to 6:00 PM
+  const timeOptions = Array.from({ length: 21 }, (_, i) => {
+    const hour = Math.floor(i / 2) + 8;
+    const minute = i % 2 === 0 ? "00" : "30";
+    return `${hour.toString().padStart(2, "0")}:${minute}`;
+  });
 
   const handleResponse = async (response: AppointmentResponse) => {
     if (response === "propose_new") {
@@ -92,7 +104,7 @@ export function AppointmentChatCard({
     };
 
     if (response === "accept" && appointment.proposed_times && appointment.proposed_times.length > 0) {
-      payload.agreed_time = appointment.proposed_times[0];
+      payload.agreed_time = appointment.proposed_times[selectedTimeIndex];
     }
 
     try {
@@ -103,21 +115,28 @@ export function AppointmentChatCard({
   };
 
   const handleProposeNewTime = async () => {
-    if (!newProposedTime) return;
+    if (!proposedDate || !proposedTime) return;
 
     setIsLoading("propose_new");
 
     try {
-      await onProposeNew([newProposedTime]);
+      const combinedDateTime = new Date(`${proposedDate}T${proposedTime}:00`).toISOString();
+      await onProposeNew([combinedDateTime]);
+      
       setShowProposeModal(false);
-      setNewProposedTime("");
+      setProposedDate("");
+      setProposedTime("");
     } finally {
       setIsLoading(null);
     }
   };
 
   const getActionButtons = () => {
-    if (status === "pending" && isLawyer) {
+    const isOurTurnToRespond =
+      status === "pending" &&
+      ((isLawyer && waitingFor === "lawyer") || (isClient && waitingFor === "client"));
+
+    if (isOurTurnToRespond) {
       return (
         <div className="flex flex-col gap-2 w-full pt-4 mt-4 border-t border-slate-100">
           <div className="flex gap-2">
@@ -141,7 +160,7 @@ export function AppointmentChatCard({
               variant="outline"
               onClick={() => handleResponse("decline")}
               disabled={isLoading !== null}
-              className="flex-1 border-slate-200 hover:bg-slate-50 text-slate-600 rounded-sm shadow-none font-bold text-[10px] tracking-widest uppercase h-10 transition-colors"
+              className="flex-1 border-slate-200 text-slate-600 hover:bg-red-50 hover:text-red-600 hover:border-red-100 rounded-sm shadow-none font-bold text-[10px] tracking-widest uppercase h-10 transition-colors"
             >
               {isLoading === "decline" ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -158,7 +177,7 @@ export function AppointmentChatCard({
             variant="ghost"
             onClick={() => handleResponse("propose_new")}
             disabled={isLoading !== null}
-            className="w-full text-[#af9164] hover:text-[#937851] hover:bg-transparent text-[10px] tracking-widest uppercase rounded-sm h-8 font-bold transition-colors mt-1"
+            className="w-full text-[#af9164] hover:text-[#937851] hover:bg-[#af9164]/10 text-[10px] tracking-widest uppercase rounded-sm h-8 font-bold transition-colors mt-1"
           >
             {isLoading === "propose_new" && !showProposeModal ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" />
@@ -171,11 +190,17 @@ export function AppointmentChatCard({
       );
     }
 
-    if (status === "pending" && isClient) {
+    const isWaitingForOtherParty =
+      status === "pending" &&
+      ((isLawyer && waitingFor === "client") || (isClient && waitingFor === "lawyer"));
+
+    if (isWaitingForOtherParty) {
       return (
         <div className="flex items-center justify-center gap-2 pt-5 mt-4 border-t border-slate-100 text-[#af9164]">
           <Hourglass className="w-4 h-4 animate-pulse opacity-70" />
-          <span className="text-[11px] font-serif italic tracking-wide text-[#1a2238]/70">Awaiting Lawyer Response</span>
+          <span className="text-[11px] font-serif italic tracking-wide text-[#1a2238]/70">
+            Awaiting {waitingFor === "lawyer" ? "Lawyer" : "Client"} Response
+          </span>
         </div>
       );
     }
@@ -262,49 +287,77 @@ export function AppointmentChatCard({
                     </div>
                   </div>
                 ) : (
-                  appointment.proposed_times && appointment.proposed_times.map((time, index) => (
-                    <div
-                      key={index}
-                      className={cn(
-                        "flex items-center p-3.5 rounded-sm transition-colors relative",
-                        index === 0 
-                          ? "bg-[#af9164]/[0.03] border border-[#af9164]/20" 
-                          : "bg-white border border-slate-100 shadow-sm"
-                      )}
-                    >
-                      {index === 0 && <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-[#af9164] rounded-l-sm" />}
-                      <div className={cn(
-                        "flex-shrink-0 w-11 h-11 border rounded-sm flex flex-col items-center justify-center mr-4 ml-1",
-                        index === 0 ? "border-[#af9164]/30 bg-white" : "border-slate-100 bg-slate-50"
-                      )}>
-                        <span className={cn(
-                          "text-[10px] font-bold uppercase leading-none mb-1",
-                          index === 0 ? "text-[#af9164]" : "text-slate-500"
+                  appointment.proposed_times && appointment.proposed_times.map((time, index) => {
+                    const isSelectable =
+                      status === "pending" &&
+                      ((isLawyer && waitingFor === "lawyer") || (isClient && waitingFor === "client"));
+                    const isSelected = isSelectable ? selectedTimeIndex === index : index === 0;
+
+                    return (
+                      <div
+                        key={index}
+                        onClick={() => isSelectable && setSelectedTimeIndex(index)}
+                        className={cn(
+                          "flex items-center p-3.5 rounded-sm transition-all relative",
+                          isSelectable ? "cursor-pointer hover:border-[#af9164]/30" : "",
+                          isSelected 
+                            ? "bg-[#af9164]/[0.03] border border-[#af9164]/20 ring-1 ring-[#af9164]/10 shadow-sm" 
+                            : "bg-white border border-slate-100 shadow-sm hover:shadow-md"
+                        )}
+                      >
+                        {isSelected && <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-[#af9164] rounded-l-sm" />}
+                        <div className={cn(
+                          "flex-shrink-0 w-11 h-11 border rounded-sm flex flex-col items-center justify-center mr-4 ml-1 transition-colors",
+                          isSelected ? "border-[#af9164]/30 bg-white" : "border-slate-100 bg-slate-50"
                         )}>
-                          {format(new Date(time), "MMM")}
-                        </span>
-                        <span className="text-base font-serif text-[#1a2238] leading-none">
-                          {format(new Date(time), "d")}
-                        </span>
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <div className="text-sm text-[#1a2238] font-bold">
-                            {format(new Date(time), "EEEE")}
+                          <span className={cn(
+                            "text-[10px] font-bold uppercase leading-none mb-1 transition-colors",
+                            isSelected ? "text-[#af9164]" : "text-slate-500"
+                          )}>
+                            {format(new Date(time), "MMM")}
+                          </span>
+                          <span className="text-base font-serif text-[#1a2238] leading-none">
+                            {format(new Date(time), "d")}
+                          </span>
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                            <div className={cn(
+                              "text-sm font-bold transition-colors",
+                              isSelected ? "text-[#1a2238]" : "text-slate-600"
+                            )}>
+                              {format(new Date(time), "EEEE")}
+                            </div>
+                            {index === 0 ? (
+                              <span className="text-[9px] uppercase tracking-widest font-bold text-[#af9164] bg-[#af9164]/10 px-2 py-0.5 rounded-sm">
+                                Primary
+                              </span>
+                            ) : (
+                              <span className="text-[9px] uppercase tracking-widest font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-sm">
+                                Alternate
+                              </span>
+                            )}
                           </div>
-                          {index === 0 && (
-                            <span className="text-[9px] uppercase tracking-widest font-bold text-[#af9164] bg-[#af9164]/10 px-2 py-0.5 rounded-sm">
-                              Primary
-                            </span>
-                          )}
+                          <div className="text-[13px] text-slate-500 flex items-center gap-1.5 mt-1 font-medium">
+                            <Clock className={cn("w-3.5 h-3.5 transition-colors", isSelected ? "text-[#af9164]" : "text-slate-400")} />
+                            {format(new Date(time), "h:mm a")}
+                          </div>
                         </div>
-                        <div className="text-[13px] text-slate-500 flex items-center gap-1.5 mt-1 font-medium">
-                          <Clock className={cn("w-3.5 h-3.5", index === 0 ? "text-[#af9164]" : "text-slate-400")} />
-                          {format(new Date(time), "h:mm a")}
-                        </div>
+                        {isSelectable && (
+                          <div className="ml-3 flex-shrink-0">
+                            <div className={cn(
+                              "w-4 h-4 rounded-full border flex items-center justify-center transition-all",
+                              isSelected 
+                                ? "border-[#af9164] bg-[#af9164] text-white" 
+                                : "border-slate-300 bg-white text-transparent"
+                            )}>
+                              <Check className="w-2.5 h-2.5" />
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>
@@ -338,7 +391,8 @@ export function AppointmentChatCard({
                   <button 
                     onClick={() => {
                       setShowProposeModal(false);
-                      setNewProposedTime("");
+                      setProposedDate("");
+                      setProposedTime("");
                     }}
                     className="p-1.5 hover:bg-slate-50 rounded-sm text-slate-400 hover:text-slate-600 transition-colors border border-transparent hover:border-slate-200"
                   >
@@ -347,21 +401,43 @@ export function AppointmentChatCard({
                 </div>
                 
                 <div className="space-y-6">
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-[0.1em] text-slate-500 mb-2">
-                      New Date & Time
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="datetime-local"
-                        value={newProposedTime}
-                        onChange={(e) => setNewProposedTime(e.target.value)}
-                        min={new Date().toISOString().slice(0, 16)}
-                        className="w-full pl-10 pr-4 py-3.5 border border-slate-200 rounded-sm 
-                                bg-slate-50 text-sm text-[#1a2238] font-medium shadow-inner
-                                focus:bg-white focus:outline-none focus:border-[#af9164] transition-colors"
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Date Picker */}
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-[0.1em] text-slate-500 mb-2 flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5" />
+                        Select Date
+                      </label>
+                      <Input
+                        type="date"
+                        value={proposedDate}
+                        onChange={(e) => setProposedDate(e.target.value)}
+                        min={new Date().toISOString().split("T")[0]}
+                        className="w-full bg-slate-50 border-slate-200 text-[#1a2238] font-medium shadow-inner focus-visible:ring-1 focus-visible:ring-[#af9164] transition-colors"
                       />
-                      <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    </div>
+
+                    {/* Time Dropdown */}
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-[0.1em] text-slate-500 mb-2 flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5" />
+                        Select Time
+                      </label>
+                      <select
+                        value={proposedTime}
+                        onChange={(e) => setProposedTime(e.target.value)}
+                        className="flex h-10 w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-[#1a2238] font-medium shadow-inner focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#af9164] transition-colors"
+                      >
+                        <option value="" disabled>Choose time...</option>
+                        {timeOptions.map((time) => {
+                          const displayTime = format(new Date(`2000-01-01T${time}`), "h:mm a");
+                          return (
+                            <option key={time} value={time}>
+                              {displayTime}
+                            </option>
+                          );
+                        })}
+                      </select>
                     </div>
                   </div>
 
@@ -370,7 +446,8 @@ export function AppointmentChatCard({
                       variant="outline"
                       onClick={() => {
                         setShowProposeModal(false);
-                        setNewProposedTime("");
+                        setProposedDate("");
+                        setProposedTime("");
                       }}
                       className="flex-1 rounded-sm border-slate-200 text-slate-600 hover:bg-slate-50 h-12 text-[10px] uppercase tracking-widest font-bold transition-all"
                     >
@@ -378,7 +455,7 @@ export function AppointmentChatCard({
                     </Button>
                     <Button
                       onClick={handleProposeNewTime}
-                      disabled={!newProposedTime || isLoading === "propose_new"}
+                      disabled={!proposedDate || !proposedTime || isLoading === "propose_new"}
                       className="flex-1 rounded-sm bg-[#1a2238] hover:bg-[#2d3648] text-white h-12 text-[10px] uppercase tracking-widest font-bold shadow-md transition-all disabled:opacity-70 disabled:shadow-none"
                     >
                       {isLoading === "propose_new" ? (

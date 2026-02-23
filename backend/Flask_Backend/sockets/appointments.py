@@ -111,6 +111,36 @@ def register_appointment_socket_events(socketio):
                 })
                 return {"success": False, "error": "Invalid proposed_times"}
 
+            # Server-side Time Constraints Validation
+            from datetime import timedelta
+            now_utc = datetime.now(timezone.utc)
+            min_buffer_hours = 48 if location_type == "in-person" else 24
+            min_valid_time = now_utc + timedelta(hours=min_buffer_hours) - timedelta(minutes=5)
+            max_valid_time = now_utc + timedelta(days=30)
+
+            for pt in proposed_times:
+                try:
+                    pt_clean = pt.replace("Z", "+00:00")
+                    pt_dt = datetime.fromisoformat(pt_clean).astimezone(timezone.utc)
+                    
+                    if pt_dt < min_valid_time:
+                        error_msg = f"Requires at least {min_buffer_hours} hours advance notice."
+                        emit("appointment_error", {"error": error_msg})
+                        return {"success": False, "error": error_msg}
+                        
+                    if pt_dt > max_valid_time:
+                        error_msg = "Appointments cannot be booked more than 30 days in advance."
+                        emit("appointment_error", {"error": error_msg})
+                        return {"success": False, "error": error_msg}
+                        
+                    if pt_dt.minute not in (0, 30) or pt_dt.second != 0 or pt_dt.microsecond != 0:
+                        error_msg = "Appointments must be in 30-minute intervals (e.g., 10:00 or 10:30)."
+                        emit("appointment_error", {"error": error_msg})
+                        return {"success": False, "error": error_msg}
+                except ValueError:
+                    emit("appointment_error", {"error": "Invalid datetime format."})
+                    return {"success": False, "error": "Invalid datetime format"}
+
             # Create appointment in MongoDB
             appointment = Appointment.create(
                 case_id=case_id,
@@ -135,6 +165,7 @@ def register_appointment_socket_events(socketio):
                 "proposed_times": proposed_times,
                 "location_type": location_type,
                 "status": "pending",
+                "waiting_for": "lawyer",
                 "agreed_time": None,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             }
@@ -168,9 +199,11 @@ def register_appointment_socket_events(socketio):
         try:
             appointment_id = data.get("appointment_id")
             case_id = data.get("case_id")
+            chat_id = data.get("chat_id")
             response = data.get("response")
             agreed_time = data.get("agreed_time")
             new_proposed_times = data.get("new_proposed_times", [])
+            user_role = data.get("user_role")
 
             # Validate required fields
             if not all([appointment_id, case_id, response]):
@@ -228,7 +261,46 @@ def register_appointment_socket_events(socketio):
                     })
                     return {"success": False, "error": "Missing new_proposed_times"}
 
-                success = Appointment.propose_new_times(appointment_id, new_proposed_times)
+                # Validate lawyer's proposed times
+                existing_apt = Appointment.get_by_id(appointment_id)
+                loc_type = existing_apt.get("location_type", "virtual") if existing_apt else "virtual"
+                from datetime import timedelta
+                now_utc = datetime.now(timezone.utc)
+                min_buffer_hours = 48 if loc_type == "in-person" else 24
+                min_valid_time = now_utc + timedelta(hours=min_buffer_hours) - timedelta(minutes=5)
+                max_valid_time = now_utc + timedelta(days=30)
+                
+                for pt in new_proposed_times:
+                    try:
+                        pt_clean = pt.replace("Z", "+00:00")
+                        pt_dt = datetime.fromisoformat(pt_clean).astimezone(timezone.utc)
+                        if pt_dt < min_valid_time:
+                            error_msg = f"Requires at least {min_buffer_hours} hours advance notice."
+                            emit("appointment_error", {"error": error_msg})
+                            return {"success": False, "error": error_msg}
+                        if pt_dt > max_valid_time:
+                            error_msg = "Appointments cannot be booked more than 30 days in advance."
+                            emit("appointment_error", {"error": error_msg})
+                            return {"success": False, "error": error_msg}
+                        if pt_dt.minute not in (0, 30) or pt_dt.second != 0 or pt_dt.microsecond != 0:
+                            error_msg = "Appointments must be in 30-minute intervals (e.g., 10:00 or 10:30)."
+                            emit("appointment_error", {"error": error_msg})
+                            return {"success": False, "error": error_msg}
+                    except ValueError:
+                        emit("appointment_error", {"error": "Invalid datetime format."})
+                        return {"success": False, "error": "Invalid datetime format"}
+
+                client_id_str = existing_apt.get("client_id") if existing_apt else None
+                lawyer_id_str = existing_apt.get("lawyer_id") if existing_apt else None
+                # Determine who is proposing the new time. Set waiting_for to the OTHER party.
+                if user_role:
+                    proposed_by_lawyer = (user_role == "lawyer")
+                else:
+                    proposed_by_lawyer = (str(user_id) == str(lawyer_id_str))
+                
+                waiting_for = "client" if proposed_by_lawyer else "lawyer"
+
+                success = Appointment.propose_new_times(appointment_id, new_proposed_times, waiting_for)
 
             if not success:
                 emit("appointment_error", {"error": "Failed to update appointment"})
@@ -242,16 +314,20 @@ def register_appointment_socket_events(socketio):
             notification = {
                 "appointment_id": appointment_id,
                 "case_id": case_id,
+                "client_id": serialized.get("client_id") if serialized else None,
+                "lawyer_id": serialized.get("lawyer_id") if serialized else None,
+                "location_type": serialized.get("location_type") if serialized else "virtual",
                 "status": serialized.get("status") if serialized else response,
                 "agreed_time": agreed_time if response == "accept" else None,
                 "proposed_times": new_proposed_times if response == "propose_new" else (serialized.get("proposed_times") if serialized else []),
                 "response": response,
                 "responded_by": str(user_id) if user_id else None,
+                "waiting_for": serialized.get("waiting_for") if serialized else "client",
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             }
 
-            # Broadcast update to case-specific room
-            room = f"case:{case_id}"
+            # Broadcast update to appropriate room
+            room = f"chat:{chat_id}" if chat_id else f"case:{case_id}"
             emit("appointment_updated", notification, room=room)
 
             logger.info(f"✅ Appointment {appointment_id} {response}ed by user {user_id}")

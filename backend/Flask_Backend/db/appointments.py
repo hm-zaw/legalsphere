@@ -76,6 +76,7 @@ class Appointment:
                 "proposed_times": proposed_times,
                 "agreed_time": None,
                 "status": "pending",
+                "waiting_for": "lawyer",
                 "location_type": location_type,
                 "created_at": _utc_now(),
                 "updated_at": _utc_now(),
@@ -225,13 +226,14 @@ class Appointment:
             return False
     
     @staticmethod
-    def propose_new_times(appointment_id: str, new_proposed_times: List[str]) -> bool:
+    def propose_new_times(appointment_id: str, new_proposed_times: List[str], waiting_for: str = "client") -> bool:
         """
-        Update appointment with new proposed times (lawyer proposing new times).
+        Update appointment with new proposed times (lawyer or client proposing new times).
         
         Args:
             appointment_id: The appointment UUID
             new_proposed_times: Array of new ISO timestamp strings
+            waiting_for: 'lawyer' or 'client', defaults to 'client'
             
         Returns:
             True if successful, False otherwise
@@ -242,7 +244,8 @@ class Appointment:
                 {
                     "$set": {
                         "proposed_times": new_proposed_times,
-                        "status": "pending",  # Reset to pending for client to choose
+                        "status": "pending",  # Reset to pending for the other party to choose
+                        "waiting_for": waiting_for,
                         "updated_at": _utc_now(),
                     }
                 }

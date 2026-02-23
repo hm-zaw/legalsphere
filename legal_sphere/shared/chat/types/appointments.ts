@@ -19,6 +19,7 @@ export interface AppointmentData {
   agreed_time: string | null;
   status: AppointmentStatus;
   location_type: LocationType;
+  waiting_for?: "lawyer" | "client";
   created_at: string;
   updated_at: string;
 }
@@ -58,6 +59,7 @@ export interface AppointmentNotificationPayload {
   location_type: LocationType;
   status: AppointmentStatus;
   agreed_time: string | null;
+  waiting_for?: "lawyer" | "client";
   responded_by?: string;
   response?: string;
   timestamp: string;
