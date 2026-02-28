@@ -35,6 +35,7 @@ import { TasksView } from "./TasksView";
 import LawyerCasesView from "./LawyerCasesView";
 import LawyerCaseDetailView from "./LawyerCaseDetailView";
 import ClientCommunicationView from "./ClientCommunicationView";
+import LawyerOfflineCaseView from "./LawyerOfflineCaseView";
 import {
   Popover,
   PopoverContent,
@@ -99,6 +100,14 @@ function LawyerDashboardPage() {
         <MessageCircle className="h-4 w-4 shrink-0 text-slate-500 group-hover/sidebar:text-[#1a2238]" />
       ),
       onClick: () => setActiveTab("communications"),
+    },
+    {
+      label: "Offline Intake",
+      href: "#",
+      icon: (
+        <Plus className="h-4 w-4 shrink-0 text-slate-500 group-hover/sidebar:text-[#1a2238]" />
+      ),
+      onClick: () => setActiveTab("offline"),
     },
     {
       label: "Firm Settings",
@@ -169,6 +178,7 @@ function LawyerDashboardPage() {
                 {activeTab === "tasks" && "Task Delegation"}
                 {activeTab === "documents" && "Secure Document Vault"}
                 {activeTab === "communications" && "Client Communications"}
+                {activeTab === "offline" && "Ghost Client Intake"}
                 {activeTab === "settings" && "Firm Configuration"}
               </h2>
               <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-[#af9164] font-bold">
@@ -277,6 +287,11 @@ function LawyerDashboardPage() {
                     <ClientCommunicationView />
                   </div>
                 )}
+                {activeTab === "offline" && (
+                  <div className="animate-in fade-in duration-500 h-full w-full">
+                    <LawyerOfflineCaseView />
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -322,7 +337,7 @@ const LogoIcon = () => (
 
 import { IncomingAssignments } from "./IncomingAssignments";
 
-function OverviewContent() {
+function OverviewContent({ setActiveTab }: { setActiveTab?: any }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -334,7 +349,7 @@ function OverviewContent() {
       <IncomingAssignments />
 
       {/* 1. Firm Intelligence Hero */}
-      <FirmIntelligenceHero />
+      <FirmIntelligenceHero setActiveTab={setActiveTab} />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left MAIN Column (8 Cols) */}
@@ -425,7 +440,7 @@ function OverviewContent() {
 }
 
 // --- 1. Firm Intelligence Hero Component ---
-function FirmIntelligenceHero() {
+function FirmIntelligenceHero({ setActiveTab }: { setActiveTab?: any }) {
   return (
     <div className="relative overflow-hidden rounded-2xl bg-[#1a2238] text-white shadow-2xl">
       {/* Background Texture */}
@@ -462,7 +477,7 @@ function FirmIntelligenceHero() {
               Success Rate
             </span>
           </div>
-          <button className="bg-[#af9164] hover:bg-[#9c7f56] text-white px-6 py-3 rounded-lg text-xs font-bold uppercase tracking-widest shadow-lg shadow-[#af9164]/20 transition-all flex items-center gap-2">
+          <button onClick={() => setActiveTab?.("offline")} className="bg-[#af9164] hover:bg-[#9c7f56] text-white px-6 py-3 rounded-lg text-xs font-bold uppercase tracking-widest shadow-lg shadow-[#af9164]/20 transition-all flex items-center gap-2">
             <Plus size={14} /> New Matter
           </button>
         </div>

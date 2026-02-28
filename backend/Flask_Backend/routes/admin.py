@@ -558,3 +558,53 @@ def get_case_connections():
         
     except Exception as e:
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+
+@admin_bp.route('/api/admin/manual-case-entry', methods=['POST'])
+@admin_token_required
+def manual_case_entry():
+    """Admin route for manual public defender/court case intake."""
+    try:
+        data = request.get_json()
+        if not data or not data.get('client') or not data.get('case') or not data.get('lawyerId'):
+            return jsonify({'error': 'Missing required fields or lawyerId'}), 400
+
+        case_id = str(uuid.uuid4())
+        now_iso = datetime.utcnow().isoformat()
+
+        case_data = {
+            'id': case_id,
+            'client': data['client'],
+            'case': data['case'],
+            'status': 'lawyer_assigned', # Instantly mark as assigned
+            'source': 'admin_manual_entry',
+            'assignedLawyerId': data['lawyerId'],
+            'createdAt': now_iso,
+            'updatedAt': now_iso,
+        }
+
+        if 'proxy_filer' in data:
+            case_data['proxy_filer'] = data['proxy_filer']
+
+        collection = get_db_collection('case_requests')
+        result = collection.insert_one(case_data)
+        case_data['_id'] = str(result.inserted_id)
+
+        # CRITICAL constraint: Skip matching and standard topics.
+        # Push assignment event strictly to the existing lawyer-assignments Kafka topic.
+        assignment_event = {
+            'caseId': case_id,
+            'lawyerId': data['lawyerId'],
+            'clientName': data.get('client', {}).get('fullName', 'Unknown'),
+            'timestamp': now_iso,
+            'status': 'assigned_manually_by_admin'
+        }
+        
+        kafka_service.publish_lawyer_assignment(assignment_event)
+
+        return jsonify({
+            'message': 'Case successfully created and manually assigned',
+            'caseId': case_id
+        }), 201
+
+    except Exception as e:
+        return jsonify({'error': f'Internal server error: {str(e)}'}), 500

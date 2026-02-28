@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import { z } from "zod";
 
 // Refined Professional Palette
 const LEGAL_NAVY = "#1a2238"; // Deep, authoritative navy
@@ -103,6 +104,12 @@ export default function ApplyNewView({ onNavigate }: { onNavigate?: (view: strin
     acknowledgements: {
       accurate: false,
       privacy: false
+    },
+    isProxy: false,
+    proxy_filer: {
+      defendant_name: "",
+      relationship_to_defendant: "",
+      defendant_current_location: ""
     }
   });
   // NRC Township data
@@ -197,6 +204,39 @@ export default function ApplyNewView({ onNavigate }: { onNavigate?: (view: strin
         } else if (actualAge > 100) {
           e.dob = "Please enter a valid date of birth.";
         }
+      }
+
+      // Feature 1: Conditional Zod Validation for Proxy
+      const proxySchema = z.object({
+        isProxy: z.boolean(),
+        proxy_filer: z.object({
+          defendant_name: z.string().optional(),
+          relationship_to_defendant: z.string().optional(),
+          defendant_current_location: z.string().optional(),
+        })
+      }).superRefine((data, ctx) => {
+        if (data.isProxy) {
+          if (!data.proxy_filer.defendant_name?.trim()) {
+            ctx.addIssue({ path: ["defendant_name"], message: "Defendant name is required", code: z.ZodIssueCode.custom });
+          }
+          if (!data.proxy_filer.relationship_to_defendant?.trim()) {
+            ctx.addIssue({ path: ["relationship_to_defendant"], message: "Relationship is required", code: z.ZodIssueCode.custom });
+          }
+          if (!data.proxy_filer.defendant_current_location?.trim()) {
+            ctx.addIssue({ path: ["defendant_current_location"], message: "Current location is required", code: z.ZodIssueCode.custom });
+          }
+        }
+      });
+
+      const proxyResult = proxySchema.safeParse({
+        isProxy: form.isProxy,
+        proxy_filer: form.proxy_filer
+      });
+      
+      if (!proxyResult.success) {
+        proxyResult.error.issues.forEach(issue => {
+           e[`proxy_${String(issue.path[0])}`] = issue.message;
+        });
       }
     }
     if (stepIndex === 1) {
@@ -320,7 +360,7 @@ export default function ApplyNewView({ onNavigate }: { onNavigate?: (view: strin
       }
 
       // Attach client ID if available
-      const payload = {
+      const payload: any = {
           client: {
               ...form.client,
               id: userData?.id || userData?._id, // Add user ID to link case
@@ -337,6 +377,10 @@ export default function ApplyNewView({ onNavigate }: { onNavigate?: (view: strin
           acknowledgements: form.acknowledgements,
           documents: uploadedDocs,
       };
+
+      if (form.isProxy) {
+          payload.proxy_filer = form.proxy_filer;
+      }
 
       const res = await fetch("/api/case-requests", {
         method: "POST",
@@ -600,6 +644,66 @@ export default function ApplyNewView({ onNavigate }: { onNavigate?: (view: strin
                           onChange={(e) => setForm({...form, client: {...form.client, address: e.target.value}})}
                         />
                       </div>
+                      
+                      {/* Proxy Submitter Checkbox */}
+                      <div className="sm:col-span-2 pt-4 border-t border-slate-200 mt-2">
+                        <label className="flex items-center gap-3 cursor-pointer group">
+                          <input 
+                            type="checkbox"
+                            className="w-5 h-5 rounded border-slate-300 text-amber-600 focus:ring-amber-500 transition-colors cursor-pointer"
+                            checked={form.isProxy}
+                            onChange={(e) => setForm({...form, isProxy: e.target.checked})}
+                          />
+                          <span className="text-sm font-medium text-slate-700 group-hover:text-slate-900 transition-colors">
+                            I am filing on behalf of someone else (Proxy)
+                          </span>
+                        </label>
+                      </div>
+
+                      {/* Conditional Proxy Fields */}
+                      {form.isProxy && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-10 sm:col-span-2 p-6 bg-slate-50 border border-slate-200 rounded-md animate-in fade-in slide-in-from-top-2">
+                          <div className="group relative sm:col-span-2">
+                            <label className="text-[10px] font-bold uppercase text-slate-500 group-focus-within:text-amber-700 transition-colors">Defendant / Victim Name</label>
+                            <input 
+                              className="w-full border-b border-slate-300 py-2 focus:border-slate-900 outline-none transition-colors bg-transparent font-medium"
+                              placeholder="Name of the person you are filing for"
+                              value={form.proxy_filer.defendant_name}
+                              onChange={(e) => setForm({...form, proxy_filer: {...form.proxy_filer, defendant_name: e.target.value}})}
+                            />
+                            {attempted && errors.proxy_defendant_name && (
+                              <p className="text-xs text-red-600 mt-1">{errors.proxy_defendant_name}</p>
+                            )}
+                          </div>
+                          
+                          <div className="group relative">
+                            <label className="text-[10px] font-bold uppercase text-slate-500 group-focus-within:text-amber-700 transition-colors">Relationship to Defendant</label>
+                            <input 
+                              className="w-full border-b border-slate-300 py-2 focus:border-slate-900 outline-none transition-colors bg-transparent"
+                              placeholder="e.g. Sister, NGO Worker, Friend"
+                              value={form.proxy_filer.relationship_to_defendant}
+                              onChange={(e) => setForm({...form, proxy_filer: {...form.proxy_filer, relationship_to_defendant: e.target.value}})}
+                            />
+                            {attempted && errors.proxy_relationship_to_defendant && (
+                              <p className="text-xs text-red-600 mt-1">{errors.proxy_relationship_to_defendant}</p>
+                            )}
+                          </div>
+                          
+                          <div className="group relative">
+                            <label className="text-[10px] font-bold uppercase text-slate-500 group-focus-within:text-amber-700 transition-colors">Defendant's Current Location</label>
+                            <input 
+                              className="w-full border-b border-slate-300 py-2 focus:border-slate-900 outline-none transition-colors bg-transparent"
+                              placeholder="e.g. Insein Prison, At Home"
+                              value={form.proxy_filer.defendant_current_location}
+                              onChange={(e) => setForm({...form, proxy_filer: {...form.proxy_filer, defendant_current_location: e.target.value}})}
+                            />
+                            {attempted && errors.proxy_defendant_current_location && (
+                              <p className="text-xs text-red-600 mt-1">{errors.proxy_defendant_current_location}</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
                     </div>
                   </div>
                 )}

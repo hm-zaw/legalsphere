@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import CasesView from "./CasesView";
 import LegalTeamView from "./LegalTeamView";
+import AdminManualEntryView from "./AdminManualEntryView";
 import { AdminNotifications } from "./AdminNotifications";
 import { withRoleProtection } from "@/hooks/useAuth";
 
@@ -38,7 +39,7 @@ const THEME = {
 
 function AdminDashboardPage() {
   const [open, setOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"overview" | "cases" | "legal-team">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "cases" | "legal-team" | "manual-entry">("overview");
 
   const links = [
     {
@@ -58,6 +59,12 @@ function AdminDashboardPage() {
       href: "#",
       icon: <Users className="h-4 w-4 shrink-0 text-zinc-500 group-hover/sidebar:text-[#1a2238]" />,
       onClick: () => setActiveTab("legal-team"),
+    },
+    {
+      label: "Manual Intake",
+      href: "#",
+      icon: <Plus className="h-4 w-4 shrink-0 text-zinc-500 group-hover/sidebar:text-[#1a2238]" />,
+      onClick: () => setActiveTab("manual-entry"),
     },
     {
       label: "Financials",
@@ -117,6 +124,7 @@ function AdminDashboardPage() {
                {activeTab === "overview" && "Executive Dashboard"}
                {activeTab === "cases" && "Case Management"}
                {activeTab === "legal-team" && "Directory"}
+               {activeTab === "manual-entry" && "Manual Case Intake"}
             </h2>
             <div className="h-4 w-[1px] bg-zinc-300 mx-1"></div>
             <span className="text-xs text-zinc-500 font-medium">
@@ -147,9 +155,10 @@ function AdminDashboardPage() {
         {/* Dense Content Area */}
         <main className="flex-1 overflow-y-auto p-0 scroll-smooth">
           <div className="w-full">
-            {activeTab === "overview" && <OverviewContent />}
+            {activeTab === "overview" && <OverviewContent setActiveTab={setActiveTab} />}
             {activeTab === "cases" && <div className="animate-in fade-in duration-300"><CasesView /></div>}
             {activeTab === "legal-team" && <div className="animate-in fade-in duration-300"><LegalTeamView /></div>}
+            {activeTab === "manual-entry" && <div className="animate-in fade-in duration-300"><AdminManualEntryView /></div>}
           </div>
         </main>
       </div>
@@ -182,7 +191,7 @@ const LogoIcon = () => (
 );
 
 // --- Dense Overview Layout ---
-function OverviewContent() {
+function OverviewContent({ setActiveTab }: { setActiveTab?: any }) {
   return (
     <motion.div 
       initial={{ opacity: 0, y: 5 }}
@@ -327,7 +336,7 @@ function OverviewContent() {
            
            {/* Quick Action Strip */}
            <div className="grid grid-cols-2 gap-3">
-              <ActionButton icon={<Plus size={14} />} label="New Case" shortcut="C" />
+              <ActionButton onClick={() => setActiveTab?.("manual-entry")} icon={<Plus size={14} />} label="New Case" shortcut="C" />
               <ActionButton icon={<Users size={14} />} label="Add Client" shortcut="U" />
            </div>
 
@@ -414,9 +423,9 @@ function CompactMetric({ label, value, trend, trendDir, meta, isAlert }: any) {
   );
 }
 
-function ActionButton({ icon, label, shortcut }: any) {
+function ActionButton({ icon, label, shortcut, onClick }: any) {
   return (
-    <button className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-zinc-200 bg-white text-zinc-700 hover:border-[#af9164] hover:text-[#af9164] shadow-sm transition-all group">
+    <button onClick={onClick} className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-zinc-200 bg-white text-zinc-700 hover:border-[#af9164] hover:text-[#af9164] shadow-sm transition-all group">
       <div className="flex items-center gap-2">
         <div className="text-zinc-400 group-hover:text-[#af9164] transition-colors">{icon}</div>
         <span className="text-xs font-medium">{label}</span>

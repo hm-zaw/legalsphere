@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from datetime import datetime
 import os
 import jwt
+import uuid
 from functools import wraps
 from mongodb_client import get_db_collection
 from kafka_config import kafka_service
@@ -525,5 +526,73 @@ def get_lawyer_dashboard():
         
         return jsonify(dashboard_data), 200
         
+    except Exception as e:
+        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+
+@lawyer_bp.route('/api/lawyer/offline-case', methods=['POST'])
+@lawyer_token_required
+def create_offline_case():
+    """Lawyer route for logging a ghost client case acquired offline."""
+    try:
+        data = request.get_json()
+        # Fallback to payload lawyerId if not injected by request middleware
+        lawyer_id = getattr(request, 'user_id', data.get('lawyerId'))
+        
+        if not lawyer_id:
+            return jsonify({'error': 'Lawyer ID missing from request'}), 401
+            
+        if not data or not data.get('client') or not data.get('case'):
+            return jsonify({'error': 'Missing client or case details'}), 400
+
+        now_iso = datetime.utcnow().isoformat()
+        ghost_client_id = str(uuid.uuid4())
+        case_id = str(uuid.uuid4())
+
+        # 1. Generate Ghost Client Record
+        client_name = data['client'].get('fullName', 'Unknown Client')
+        client_doc = {
+            'id': ghost_client_id,
+            'name': client_name,
+            'email': f"ghost_{ghost_client_id}@legalsphere.local",
+            'phone': data['client'].get('phone', 'N/A'),
+            'role': 'client',
+            'is_ghost_client': True, 
+            'linked_lawyer_id': lawyer_id,
+            'createdAt': now_iso,
+            'updatedAt': now_iso
+        }
+        
+        users_col = get_db_collection('users')
+        users_col.insert_one(client_doc)
+
+        # 2. Create the Associated Case Record
+        case_data = {
+            'id': case_id,
+            'clientId': ghost_client_id,
+            'client': data['client'], # Store nested client data exactly as typical workflow dictates
+            'case': data['case'],
+            'status': 'active', # CRITICAL: Bypass assign workflow entirely
+            'source': 'lawyer_offline_acquisition',
+            'assignedLawyerId': lawyer_id,
+            'createdAt': now_iso,
+            'updatedAt': now_iso
+        }
+
+        if 'proxy_filer' in data:
+            case_data['proxy_filer'] = data['proxy_filer']
+
+        case_col = get_db_collection('case_requests')
+        result = case_col.insert_one(case_data)
+        case_data['_id'] = str(result.inserted_id)
+
+        # CRITICAL constraint: DO NOT push to any Kafka pipeline.
+        # The lawyer physically has the client so no assignment/matching/notification broadcast is required.
+        
+        return jsonify({
+            'message': 'Offline case and ghost client successfully logged.',
+            'caseId': case_id,
+            'ghostClientId': ghost_client_id
+        }), 201
+
     except Exception as e:
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500

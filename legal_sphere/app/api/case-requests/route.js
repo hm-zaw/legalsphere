@@ -110,6 +110,10 @@ export async function POST(request) {
       source: "web_form",
     };
 
+    if (body.proxy_filer) {
+      caseData.proxy_filer = body.proxy_filer;
+    }
+
     // Store directly in MongoDB
     try {
       const db = await getDb();

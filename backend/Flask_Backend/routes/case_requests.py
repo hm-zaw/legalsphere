@@ -64,6 +64,10 @@ def create_case_request():
             'status': 'pending_submission',
             'source': 'web_form'
         })
+        
+        # Append proxy_filer if it exists
+        if 'proxy_filer' in case_data and case_data['proxy_filer']:
+            pass # Keep it intact as it's already in case_data
 
         # Store directly in MongoDB
         try:
