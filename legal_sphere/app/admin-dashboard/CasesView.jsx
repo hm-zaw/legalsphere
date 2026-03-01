@@ -396,7 +396,7 @@ export default function CasesView() {
 
   return (
     <>
-      <div className="flex-1 w-full min-h-screen bg-[#efefec] selection:bg-[#af9164]/30 overflow-y-auto">
+      <div className="w-full min-h-[calc(100vh-3.5rem)] bg-[#efefec]">
         <div className="w-full max-w-7xl mx-auto p-6 lg:p-12 space-y-12">
           {/* Header */}
           <header className="flex flex-col md:flex-row justify-between items-end border-b-2 border-slate-900 pb-6 gap-6">

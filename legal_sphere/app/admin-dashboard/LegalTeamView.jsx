@@ -125,7 +125,7 @@ export default function LegalTeamView() {
   };
 
   return (
-    <div className="flex flex-col gap-4 h-full animate-in fade-in duration-300">
+    <div className="flex flex-col gap-4 h-full p-6 animate-in fade-in duration-300">
       
       {/* --- Compact Toolbar --- */}
       <div className="flex items-center justify-between">

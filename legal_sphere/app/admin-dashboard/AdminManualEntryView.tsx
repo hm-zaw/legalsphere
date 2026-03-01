@@ -40,11 +40,10 @@ const SubHeading = ({ children }: { children: React.ReactNode }) => (
 );
 
 export default function AdminManualEntryView() {
-  const STEPS = ["Client Information", "Case Details", "Advocate Assignment"];
+  const STEPS = ["Client Information", "Case Details"];
   const [stepIndex, setStepIndex] = useState(0);
   const [attempted, setAttempted] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [lawyers, setLawyers] = useState<any[]>([]);
   
   const [form, setForm] = useState({
     client: {
@@ -60,28 +59,8 @@ export default function AdminManualEntryView() {
       description: "",
       incidentDate: "",
       urgency: "Normal"
-    },
-    lawyerId: ""
+    }
   });
-
-  useEffect(() => {
-    // Fetch lawyers to populate dropdown
-    const fetchLawyers = async () => {
-      try {
-        const token = localStorage.getItem("token") || sessionStorage.getItem("token");
-        const res = await fetch("/api/lawyers", {
-          headers: { "Authorization": `Bearer ${token}` }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setLawyers(data.lawyers || []);
-        }
-      } catch (err) {
-        console.error("Failed to fetch lawyers", err);
-      }
-    };
-    fetchLawyers();
-  }, []);
 
   const errors = useMemo(() => {
     const e: Record<string, string> = {};
@@ -94,9 +73,6 @@ export default function AdminManualEntryView() {
       if (!form.case.title.trim()) e.title = "Case Title is required.";
       if (!form.case.category) e.category = "Please select a case category.";
       if (!form.case.description.trim()) e.description = "Case Description is required.";
-    }
-    if (stepIndex === 2) {
-      if (!form.lawyerId) e.lawyerId = "You must assign an attorney.";
     }
     return e;
   }, [form, stepIndex]);
@@ -125,14 +101,20 @@ export default function AdminManualEntryView() {
 
     setLoading(true);
     try {
-      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+      const token = localStorage.getItem("adminToken") || localStorage.getItem("userToken");
+      
+      const payload = {
+        ...form,
+        source: "admin_proxy"
+      };
+
       const res = await fetch("http://127.0.0.1:5000/api/admin/manual-case-entry", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify(form)
+        body: JSON.stringify(payload)
       });
 
       if (!res.ok) {
@@ -140,12 +122,11 @@ export default function AdminManualEntryView() {
         throw new Error(j.error || "Failed to submit manual case");
       }
 
-      alert("Case manually created and assigned successfully.");
+      alert("Case manually created and queued for AI analysis.");
       // reset form
       setForm({
         client: { fullName: "", email: "", phone: "", address: "", dob: "" },
-        case: { title: "", category: "", description: "", incidentDate: "", urgency: "Normal" },
-        lawyerId: ""
+        case: { title: "", category: "", description: "", incidentDate: "", urgency: "Normal" }
       });
       setStepIndex(0);
       setAttempted(false);
@@ -158,7 +139,7 @@ export default function AdminManualEntryView() {
 
   return (
     <div
-      className="flex-1 w-full min-w-0 bg-[#efefec] py-8 sm:py-12 px-4 sm:px-8 selection:bg-slate-200"
+      className="w-full min-h-[calc(100vh-3.5rem)] bg-[#efefec] py-8 sm:py-12 px-4 sm:px-8"
       style={{
         fontFamily:
           'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial',
@@ -209,8 +190,8 @@ export default function AdminManualEntryView() {
           </nav>
 
           {/* The Form 'Sheet' */}
-          <main className="min-w-0 lg:pl-4 xl:pl-8">
-            <PaperSheet className="p-8 sm:p-12 lg:p-16">
+          <main className="min-w-0">
+            <PaperSheet className="p-4 sm:p-6 lg:p-8">
               
               <form onSubmit={handleSubmit} className="space-y-12">
                 
@@ -369,52 +350,6 @@ export default function AdminManualEntryView() {
                   </div>
                 )}
 
-                {/* Step 2: Attorney Assignment & Review */}
-                {stepIndex === 2 && (
-                  <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-                    <Heading>III. Advocate Assignment</Heading>
-                    <SubHeading>Select & Confirm Counsel</SubHeading>
-                    
-                    <div className="space-y-12">
-                      <div className="group relative">
-                        <label className="text-[10px] font-bold uppercase text-slate-500 group-focus-within:text-amber-700 transition-colors">Assign to Attorney</label>
-                        <select 
-                          className="w-full border-b border-slate-300 py-2 focus:border-slate-900 outline-none transition-colors bg-transparent font-medium appearance-none cursor-pointer text-lg mt-2"
-                          value={form.lawyerId}
-                          onChange={(e) => setForm({...form, lawyerId: e.target.value})}
-                        >
-                          <option value="">Select an advocate from the directory...</option>
-                          {lawyers.map(l => (
-                            <option key={l.id} value={l.id}>{l.name} — {l.specialization?.join(', ') || 'General'}</option>
-                          ))}
-                        </select>
-                        {attempted && errors.lawyerId && (
-                          <p className="text-xs text-red-600 mt-1">{errors.lawyerId}</p>
-                        )}
-                      </div>
-
-                      {/* Summary Display */}
-                      <div className="border-l-4 border-amber-600 pl-6 space-y-6 mt-8">
-                        <div>
-                          <h3 className="font-semibold text-slate-900 mb-2">Selected Matter</h3>
-                          <div className="text-sm">
-                            <span className="text-slate-500">Title:</span> {form.case.title || "—"}<br/>
-                            <span className="text-slate-500">Category:</span> {form.case.category || "—"}
-                          </div>
-                        </div>
-
-                        <div>
-                          <h3 className="font-semibold text-slate-900 mb-2">Subject Client</h3>
-                          <div className="text-sm">
-                            <span className="text-slate-500">Name:</span> {form.client.fullName || "—"}<br/>
-                            <span className="text-slate-500">Phone:</span> {form.client.phone || "—"}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
                 {/* Form Navigation Controls */}
                 <div className="pt-12 mt-12 border-t border-slate-200 flex justify-between items-center sm:pl-0">
                   {stepIndex > 0 ? (
@@ -443,7 +378,7 @@ export default function AdminManualEntryView() {
                       disabled={loading}
                       className="bg-amber-600 hover:bg-amber-700 text-white px-8 py-3 rounded-sm text-xs font-bold uppercase tracking-widest transition-colors disabled:opacity-50"
                     >
-                      {loading ? "Processing..." : "Complete & Assign"}
+                      {loading ? "Processing..." : "Queue for Analysis"}
                     </button>
                   )}
                 </div>

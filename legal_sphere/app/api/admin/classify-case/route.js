@@ -985,7 +985,7 @@ async function classifyCaseWithHF(text, allCategories) {
         body: JSON.stringify({
           inputs: text,
           parameters: {
-            candidate_labels: allCategories.slice(0, 20), // Increased to get more categories
+            candidate_labels: allCategories, // Allow all categories
           },
         }),
         signal: AbortSignal.timeout(60000), // 60 second timeout
@@ -1059,8 +1059,11 @@ export async function POST(req) {
       ? body.excludedLawyerIds
       : [];
 
-    // Use comprehensive case types for HF classification
-    let predictions = await classifyCaseWithHF(text, CASE_TYPES);
+    console.log("DEBUG - Incoming text to classify:", text);
+
+    // Use unique specializations for HF classification
+    const UNIQUE_SPECIALIZATIONS = [...new Set(Object.values(SPECIALIZATION_MAP).flat())];
+    let predictions = await classifyCaseWithHF(text, UNIQUE_SPECIALIZATIONS);
     console.log(
       "DEBUG - HF predictions:",
       predictions ? predictions.length : "null",
@@ -1091,7 +1094,7 @@ export async function POST(req) {
     // Map predicted case types to lawyer specializations
     const topPredictions = predictions.slice(0, 5);
     const mappedSpecializations = topPredictions.flatMap(
-      (p) => SPECIALIZATION_MAP[p.label] || [],
+      (p) => SPECIALIZATION_MAP[p.label] || [p.label],
     );
     const uniqueSpecializations = [...new Set(mappedSpecializations)];
 
@@ -1111,7 +1114,7 @@ export async function POST(req) {
       // give a small bonus for breadth.
       let matchScore = 0;
       topPredictions.forEach((p) => {
-        const mappedSpecs = SPECIALIZATION_MAP[p.label] || [];
+        const mappedSpecs = SPECIALIZATION_MAP[p.label] || [p.label];
         const intersect = mappedSpecs.filter((s) =>
           lawyerSpecializations.includes(s),
         );

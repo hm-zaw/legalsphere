@@ -184,12 +184,52 @@ def _classify_with_huggingface(text):
         
         # Comprehensive case types for legal classification
         case_types = [
-            "Contract Dispute", "Breach of Contract", "Fraud", "Theft", "Assault", "Battery",
-            "Property Dispute", "Real Estate Dispute", "Contract Drafting", "Lease Agreement",
-            "Divorce", "Child Custody", "Child Support", "Personal Injury", "Medical Malpractice",
-            "Trademark Infringement", "Copyright Infringement", "Patent Dispute", "Employment Dispute",
-            "Wrongful Termination", "Corporate Law", "Business Formation", "Mergers and Acquisitions",
-            "Bankruptcy", "Immigration", "Environmental Law", "Civil Rights", "Administrative Law"
+            # Criminal Law
+            "Assault", "Battery", "Homicide", "Manslaughter", "DUI/DWI", 
+            "Drug Possession", "Drug Trafficking", "Fraud", "Embezzlement", 
+            "Money Laundering", "Extortion", "Burglary", "Robbery", "Theft", 
+            "Cybercrime", "Domestic Violence", "Sex Crimes", "Probation Violation", 
+            "Juvenile Crimes", "Traffic Violations", "Weapons Charges", "Perjury",
+            
+            # Corporate and Commercial Law
+            "Contract Dispute", "Breach of Contract", "Mergers and Acquisitions", 
+            "Business Formation", "Corporate Governance", "Bankruptcy", "Antitrust", 
+            "Securities Fraud", "Franchise Law", "Joint Ventures", "Commercial Litigation",
+            "Non-Compete Agreement", "Consumer Protection",
+            
+            # Civil Litigation & Torts
+            "Personal Injury", "Medical Malpractice", "Wrongful Death", "Product Liability", 
+            "Premises Liability", "Slip and Fall", "Motor Vehicle Accident", "Class Action", 
+            "Defamation", "Libel", "Slander", "Intentional Infliction of Emotional Distress",
+            
+            # Family Law
+            "Divorce", "Child Custody", "Child Support", "Spousal Support", "Alimony", 
+            "Adoption", "Paternity", "Prenuptial Agreements", "Domestic Relations", 
+            "Guardianship", "Surrogacy Law", "Child Abuse and Neglect",
+            
+            # Property and Real Estate
+            "Residential Real Estate", "Commercial Real Estate", "Landlord-Tenant Dispute", 
+            "Eviction", "Foreclosure", "Zoning and Land Use", "Eminent Domain", 
+            "Property Line Dispute", "HOA Dispute", "Construction Defect", "Title Dispute",
+            
+            # Employment and Labor Law
+            "Wrongful Termination", "Workplace Discrimination", "Sexual Harassment", 
+            "Workplace Retaliation", "Wage and Hour Dispute", "Workers Compensation", 
+            "ERISA", "Union Disputes", "Family and Medical Leave Act", "Whistleblower",
+            
+            # Intellectual Property
+            "Patent Infringement", "Trademark Infringement", "Copyright Infringement", 
+            "Trade Secret Misappropriation", "IP Licensing", "Right of Publicity",
+            
+            # Public, Administrative, and Specialized Law
+            "Immigration", "Deportation", "Environmental Law", "Civil Rights Violation", 
+            "Police Brutality", "Education Law", "Tax Evasion", "Tax Dispute", 
+            "Social Security Disability", "Healthcare Law", "Medicare Fraud", 
+            "Election Law", "Native American Law", "Aviation Law", "Maritime Law", 
+            "Military Law", "Sports and Entertainment Law",
+            
+            # Estate and Probate
+            "Estate Planning", "Probate", "Will Contest", "Trust Administration"
         ]
         
         response = requests.post(
@@ -238,18 +278,69 @@ def _fallback_classification(text):
     """Fallback classification when AI service is unavailable"""
     # Simple keyword-based classification as fallback
     keywords_to_category = {
+        # Criminal Law
+        'arrest': 'Criminal Defense',
+        'detained': 'Criminal Defense',
+        'federal': 'Federal Crimes',
+        'interrogation': 'Criminal Defense',
+        'assault': 'Assault',
+        'robbery': 'Armed Robbery',
+        'drugs': 'Drug Crimes',
+        'narcotics': 'Drug Crimes',
+        'trafficking': 'Drug Crimes',
+        'dui': 'DUI/DWI',
+        'homicide': 'Homicide',
+        'murder': 'Homicide',
+        'weapons': 'Weapons Charges',
+        'domestic violence': 'Domestic Violence',
+        'probation': 'Probation Violation',
+        'jail': 'Criminal Defense',
+        'prison': 'Criminal Defense',
+        'charges': 'Criminal Defense',
+        'indictment': 'Criminal Defense',
+        
+        # Contract and Corporate
         'contract': 'Contract Dispute',
         'breach': 'Breach of Contract',
+        'agreement': 'Contract Dispute',
+        'corporate': 'Corporate Law',
+        'merger': 'Mergers and Acquisitions',
+        'business': 'Corporate Law',
+        
+        # Family Law
         'divorce': 'Divorce',
         'custody': 'Child Custody',
+        'support': 'Child Support',
+        'adoption': 'Adoption',
+        
+        # Personal Injury
         'injury': 'Personal Injury',
+        'accident': 'Personal Injury',
         'medical': 'Medical Malpractice',
+        'malpractice': 'Medical Malpractice',
+        
+        # Employment
         'employment': 'Employment Dispute',
-        'corporate': 'Corporate Law',
+        'termination': 'Wrongful Termination',
+        'discrimination': 'Discrimination',
+        'harassment': 'Harassment',
+        
+        # Property
         'property': 'Property Dispute',
+        'real estate': 'Real Estate Dispute',
+        'landlord': 'Landlord-Tenant',
+        'lease': 'Lease Agreement',
+        
+        # Intellectual Property
         'trademark': 'Trademark Infringement',
         'copyright': 'Copyright Infringement',
-        'patent': 'Patent Dispute'
+        'patent': 'Patent Dispute',
+        
+        # Other
+        'bankruptcy': 'Bankruptcy',
+        'immigration': 'Immigration',
+        'environment': 'Environmental Law',
+        'civil rights': 'Civil Rights'
     }
     
     text_lower = text.lower()
@@ -308,22 +399,84 @@ def _score_and_rank_lawyers(lawyers, predictions):
     """Score and rank lawyers based on specialization match and performance"""
     # Map case types to specializations
     specialization_map = {
+        # Criminal Law
+        'Criminal Defense': ['Criminal Law'],
+        'Drug Crimes': ['Criminal Law'],
+        'Assault': ['Criminal Law'],
+        'Battery': ['Criminal Law'],
+        'Armed Robbery': ['Criminal Law'],
+        'Federal Crimes': ['Criminal Law'],
+        'DUI/DWI': ['Criminal Law'],
+        'Homicide': ['Criminal Law'],
+        'Domestic Violence': ['Criminal Law', 'Family Law'],
+        'Weapons Charges': ['Criminal Law'],
+        'White Collar Crime': ['Criminal Law', 'Corporate Law'],
+        'Probation Violation': ['Criminal Law'],
+        'Sex Crimes': ['Criminal Law'],
+        'Juvenile Crimes': ['Criminal Law', 'Family Law'],
+        'Traffic Violations': ['Criminal Law'],
+        
+        # Contract and Corporate Law
         'Contract Dispute': ['Corporate Law', 'Contract Law'],
         'Breach of Contract': ['Corporate Law', 'Contract Law'],
+        'Contract Drafting': ['Corporate Law', 'Contract Law'],
+        'Contract Review': ['Corporate Law', 'Contract Law'],
+        'Non-Compete Agreement': ['Corporate Law', 'Contract Law'],
         'Corporate Law': ['Corporate Law'],
         'Business Formation': ['Corporate Law'],
         'Mergers and Acquisitions': ['Corporate Law'],
-        'Employment Dispute': ['Employment Law'],
-        'Wrongful Termination': ['Employment Law'],
+        
+        # Civil Litigation
         'Personal Injury': ['Personal Injury'],
         'Medical Malpractice': ['Medical Malpractice'],
+        'Wrongful Death': ['Personal Injury'],
+        'Product Liability': ['Personal Injury'],
+        'Slip and Fall': ['Personal Injury'],
+        'Motor Vehicle Accident': ['Personal Injury'],
+        
+        # Family Law
+        'Divorce': ['Family Law'],
+        'Child Custody': ['Family Law'],
+        'Child Support': ['Family Law'],
+        'Spousal Support': ['Family Law'],
+        'Adoption': ['Family Law'],
+        'Domestic Relations': ['Family Law'],
+        'Paternity': ['Family Law'],
+        
+        # Property and Real Estate
         'Property Dispute': ['Property Law', 'Real Estate Law'],
         'Real Estate Dispute': ['Property Law', 'Real Estate Law'],
+        'Landlord-Tenant': ['Property Law', 'Real Estate Law'],
+        'Lease Agreement': ['Property Law', 'Real Estate Law'],
+        'Zoning Issues': ['Property Law', 'Real Estate Law'],
+        'Eminent Domain': ['Property Law', 'Real Estate Law'],
+        
+        # Employment Law
+        'Employment Dispute': ['Employment Law'],
+        'Wrongful Termination': ['Employment Law'],
+        'Workplace Retaliation': ['Employment Law'],
+        'Discrimination': ['Employment Law', 'Civil Rights'],
+        'Harassment': ['Employment Law', 'Civil Rights'],
+        'Family and Medical Leave Act': ['Employment Law'],
+        'Wage and Hour': ['Employment Law'],
+        
+        # Intellectual Property
         'Trademark Infringement': ['Intellectual Property'],
         'Copyright Infringement': ['Intellectual Property'],
         'Patent Dispute': ['Intellectual Property'],
-        'Divorce': ['Family Law'],
-        'Child Custody': ['Family Law']
+        'Trade Secrets': ['Intellectual Property'],
+        'Licensing': ['Intellectual Property'],
+        
+        # Other Areas
+        'Bankruptcy': ['Bankruptcy Law'],
+        'Immigration': ['Immigration Law'],
+        'Environmental Law': ['Environmental Law'],
+        'Civil Rights': ['Civil Rights'],
+        'Administrative Law': ['Administrative Law'],
+        'Estate Planning': ['Estate Planning'],
+        'Probate': ['Estate Planning'],
+        'Tax Law': ['Tax Law'],
+        'Securities Law': ['Securities Law']
     }
     
     # Get top predictions
@@ -562,22 +715,24 @@ def get_case_connections():
 @admin_bp.route('/api/admin/manual-case-entry', methods=['POST'])
 @admin_token_required
 def manual_case_entry():
-    """Admin route for manual public defender/court case intake."""
+    """Admin route for manual public defender/court case intake (Pipeline Injector)."""
     try:
         data = request.get_json()
-        if not data or not data.get('client') or not data.get('case') or not data.get('lawyerId'):
-            return jsonify({'error': 'Missing required fields or lawyerId'}), 400
+        if not data or not data.get('client') or not data.get('case'):
+            return jsonify({'error': 'Missing required fields (client or case)'}), 400
 
         case_id = str(uuid.uuid4())
         now_iso = datetime.utcnow().isoformat()
+
+        # Extract source, default to admin_proxy as required
+        source = data.get('source', 'admin_proxy')
 
         case_data = {
             'id': case_id,
             'client': data['client'],
             'case': data['case'],
-            'status': 'lawyer_assigned', # Instantly mark as assigned
-            'source': 'admin_manual_entry',
-            'assignedLawyerId': data['lawyerId'],
+            'status': 'Pending_Classification',
+            'source': source,
             'createdAt': now_iso,
             'updatedAt': now_iso,
         }
@@ -590,19 +745,16 @@ def manual_case_entry():
         case_data['_id'] = str(result.inserted_id)
 
         # CRITICAL constraint: Skip matching and standard topics.
-        # Push assignment event strictly to the existing lawyer-assignments Kafka topic.
-        assignment_event = {
-            'caseId': case_id,
-            'lawyerId': data['lawyerId'],
-            'clientName': data.get('client', {}).get('fullName', 'Unknown'),
-            'timestamp': now_iso,
-            'status': 'assigned_manually_by_admin'
-        }
-        
-        kafka_service.publish_lawyer_assignment(assignment_event)
+        # Push the new case payload strictly to the case-notifications Kafka topic
+        # Ensure timestamp and user_id are set properly for the publisher
+        notification_payload = case_data.copy()
+        notification_payload['timestamp'] = now_iso
+        notification_payload['user_id'] = data.get('client', {}).get('email', 'admin_proxy')
+
+        kafka_service.publish_notification(notification_payload)
 
         return jsonify({
-            'message': 'Case successfully created and manually assigned',
+            'message': 'Case successfully created and queued for AI analysis',
             'caseId': case_id
         }), 201
 

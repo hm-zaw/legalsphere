@@ -1,0 +1,1 @@
+﻿{'_id': ObjectId('69a3295382cf8cc34da93ad8'), 'clientId': None, 'caseId': None, 'notificationType': None, 'title': None, 'message': None, 'metadata': {}, 'read': False, 'createdAt': '2026-02-28T17:43:47.312084', 'kafkaTimestamp': '2026-02-28T17:43:44.430661', 'kafkaKey': 'kyawkyaw@gmail.com'}
