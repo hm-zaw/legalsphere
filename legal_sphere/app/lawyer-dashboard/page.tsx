@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Briefcase,
@@ -36,6 +36,7 @@ import LawyerCasesView from "./LawyerCasesView";
 import LawyerCaseDetailView from "./LawyerCaseDetailView";
 import ClientCommunicationView from "./ClientCommunicationView";
 import LawyerOfflineCaseView from "./LawyerOfflineCaseView";
+import LawyerCalendarView from "./LawyerCalendarView";
 import {
   Popover,
   PopoverContent,
@@ -48,6 +49,7 @@ function LawyerDashboardPage() {
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const searchParams = useSearchParams();
+  const router = useRouter();
   const view = searchParams.get("view");
   const caseId = searchParams.get("id");
   const isCaseDetail = view === "case-details" && caseId;
@@ -60,6 +62,13 @@ function LawyerDashboardPage() {
         .join("")
     : "JD";
 
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    if (isCaseDetail) {
+      router.push("/lawyer-dashboard");
+    }
+  };
+
   const links = [
     {
       label: "Dashboard",
@@ -67,7 +76,7 @@ function LawyerDashboardPage() {
       icon: (
         <LayoutDashboard className="h-4 w-4 shrink-0 text-slate-500 group-hover/sidebar:text-[#1a2238]" />
       ),
-      onClick: () => setActiveTab("overview"),
+      onClick: () => handleTabChange("overview"),
     },
     {
       label: "Active Matters",
@@ -75,7 +84,7 @@ function LawyerDashboardPage() {
       icon: (
         <Briefcase className="h-4 w-4 shrink-0 text-slate-500 group-hover/sidebar:text-[#1a2238]" />
       ),
-      onClick: () => setActiveTab("matters"),
+      onClick: () => handleTabChange("matters"),
     },
     {
       label: "My Calendar",
@@ -83,7 +92,7 @@ function LawyerDashboardPage() {
       icon: (
         <Calendar className="h-4 w-4 shrink-0 text-slate-500 group-hover/sidebar:text-[#1a2238]" />
       ),
-      onClick: () => setActiveTab("calendar"),
+      onClick: () => handleTabChange("calendar"),
     },
     {
       label: "Documents",
@@ -91,7 +100,7 @@ function LawyerDashboardPage() {
       icon: (
         <FileText className="h-4 w-4 shrink-0 text-slate-500 group-hover/sidebar:text-[#1a2238]" />
       ),
-      onClick: () => setActiveTab("documents"),
+      onClick: () => handleTabChange("documents"),
     },
     {
       label: "Client Communications",
@@ -99,7 +108,7 @@ function LawyerDashboardPage() {
       icon: (
         <MessageCircle className="h-4 w-4 shrink-0 text-slate-500 group-hover/sidebar:text-[#1a2238]" />
       ),
-      onClick: () => setActiveTab("communications"),
+      onClick: () => handleTabChange("communications"),
     },
     {
       label: "Offline Intake",
@@ -107,7 +116,7 @@ function LawyerDashboardPage() {
       icon: (
         <Plus className="h-4 w-4 shrink-0 text-slate-500 group-hover/sidebar:text-[#1a2238]" />
       ),
-      onClick: () => setActiveTab("offline"),
+      onClick: () => handleTabChange("offline"),
     },
     {
       label: "Firm Settings",
@@ -115,7 +124,7 @@ function LawyerDashboardPage() {
       icon: (
         <Settings className="h-4 w-4 shrink-0 text-slate-500 group-hover/sidebar:text-[#1a2238]" />
       ),
-      onClick: () => setActiveTab("settings"),
+      onClick: () => handleTabChange("settings"),
     },
   ];
 
@@ -273,8 +282,8 @@ function LawyerDashboardPage() {
                   </div>
                 )}
                 {activeTab === "calendar" && (
-                  <div className="flex h-[60vh] items-center justify-center text-slate-400 font-serif italic">
-                    Calendar Module Loading...
+                  <div className="animate-in fade-in duration-500 -mx-6 -mt-6">
+                    <LawyerCalendarView />
                   </div>
                 )}
                 {activeTab === "documents" && (

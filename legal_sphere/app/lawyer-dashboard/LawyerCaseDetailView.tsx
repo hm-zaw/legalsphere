@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -193,11 +193,13 @@ const QuickActionButton = ({
   label,
   onClick,
   variant = "default",
+  disabled = false,
 }: {
   icon: React.ElementType;
   label: string;
   onClick?: () => void;
   variant?: "default" | "primary" | "danger";
+  disabled?: boolean;
 }) => {
   const variants = {
     default: "bg-white border-slate-200 text-slate-700 hover:border-[#af9164]",
@@ -208,12 +210,14 @@ const QuickActionButton = ({
   return (
     <button
       onClick={onClick}
+      disabled={disabled}
       className={cn(
-        "flex items-center gap-2 px-4 py-2.5 border rounded-sm text-xs font-bold uppercase tracking-wider transition-all shadow-sm",
+        "flex items-center gap-1.5 px-3 py-1.5 border rounded-sm text-[10px] font-bold uppercase tracking-wider transition-all shadow-sm",
         variants[variant],
+        disabled && "opacity-50 cursor-not-allowed",
       )}
     >
-      <Icon className="w-3.5 h-3.5" />
+      <Icon className="w-3 h-3" />
       {label}
     </button>
   );
@@ -416,7 +420,7 @@ const OverviewTab = ({ caseData }: { caseData: CaseDetail }) => (
   </div>
 );
 
-const DocumentsTab = ({ documents }: { documents: Document[] }) => (
+const DocumentsTab = ({ documents, uploaderNames }: { documents: Document[]; uploaderNames: Record<string, string> }) => (
   <div className="space-y-4">
     <div className="flex justify-between items-center">
       <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">
@@ -453,7 +457,7 @@ const DocumentsTab = ({ documents }: { documents: Document[] }) => (
               <div>
                 <p className="text-sm font-medium text-slate-900">{doc.name}</p>
                 <p className="text-[10px] text-slate-400">
-                  by {doc.uploadedBy}
+                  by {uploaderNames[doc.uploadedBy] || doc.uploadedBy}
                 </p>
               </div>
             </div>
@@ -701,6 +705,9 @@ export default function LawyerCaseDetailView({ caseId }: { caseId?: string }) {
   const [caseData, setCaseData] = useState<CaseDetail>(BLANK_CASE);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [uploaderNames, setUploaderNames] = useState<Record<string, string>>({});
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // In real implementation, fetch case data
   useEffect(() => {
@@ -877,6 +884,148 @@ export default function LawyerCaseDetailView({ caseId }: { caseId?: string }) {
     }
   }, [caseId]);
 
+  // Fetch uploader names for documents with numeric IDs
+  useEffect(() => {
+    const fetchUploaderNames = async () => {
+      if (!caseData?.documents) return;
+
+      const uniqueUploaderIds = Array.from(new Set(
+        caseData.documents
+          .map(doc => doc.uploadedBy)
+          .filter(by => by && !isNaN(Number(by))) // Filter for numeric IDs
+      ));
+
+      if (uniqueUploaderIds.length === 0) return;
+
+      try {
+        const newUploaderNames: Record<string, string> = {};
+        
+        // Try to fetch user names for each numeric ID
+        for (const userId of uniqueUploaderIds) {
+          try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000"}/api/users/${userId}`, {
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('userToken') || localStorage.getItem('adminToken')}`
+              }
+            });
+            
+            if (response.ok) {
+              const userData = await response.json();
+              newUploaderNames[userId] = userData.user?.name || userData.user?.email || `User ${userId}`;
+            } else {
+              newUploaderNames[userId] = `Lawyer ${userId}`;
+            }
+          } catch (error) {
+            console.error(`Error fetching user ${userId}:`, error);
+            newUploaderNames[userId] = `Lawyer ${userId}`;
+          }
+        }
+        
+        setUploaderNames(prev => ({ ...prev, ...newUploaderNames }));
+      } catch (error) {
+        console.error("Error fetching uploader names:", error);
+      }
+    };
+
+    fetchUploaderNames();
+  }, [caseData?.documents]);
+
+  // File upload handler
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+    
+    // Validate file type
+    const allowedTypes = [
+      "application/pdf",
+      "image/jpeg",
+      "image/png",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ];
+    
+    if (!allowedTypes.includes(file.type) && !/\.(pdf|jpg|jpeg|png|docx)$/i.test(file.name)) {
+      alert("Please upload a valid file (PDF, JPG, PNG, or DOCX)");
+      return;
+    }
+
+    try {
+      setUploadingDoc(true);
+
+      // Step 1: Get presigned URL from R2
+      const presignRes = await fetch("/api/uploads/presign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          filename: file.name,
+          contentType: file.type || "application/pdf",
+        }),
+      });
+
+      if (!presignRes.ok) {
+        throw new Error("Failed to prepare upload");
+      }
+
+      const { url, key, contentType } = await presignRes.json();
+
+      // Step 2: Upload file to R2
+      const uploadRes = await fetch(url, {
+        method: "PUT",
+        headers: {
+          "Content-Type": contentType,
+        },
+        body: file,
+      });
+
+      if (!uploadRes.ok) {
+        throw new Error(`Upload failed for ${file.name}`);
+      }
+
+      // Step 3: Save document metadata to backend
+      const docData = {
+        caseId: caseData._id || caseId,
+        document: {
+          key,
+          name: file.name,
+          size: file.size,
+          type: contentType,
+          uploadedAt: new Date().toISOString(),
+          uploadedBy: user?.name || user?.email || 'Unknown',
+        },
+      };
+
+      const resp = await apiClient.post(`/api/cases/${caseData._id || caseId}/documents`, docData);
+
+      if (resp.error) {
+        throw new Error(resp.error || "Failed to save document to case");
+      }
+
+      // Refresh case data to show new document
+      const caseResp = await apiClient.getCaseDetails(caseData._id || caseId);
+      if (!caseResp.error && caseResp.data) {
+        const apiCase: any = caseResp.data;
+        setCaseData(prev => ({
+          ...prev,
+          documents: apiCase.documents || []
+        }));
+      }
+
+      alert("Document uploaded successfully!");
+      
+    } catch (err: any) {
+      console.error("Upload error:", err);
+      alert(err?.message || "Failed to upload document. Please try again.");
+    } finally {
+      setUploadingDoc(false);
+      // Clear file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
   const handleAddNote = async (content: string, isPrivate: boolean) => {
     try {
       const resp = await apiClient.post(`/api/case-requests/${caseData.id}/notes`, {
@@ -957,9 +1106,24 @@ export default function LawyerCaseDetailView({ caseId }: { caseId?: string }) {
 
             {/* Quick Actions - Now pushed to the right on large screens */}
             <div className="flex flex-wrap items-center gap-2 lg:justify-end lg:ml-auto">
-              <QuickActionButton icon={MessageSquare} label="Message Client" />
-              <QuickActionButton icon={Upload} label="Upload Doc" />
-              <QuickActionButton icon={Clock} label="Log Time" />
+              <QuickActionButton 
+                icon={MessageSquare} 
+                label="Message Client" 
+                onClick={() => router.push(`/lawyer-dashboard/communication?caseId=${caseData._id}`)}
+              />
+              <QuickActionButton 
+                icon={Upload} 
+                label="Upload Doc" 
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingDoc}
+              />
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,.docx"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
               <QuickActionButton
                 icon={Edit3}
                 label="Update Status"
@@ -1035,7 +1199,7 @@ export default function LawyerCaseDetailView({ caseId }: { caseId?: string }) {
           >
             {activeTab === "overview" && <OverviewTab caseData={caseData} />}
             {activeTab === "documents" && (
-              <DocumentsTab documents={caseData.documents} />
+              <DocumentsTab documents={caseData.documents} uploaderNames={uploaderNames} />
             )}
             {activeTab === "time" && (
               <TimeTrackingTab entries={caseData.timeEntries} />

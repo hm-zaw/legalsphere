@@ -438,3 +438,106 @@ def add_case_note(case_id):
         return jsonify({'note': note}), 201
     except Exception as e:
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+
+
+@case_requests_bp.route('/api/case-requests/<case_id>/documents', methods=['POST'])
+@token_required
+def upload_case_document(case_id):
+    """Upload a document to an existing case request"""
+    try:
+        payload = request.get_json()
+        if not payload:
+            return jsonify({'error': 'Request body is required'}), 400
+        
+        document = payload.get('document')
+        if not document:
+            return jsonify({'error': 'Document data is required'}), 400
+        
+        # Validate required document fields
+        required_fields = ['key', 'name', 'size', 'type', 'uploadedAt']
+        for field in required_fields:
+            if field not in document:
+                return jsonify({'error': f'Document {field} is required'}), 400
+        
+        collection = get_db_collection('case_requests')
+        
+        # Try to find case by id first, then by _id
+        case = collection.find_one({'id': case_id})
+        if not case:
+            # Try with ObjectId
+            from bson import ObjectId
+            try:
+                case = collection.find_one({'_id': ObjectId(case_id)})
+            except:
+                case = None
+        
+        if not case:
+            return jsonify({'error': 'Case not found'}), 404
+        
+        # Add document metadata
+        document_with_metadata = {
+            'id': str(uuid.uuid4()),
+            'key': document['key'],
+            'name': document['name'],
+            'size': document['size'],
+            'type': document['type'],
+            'uploadedAt': document['uploadedAt'],
+            'uploadedBy': document.get('uploadedBy', getattr(request, 'user_name', 'Unknown')),
+            'caseId': str(case.get('_id', case_id)),
+        }
+        
+        # Push the document and update timestamp
+        collection.update_one(
+            {'_id': case['_id']}, 
+            {
+                '$push': {'documents': document_with_metadata}, 
+                '$set': {'updatedAt': datetime.utcnow().isoformat()}
+            }
+        )
+        
+        return jsonify({'document': document_with_metadata}), 201
+    except Exception as e:
+        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+
+
+@case_requests_bp.route('/api/cases/<case_id>/documents', methods=['POST'])
+@token_required
+def upload_case_document_v2(case_id):
+    """Upload a document to an existing case (alternative endpoint)"""
+    return upload_case_document(case_id)
+
+
+@case_requests_bp.route('/api/users/<user_id>', methods=['GET'])
+@token_required
+def get_user_by_id(user_id):
+    """Get user details by ID"""
+    try:
+        collection = get_db_collection('users')
+        
+        # Try to find user by ID (string or ObjectId)
+        from bson import ObjectId
+        try:
+            user = collection.find_one({'_id': ObjectId(user_id)})
+        except:
+            user = collection.find_one({'id': user_id})
+        
+        if not user:
+            # Try to find by email if user_id looks like an email
+            if '@' in user_id:
+                user = collection.find_one({'email': user_id})
+        
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Convert ObjectId to string and remove sensitive data
+        user_data = {
+            'id': str(user.get('_id', user.get('id', user_id))),
+            'name': user.get('name', 'Unknown'),
+            'email': user.get('email', ''),
+            'role': user.get('role', ''),
+        }
+        
+        return jsonify({'user': user_data}), 200
+        
+    except Exception as e:
+        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
