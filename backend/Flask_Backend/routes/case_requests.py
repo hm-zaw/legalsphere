@@ -162,7 +162,11 @@ def get_lawyer_cases():
         # Build query
         query = {}
         if lawyer_id:
-            query['assignedLawyerId'] = lawyer_id
+            try:
+                lawyer_id_int = int(lawyer_id)
+                query['assignedLawyerId'] = {'$in': [lawyer_id, lawyer_id_int, str(lawyer_id)]}
+            except ValueError:
+                query['assignedLawyerId'] = lawyer_id
 
         if status:
             if status == 'incoming':

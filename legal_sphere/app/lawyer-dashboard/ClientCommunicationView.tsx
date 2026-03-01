@@ -548,29 +548,47 @@ export default function ClientCommunicationView() {
   const socketRef = useRef<any>(null);
 
   useEffect(() => {
+    let uId = null;
     // Get current user data
     if (typeof window !== "undefined") {
       try {
         const userData = localStorage.getItem("userData");
         if (userData) {
           const parsed = JSON.parse(userData);
-          setCurrentUser(Array.isArray(parsed) ? parsed[0] : parsed);
+          const userObj = Array.isArray(parsed) ? parsed[0] : parsed;
+          setCurrentUser(userObj);
+          uId = userObj?.id || userObj?.userId || userObj?.lawyerId || userObj?._id;
         }
       } catch (e) {
         console.error("Failed to parse user data", e);
       }
     }
-    fetchCases();
+    fetchCases(uId);
   }, []);
 
-  const fetchCases = async () => {
+  const fetchCases = async (lawyerId?: string | null) => {
     setLoading(true);
     setError("");
     try {
       const token = localStorage.getItem("userToken") || localStorage.getItem("token");
       
+      let uId = lawyerId || currentUser?.id || currentUser?.userId || currentUser?.lawyerId || currentUser?._id;
+      if (!uId && typeof window !== "undefined") {
+        try {
+          const parsed = JSON.parse(localStorage.getItem("userData") || "{}");
+          const userObj = Array.isArray(parsed) ? parsed[0] : parsed;
+          uId = userObj?.id || userObj?.userId || userObj?.lawyerId || userObj?._id;
+        } catch (e) {}
+      }
+      
+      const url = new URL(`${API_BASE_URL}/api/lawyer/cases`);
+      url.searchParams.append("status", "active");
+      if (uId) {
+        url.searchParams.append("lawyerId", uId.toString());
+      }
+      
       // Fetch lawyer's assigned cases from the API
-      const response = await fetch(`${API_BASE_URL}/api/case-requests?status=active&limit=50`, {
+      const response = await fetch(url.toString(), {
         headers: {
           "Authorization": `Bearer ${token}`
         }

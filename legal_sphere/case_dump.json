@@ -1,0 +1,71 @@
+{
+  "_id": "6990a4c659fa83c4b8c0f989",
+  "client": {
+    "fullName": "Htet Myet Zaw",
+    "idNumber": "12/OuKaTa(နိုင်)202020",
+    "nrc": {
+      "state": "12",
+      "township": "OuKaTa",
+      "citizen": "(နိုင်)",
+      "number": "202020"
+    },
+    "email": "htetmyetzaw114@gmail.com",
+    "phone": "9695757575",
+    "address": "114, Tagaung 7th Street, Ward 5, South Okkala",
+    "dob": "",
+    "id": 13,
+    "nrcState": "12",
+    "nrcTownship": "OuKaTa",
+    "nrcCitizen": "(နိုင်)",
+    "nrcNumber": "202020"
+  },
+  "clientId": 13,
+  "case": {
+    "title": "Unauthorized Use of Digital Illustrations",
+    "category": "Other",
+    "description": "A mid-sized clothing brand is using my \"Cosmic Flora\" illustration series on their Spring 2024 collection without a license. I discovered this via an Instagram ad. I have the original timestamped .PSD files and a registered copyright.",
+    "incidentDate": "2026-02-02",
+    "urgency": "Normal"
+  },
+  "consultation": {
+    "type": "Online Meeting",
+    "date": "2026-02-17",
+    "timeSlot": "11:00 - 12:00",
+    "notes": "I want to discuss a settlement vs. a formal lawsuit. I've already sent a DM to the brand which they ignored."
+  },
+  "acknowledgements": {
+    "accurate": true,
+    "privacy": true
+  },
+  "documents": [],
+  "id": "dbe49387-f9a7-49fc-a189-9af52bfd40b9",
+  "createdAt": "2026-02-14T16:37:26.140Z",
+  "updatedAt": "2026-02-15T07:40:02.723363",
+  "status": "active",
+  "source": "web_form",
+  "assignedLawyer": {
+    "id": 98,
+    "name": "U Kyaw Kyaw Tun",
+    "assignedAt": "2026-02-15T05:02:21.369344"
+  },
+  "assignedLawyerId": 98,
+  "deniedLawyerIds": [
+    "22",
+    "23",
+    "31"
+  ],
+  "lawyerRejectedAt": "2026-02-15T04:57:40.145941",
+  "lawyerRejectedBy": "U Win Min Htet",
+  "rejectionReason": "Case rejected by lawyer",
+  "lawyerAcceptedAt": "2026-02-15T05:25:42.385453",
+  "lawyerAcceptedBy": "U Kyaw Kyaw Tun",
+  "notes": [
+    {
+      "id": "cc44654a-9e9d-4f89-8f61-aca3d3aa0b8f",
+      "content": "Hello Testing 123",
+      "createdAt": "2026-02-15T07:40:02.723363",
+      "createdBy": "U Kyaw Kyaw Tun",
+      "isPrivate": true
+    }
+  ]
+}

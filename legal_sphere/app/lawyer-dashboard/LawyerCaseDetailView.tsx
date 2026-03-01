@@ -109,121 +109,29 @@ interface CaseDetail {
   activities: Activity[];
 }
 
-// --- Mock Data ---
-const MOCK_CASE: CaseDetail = {
-  id: "CASE-2024-0042",
-  title: "Corporate Merger Review - TechCorp Acquisition",
-  description:
-    "Comprehensive legal review of TechCorp's acquisition of StartupXYZ. Due diligence on intellectual property, employment agreements, and regulatory compliance. Requires thorough examination of all material contracts and potential liability exposures.",
-  status: "active",
-  category: "Corporate Law",
-  priority: "high",
+// --- Blank Data (No Mocks) ---
+const BLANK_CASE: CaseDetail = {
+  id: "CASE-NEW",
+  title: "Case Details",
+  description: "No description provided.",
+  status: "pending",
+  category: "General",
+  priority: "medium",
   client: {
-    id: "CLI-001",
-    fullName: "Michael Chen",
-    email: "m.chen@techcorp.com",
-    phone: "+1 (415) 555-0123",
+    id: "CLI-000",
+    fullName: "Unknown Client",
+    email: "",
+    phone: "",
   },
-  createdAt: "2024-01-15T10:30:00Z",
-  updatedAt: "2024-01-20T14:22:00Z",
-  dueDate: "2024-02-28T17:00:00Z",
-  estimatedHours: 120,
-  totalLoggedHours: 47.5,
-  documents: [
-    {
-      id: "DOC-001",
-      name: "Letter of Intent - TechCorp.pdf",
-      type: "PDF",
-      size: "2.4 MB",
-      uploadedAt: "2024-01-15T11:00:00Z",
-      uploadedBy: "Michael Chen",
-      category: "contract",
-    },
-    {
-      id: "DOC-002",
-      name: "IP Assignment Agreements.zip",
-      type: "ZIP",
-      size: "15.8 MB",
-      uploadedAt: "2024-01-16T09:30:00Z",
-      uploadedBy: "Sarah Jenkins",
-      category: "contract",
-    },
-    {
-      id: "DOC-003",
-      name: "Due Diligence Checklist.xlsx",
-      type: "XLSX",
-      size: "485 KB",
-      uploadedAt: "2024-01-18T16:45:00Z",
-      uploadedBy: "You",
-      category: "other",
-    },
-  ],
-  timeEntries: [
-    {
-      id: "TIME-001",
-      date: "2024-01-15",
-      description: "Initial client consultation and scope review",
-      hours: 2.5,
-      rate: 450,
-      billable: true,
-    },
-    {
-      id: "TIME-002",
-      date: "2024-01-16",
-      description: "Review of Letter of Intent and preliminary documents",
-      hours: 4.0,
-      rate: 450,
-      billable: true,
-    },
-    {
-      id: "TIME-003",
-      date: "2024-01-17",
-      description: "IP portfolio analysis and risk assessment",
-      hours: 6.5,
-      rate: 450,
-      billable: true,
-    },
-  ],
-  notes: [
-    {
-      id: "NOTE-001",
-      content: "Client expressed concerns about potential IP conflicts with existing patents. Need to conduct thorough patent search.",
-      createdAt: "2024-01-16T14:30:00Z",
-      createdBy: "Sarah Jenkins",
-      isPrivate: false,
-    },
-    {
-      id: "NOTE-002",
-      content: "Regulatory review complete. No major compliance issues identified, but recommend additional due diligence on international subsidiaries.",
-      createdAt: "2024-01-18T11:15:00Z",
-      createdBy: "You",
-      isPrivate: true,
-    },
-  ],
-  activities: [
-    {
-      id: "ACT-001",
-      type: "status_change",
-      description: "Case status changed from 'Pending' to 'Active'",
-      timestamp: "2024-01-15T11:00:00Z",
-      actor: "Sarah Jenkins",
-    },
-    {
-      id: "ACT-002",
-      type: "document_upload",
-      description: "Uploaded 'IP Assignment Agreements' (12 files)",
-      timestamp: "2024-01-16T09:30:00Z",
-      actor: "Sarah Jenkins",
-    },
-    {
-      id: "ACT-003",
-      type: "time_logged",
-      description: "Logged 6.5 hours - IP portfolio analysis",
-      timestamp: "2024-01-17T18:00:00Z",
-      actor: "You",
-    },
-  ],
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+  totalLoggedHours: 0,
+  documents: [],
+  timeEntries: [],
+  notes: [],
+  activities: [],
 };
+
 
 // --- Helper Components ---
 
@@ -790,7 +698,7 @@ export default function LawyerCaseDetailView({ caseId }: { caseId?: string }) {
   const router = useRouter();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("overview");
-  const [caseData, setCaseData] = useState<CaseDetail>(MOCK_CASE);
+  const [caseData, setCaseData] = useState<CaseDetail>(BLANK_CASE);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -810,59 +718,153 @@ export default function LawyerCaseDetailView({ caseId }: { caseId?: string }) {
 
           const apiCase: any = resp.data;
 
-          // Map backend case shape to CaseDetail used by this component
+          // Build activities log dynamically
+          const synthesizedActivities: Activity[] = [];
+
+          // 1. Case Creation
+          if (apiCase?.createdAt) {
+            synthesizedActivities.push({
+              id: `act-create-${apiCase.id || caseId}`,
+              type: "status_change",
+              description: "Case submitted into LegalSphere",
+              timestamp: apiCase.createdAt,
+              actor: apiCase?.client?.fullName || apiCase?.client?.name || "Client"
+            });
+          }
+
+          // 2. Lawyer Assignment (Admin action)
+          if (apiCase?.assignedLawyer?.assignedAt) {
+            synthesizedActivities.push({
+              id: `act-assign-${apiCase.id || caseId}-${apiCase.assignedLawyer.assignedAt}`,
+              type: "status_change",
+              description: `Assigned case to ${apiCase.assignedLawyer?.name || "lawyer"}`,
+              timestamp: apiCase.assignedLawyer.assignedAt,
+              actor: "Administrator"
+            });
+          }
+
+          // 3. Lawyer Rejection
+          if (apiCase?.lawyerRejectedAt) {
+            synthesizedActivities.push({
+              id: `act-reject-${apiCase.id || caseId}-${apiCase.lawyerRejectedAt}`,
+              type: "status_change",
+              description: `Case assignment declined: ${apiCase.rejectionReason || "No reason provided"}`,
+              timestamp: apiCase.lawyerRejectedAt,
+              actor: apiCase.lawyerRejectedBy || "A Lawyer"
+            });
+          }
+
+          // 4. Lawyer Acceptance
+          if (apiCase?.lawyerAcceptedAt) {
+            synthesizedActivities.push({
+              id: `act-accept-${apiCase.id || caseId}-${apiCase.lawyerAcceptedAt}`,
+              type: "status_change",
+              description: "Case assignment accepted",
+              timestamp: apiCase.lawyerAcceptedAt,
+              actor: apiCase.lawyerAcceptedBy || "Lawyer"
+            });
+          }
+
+          // 5. Document Uploads
+          if (Array.isArray(apiCase?.documents)) {
+            apiCase.documents.forEach((doc: any, i: number) => {
+              if (doc.createdAt || doc.uploadedAt) {
+                synthesizedActivities.push({
+                  id: `act-doc-${doc.id || i}`,
+                  type: "document_upload",
+                  description: `Uploaded document: ${doc.name || doc.fileName || 'File'}`,
+                  timestamp: doc.createdAt || doc.uploadedAt,
+                  actor: doc.uploadedBy || doc.createdBy || "System"
+                });
+              }
+            });
+          }
+
+          // 6. Notes Added
+          if (Array.isArray(apiCase?.notes)) {
+            apiCase.notes.forEach((note: any, i: number) => {
+              if (note.createdAt) {
+                synthesizedActivities.push({
+                  id: `act-note-${note.id || i}`,
+                  type: "note_added",
+                  description: note.isPrivate ? "Added a private note" : "Added a case note",
+                  timestamp: note.createdAt,
+                  actor: note.createdBy || "System"
+                });
+              }
+            });
+          }
+
+          // 7. Time entries
+          if (Array.isArray(apiCase?.timeEntries)) {
+            apiCase.timeEntries.forEach((entry: any, i: number) => {
+              if (entry.date || entry.createdAt) {
+                synthesizedActivities.push({
+                  id: `act-time-${entry.id || i}`,
+                  type: "time_logged",
+                  description: `Logged ${entry.hours} hours: ${entry.description}`,
+                  timestamp: entry.date || entry.createdAt,
+                  actor: entry.lawyerName || "Lawyer"
+                });
+              }
+            });
+          }
+
+          // Sort activities by timestamp descending (newest first)
+          synthesizedActivities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
           const mapped: CaseDetail = {
             id: apiCase?.id || apiCase?._id || caseId,
-            title: apiCase?.case?.title || apiCase?.title || MOCK_CASE.title,
+            title: apiCase?.case?.title || apiCase?.title || BLANK_CASE.title,
             description:
               apiCase?.case?.description ||
               apiCase?.description ||
-              MOCK_CASE.description,
+              BLANK_CASE.description,
             status:
               (apiCase?.status && String(apiCase.status).toLowerCase()) ||
               (apiCase?.rawStatus as string) ||
-              MOCK_CASE.status,
+              BLANK_CASE.status,
             category:
               apiCase?.case?.category ||
               apiCase?.category ||
-              MOCK_CASE.category,
+              BLANK_CASE.category,
             priority:
               (apiCase?.case?.urgency &&
                 String(apiCase.case.urgency).toLowerCase()) ||
               (apiCase?.priority && String(apiCase.priority).toLowerCase()) ||
-              MOCK_CASE.priority,
+              BLANK_CASE.priority,
             client: {
               id:
                 apiCase?.client?.id ||
                 apiCase?.client?._id ||
                 apiCase?.client?.email ||
-                MOCK_CASE.client.id,
+                BLANK_CASE.client.id,
               fullName:
                 apiCase?.client?.name ||
                 apiCase?.client?.fullName ||
-                MOCK_CASE.client.fullName,
-              email: apiCase?.client?.email || MOCK_CASE.client.email,
-              phone: apiCase?.client?.phone || MOCK_CASE.client.phone,
+                BLANK_CASE.client.fullName,
+              email: apiCase?.client?.email || BLANK_CASE.client.email,
+              phone: apiCase?.client?.phone || BLANK_CASE.client.phone,
               avatar: apiCase?.client?.avatar,
             },
-            createdAt: apiCase?.createdAt || MOCK_CASE.createdAt,
-            updatedAt: apiCase?.updatedAt || MOCK_CASE.updatedAt,
+            createdAt: apiCase?.createdAt || BLANK_CASE.createdAt,
+            updatedAt: apiCase?.updatedAt || BLANK_CASE.updatedAt,
             dueDate:
-              apiCase?.case?.dueDate || apiCase?.dueDate || MOCK_CASE.dueDate,
+              apiCase?.case?.dueDate || apiCase?.dueDate || BLANK_CASE.dueDate,
             estimatedHours:
               apiCase?.case?.estimatedHours ||
               apiCase?.estimatedHours ||
-              MOCK_CASE.estimatedHours,
+              BLANK_CASE.estimatedHours,
             totalLoggedHours: apiCase?.timeEntries
               ? apiCase.timeEntries.reduce(
                   (s: number, e: any) => s + (e.hours || 0),
                   0,
                 )
-              : MOCK_CASE.totalLoggedHours,
-            documents: apiCase?.documents || MOCK_CASE.documents,
-            timeEntries: apiCase?.timeEntries || MOCK_CASE.timeEntries,
-            notes: apiCase?.notes || MOCK_CASE.notes,
-            activities: apiCase?.activities || MOCK_CASE.activities,
+              : BLANK_CASE.totalLoggedHours,
+            documents: apiCase?.documents || BLANK_CASE.documents,
+            timeEntries: apiCase?.timeEntries || BLANK_CASE.timeEntries,
+            notes: apiCase?.notes || BLANK_CASE.notes,
+            activities: synthesizedActivities,
           };
 
           setCaseData(mapped);
@@ -906,7 +908,7 @@ export default function LawyerCaseDetailView({ caseId }: { caseId?: string }) {
 
   if (loading) {
     return (
-      <div className="flex-1 w-full min-h-screen bg-[#efefec] flex items-center justify-center">
+      <div className="flex-1 w-full h-full bg-[#efefec] flex items-center justify-center min-h-[50vh]">
         <div className="text-center">
           <div className="w-12 h-12 border-2 border-[#af9164] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-sm text-slate-500">Loading case details...</p>
@@ -916,8 +918,8 @@ export default function LawyerCaseDetailView({ caseId }: { caseId?: string }) {
   }
 
   return (
-    <div className="flex-1 w-full min-h-screen bg-[#efefec] selection:bg-[#af9164]/30 overflow-y-auto">
-      <div className="w-full max-w-6xl mx-auto p-6 lg:p-8 space-y-6">
+    <div className="flex-1 w-full h-full bg-[#efefec] selection:bg-[#af9164]/30">
+      <div className="w-full max-w-6xl mx-auto space-y-6">
         {/* --- Header Section --- */}
         <header className="space-y-6">
           {/* Breadcrumb & Back */}
