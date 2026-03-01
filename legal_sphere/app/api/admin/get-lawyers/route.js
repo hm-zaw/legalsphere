@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getDb } from "@/lib/mongodb";
 
 export async function GET(request) {
   try {
@@ -28,6 +29,34 @@ export async function GET(request) {
         { error: data.Error || data.Message || "Failed to fetch lawyers" },
         { status: response.status }
       );
+    }
+
+    // Embed real case counts from MongoDB
+    try {
+       const db = await getDb();
+       const counts = await db.collection("case_requests").aggregate([
+          { $match: { hidden: { $ne: true }, status: { $ne: "completed" }, assignedLawyerId: { $ne: null } } },
+          { $group: { _id: "$assignedLawyerId", count: { $sum: 1 } } }
+       ]).toArray();
+       
+       const countMap = {};
+       for (const group of counts) {
+           if (group._id !== null && group._id !== undefined) {
+               countMap[group._id.toString()] = group.count;
+           }
+       }
+       
+       if (Array.isArray(data.Lawyers)) {
+           data.Lawyers = data.Lawyers.map(lawyer => {
+               const idToMatch = (lawyer.user_id || lawyer.id || "").toString();
+               return {
+                   ...lawyer,
+                   activeCases: countMap[idToMatch] || 0
+               };
+           });
+       }
+    } catch (dbErr) {
+       console.error("Error embedding active cases:", dbErr);
     }
 
     return NextResponse.json(data);

@@ -70,6 +70,10 @@ def get_admin_cases():
             else:
                 query['status'] = status
         
+        lawyer_id = request.args.get('lawyerId', None)
+        if lawyer_id:
+            query['assignedLawyerId'] = {'$in': [lawyer_id, int(lawyer_id) if str(lawyer_id).isdigit() else lawyer_id]}
+        
         # Get total count
         total = collection.count_documents(query)
         

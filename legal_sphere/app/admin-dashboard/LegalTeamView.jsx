@@ -9,7 +9,8 @@ import {
   List,
   Plus,
   Search,
-  Users
+  Users,
+  X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -22,11 +23,124 @@ import { Textarea } from "@/components/ui/textarea"; // Added Textarea import
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
-export default function LegalTeamView() {
+const LawyerCasesPanel = ({ lawyer, onClose }) => {
+  const [cases, setCases] = useState([]);
+  const [loadingCases, setLoadingCases] = useState(true);
+
+  useEffect(() => {
+    async function fetchLawyerCases() {
+      if (!lawyer || !lawyer.id) return;
+      
+      try {
+        setLoadingCases(true);
+        const adminToken = typeof localStorage !== 'undefined' ? localStorage.getItem('adminToken') : null;
+        if (!adminToken) {
+           setCases([]);
+           return;
+        }
+        
+        const response = await fetch(`/api/admin/case-requests?limit=100&lawyerId=${lawyer.id}`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` }
+        });
+        
+        let data;
+        try { data = await response.json(); } catch { data = null; }
+        
+        if (response.ok && data?.items) {
+           const mapped = data.items.map(c => ({
+              // Use short hyphenated UUID block if possible
+              caseId: c.id ? c.id.substring(0, 13).toUpperCase() : "UNKNOWN",
+              title: c.title || c.case?.title || "Untitled",
+              type: c.category || c.case?.category || "General",
+              status: c.status || "Pending",
+              lastUpdated: c.updatedAt ? new Date(c.updatedAt).toLocaleDateString() : "N/A"
+           }));
+           setCases(mapped);
+        } else {
+           setCases([]);
+        }
+      } catch (e) {
+        console.error("Error fetching lawyer cases:", e);
+        setCases([]);
+      } finally {
+        setLoadingCases(false);
+      }
+    }
+    
+    fetchLawyerCases();
+  }, [lawyer]);
+
+  return (
+    <div className="bg-white border border-zinc-200 rounded-lg shadow-sm flex flex-col h-full animate-in slide-in-from-right-4 fade-in duration-300">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200">
+        <div>
+          <h3 className="text-sm font-semibold text-zinc-800 leading-tight">{lawyer.name}</h3>
+          <p className="text-[11px] text-[#af9164] font-medium uppercase tracking-wider mt-0.5">{lawyer.role}</p>
+        </div>
+        <button 
+          onClick={onClose}
+          className="text-zinc-400 hover:text-[#1a2238] hover:bg-zinc-100 p-1.5 rounded transition-colors"
+        >
+          <X size={16} />
+        </button>
+      </div>
+
+      <div className="p-6 flex-1 overflow-auto">
+        <h4 className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-4">Active Caseload</h4>
+        <div className="overflow-x-auto border border-zinc-200 rounded">
+          <table className="w-full text-left">
+            <thead className="bg-[#1a2238] text-white">
+              <tr>
+                <th className="h-9 px-4 text-[10px] font-medium uppercase tracking-widest whitespace-nowrap">Case ID</th>
+                <th className="h-9 px-4 text-[10px] font-medium uppercase tracking-widest whitespace-nowrap">Title</th>
+                <th className="h-9 px-4 text-[10px] font-medium uppercase tracking-widest whitespace-nowrap">Type</th>
+                <th className="h-9 px-4 text-[10px] font-medium uppercase tracking-widest whitespace-nowrap">Status</th>
+                <th className="h-9 px-4 text-[10px] font-medium uppercase tracking-widest text-right whitespace-nowrap">Last Updated</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-200 text-zinc-800">
+              {loadingCases ? (
+                <tr>
+                  <td colSpan="5" className="px-4 py-8 text-center text-xs text-zinc-500">
+                     <span className="animate-pulse">Loading active cases...</span>
+                  </td>
+                </tr>
+              ) : cases.length === 0 ? (
+                <tr>
+                  <td colSpan="5" className="px-4 py-8 text-center text-xs text-zinc-500">
+                     No active cases found for this attorney.
+                  </td>
+                </tr>
+              ) : (
+                cases.map((c, i) => (
+                  <tr key={c.caseId + "-" + i} className="hover:bg-zinc-50 transition-colors bg-white">
+                    <td className="px-4 py-3 text-[10px] font-mono text-zinc-500 tabular-nums">{c.caseId}</td>
+                    <td className="px-4 py-3 text-xs font-semibold">{c.title}</td>
+                    <td className="px-4 py-3 text-[11px] text-zinc-600">{c.type}</td>
+                    <td className="px-4 py-3">
+                      <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-zinc-100 text-[#1a2238] border border-zinc-200 whitespace-nowrap">
+                        {c.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-[10px] font-mono text-zinc-500 text-right tabular-nums">{c.lastUpdated}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default function LegalTeamView({ openModalExternal, setOpenModalExternal }) {
   const [lawyers, setLawyers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [viewMode, setViewMode] = useState("grid"); // 'grid' | 'list'
+  const [selectedLawyer, setSelectedLawyer] = useState(null);
   
   // --- SEARCH STATE ---
   const [searchQuery, setSearchQuery] = useState("");
@@ -37,6 +151,19 @@ export default function LegalTeamView() {
     firstName: "", lastName: "", email: "", phone: "", specialization: "", 
     experience: "", address: "", barNumber: "", case_history_summary: ""
   });
+
+  useEffect(() => {
+    if (openModalExternal) {
+      setIsAddDialogOpen(true);
+    }
+  }, [openModalExternal]);
+
+  const handleOpenChange = (open) => {
+    setIsAddDialogOpen(open);
+    if (!open && setOpenModalExternal) {
+      setOpenModalExternal(false);
+    }
+  };
 
   useEffect(() => {
     fetchLawyers();
@@ -91,11 +218,11 @@ export default function LegalTeamView() {
       const lawyersArray = Array.isArray(data?.Lawyers) ? data.Lawyers : [];
       if (data?.Success && lawyersArray.length > 0) {
          const transformedLawyers = lawyersArray.map((lawyer, index) => ({
-           id: lawyer.id || lawyer._id || `lawyer-${index}`,
+           id: lawyer.user_id || lawyer.id || lawyer._id || `lawyer-${index}`,
            name: lawyer.name || `${lawyer.firstName || ''} ${lawyer.lastName || ''}`.trim() || 'Unknown',
            role: lawyer.experience ? `${lawyer.experience} Exp` : 'Associate',
            specialty: lawyer.specialization || 'General',
-           cases: lawyer.activeCases || Math.floor(Math.random() * 15) + 5,
+           cases: lawyer.activeCases || 0,
            winRate: lawyer.successRate || Math.floor(Math.random() * 10) + 88,
            img: lawyer.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'UN',
            email: lawyer.email || 'N/A',
@@ -160,7 +287,7 @@ export default function LegalTeamView() {
                 </button>
             </div>
 
-            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <Dialog open={isAddDialogOpen} onOpenChange={handleOpenChange}>
                 <DialogTrigger asChild>
                     <button className="flex items-center gap-1.5 bg-[#1a2238] text-white px-3 py-1.5 text-xs font-medium rounded hover:bg-[#2d3a5e] transition-colors shadow-sm">
                         <Plus className="w-3.5 h-3.5" /> Add Attorney
@@ -270,8 +397,9 @@ export default function LegalTeamView() {
            <p className="text-xs text-zinc-400 font-medium">Accessing directory...</p>
         </div>
       ) : (
-        <>
-            {viewMode === "grid" ? (
+        <div className={cn(selectedLawyer ? "flex flex-col lg:flex-row gap-6 w-full items-start" : "w-full")}>
+            <div className={cn(selectedLawyer ? "w-full lg:w-[35%]" : "w-full")}>
+                {viewMode === "grid" && !selectedLawyer ? (
                 /* --- COMPACT CARD GRID --- */
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {filteredLawyers.map((lawyer) => (
@@ -295,7 +423,7 @@ export default function LegalTeamView() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-32">
                                 <DropdownMenuItem className="text-xs">Edit Profile</DropdownMenuItem>
-                                <DropdownMenuItem className="text-xs">View Cases</DropdownMenuItem>
+                                <DropdownMenuItem className="text-xs" onClick={() => setSelectedLawyer(lawyer)}>View Cases</DropdownMenuItem>
                                 <DropdownMenuItem className="text-xs text-red-600">Deactivate</DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
@@ -332,20 +460,28 @@ export default function LegalTeamView() {
                 /* --- DENSE LEDGER LIST --- */
                 <div className="bg-white rounded-lg border border-zinc-200 overflow-hidden shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
                     <div className="overflow-x-auto">
-                        <table className="w-full text-left">
+                        <table className="w-full text-left min-w-[550px]">
                             <thead className="bg-zinc-50 border-b border-zinc-200">
                                 <tr>
-                                    <th className="h-9 px-4 text-[10px] font-semibold uppercase tracking-wider text-zinc-500 w-1/3">Attorney</th>
-                                    <th className="h-9 px-4 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Specialty</th>
-                                    <th className="h-9 px-4 text-[10px] font-semibold uppercase tracking-wider text-zinc-500 text-center">Load</th>
-                                    <th className="h-9 px-4 text-[10px] font-semibold uppercase tracking-wider text-zinc-500 text-center">Rating</th>
-                                    <th className="h-9 px-4 text-[10px] font-semibold uppercase tracking-wider text-zinc-500 text-right">Contact</th>
+                                    <th className="h-9 px-4 text-[10px] font-semibold uppercase tracking-wider text-zinc-500 whitespace-nowrap w-1/3">Attorney</th>
+                                    <th className="h-9 px-4 text-[10px] font-semibold uppercase tracking-wider text-zinc-500 whitespace-nowrap">Specialty</th>
+                                    <th className="h-9 px-4 text-[10px] font-semibold uppercase tracking-wider text-zinc-500 text-center whitespace-nowrap">Load</th>
+                                    <th className="h-9 px-4 text-[10px] font-semibold uppercase tracking-wider text-zinc-500 text-center whitespace-nowrap">Rating</th>
+                                    <th className="h-9 px-4 text-[10px] font-semibold uppercase tracking-wider text-zinc-500 text-right whitespace-nowrap">Contact</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-zinc-100">
                                 {filteredLawyers.map((lawyer) => (
-                                    <tr key={lawyer.id} className="group hover:bg-zinc-50 transition-colors h-10">
-                                        <td className="px-4 py-2">
+                                    <tr 
+                                      key={lawyer.id} 
+                                      className={cn(
+                                        "group transition-colors h-10", 
+                                        selectedLawyer?.id === lawyer.id ? "bg-zinc-100 border-l-2 border-[#1a2238]" : "hover:bg-zinc-50",
+                                        selectedLawyer ? "cursor-pointer" : ""
+                                      )}
+                                      onClick={() => selectedLawyer && setSelectedLawyer(lawyer)}
+                                    >
+                                        <td className="px-4 py-2 whitespace-nowrap">
                                             <div className="flex items-center gap-3">
                                                 <div className="h-6 w-6 rounded-full bg-[#1a2238] text-white flex items-center justify-center text-[10px] font-bold">
                                                     {lawyer.img}
@@ -356,7 +492,7 @@ export default function LegalTeamView() {
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-4 py-2">
+                                        <td className="px-4 py-2 whitespace-nowrap">
                                             <span className="text-[11px] text-zinc-600 bg-zinc-100 px-1.5 py-0.5 rounded border border-zinc-200">
                                                 {lawyer.specialty}
                                             </span>
@@ -371,7 +507,21 @@ export default function LegalTeamView() {
                                             <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <button className="text-zinc-400 hover:text-[#1a2238]"><Mail size={12} /></button>
                                                 <button className="text-zinc-400 hover:text-[#1a2238]"><Phone size={12} /></button>
-                                                <button className="text-zinc-400 hover:text-[#1a2238]"><MoreHorizontal size={12} /></button>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <button 
+                                                          onClick={(e) => e.stopPropagation()} 
+                                                          className="text-zinc-400 hover:text-[#1a2238]"
+                                                        >
+                                                            <MoreHorizontal size={12} />
+                                                        </button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end" className="w-32">
+                                                        <DropdownMenuItem className="text-xs">Edit Profile</DropdownMenuItem>
+                                                        <DropdownMenuItem className="text-xs" onClick={(e) => { e.stopPropagation(); setSelectedLawyer(lawyer); }}>View Cases</DropdownMenuItem>
+                                                        <DropdownMenuItem className="text-xs text-red-600">Deactivate</DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
                                             </div>
                                         </td>
                                     </tr>
@@ -388,7 +538,14 @@ export default function LegalTeamView() {
                    <p className="text-xs text-zinc-500">No personnel records found.</p>
                 </div>
             )}
-        </>
+            </div>
+
+            {selectedLawyer && (
+                <div className="w-full lg:w-[65%] lg:sticky lg:top-6 lg:h-[calc(100vh-140px)]">
+                    <LawyerCasesPanel lawyer={selectedLawyer} onClose={() => setSelectedLawyer(null)} />
+                </div>
+            )}
+        </div>
       )}
     </div>
   );

@@ -29,12 +29,19 @@ export async function GET(req) {
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "20", 10)));
     const status = searchParams.get("status");
+    const lawyerId = searchParams.get("lawyerId");
 
     const db = await getDb();
     const col = db.collection("case_requests");
 
     const query = { hidden: { $ne: true } }; // Exclude hidden cases
     if (status) query.status = status;
+    if (lawyerId) {
+      const lawyerIdNum = parseInt(lawyerId, 10);
+      query.assignedLawyerId = { 
+        $in: [lawyerId, ...(isNaN(lawyerIdNum) ? [] : [lawyerIdNum])] 
+      };
+    }
 
     const total = await col.countDocuments(query);
     const items = await col

@@ -47,6 +47,7 @@ const THEME = {
 function AdminDashboardPage() {
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"overview" | "cases" | "legal-team" | "manual-entry">("overview");
+  const [openLawyerModal, setOpenLawyerModal] = useState(false);
 
   const links = [
     {
@@ -171,9 +172,9 @@ function AdminDashboardPage() {
             "mx-auto w-full h-full",
             activeTab === "overview" && "max-w-[1400px]"
           )}>
-            {activeTab === "overview" && <OverviewContent setActiveTab={setActiveTab} />}
+            {activeTab === "overview" && <OverviewContent setActiveTab={setActiveTab} setOpenLawyerModal={setOpenLawyerModal} />}
             {activeTab === "cases" && <div className="animate-in fade-in duration-300 h-full"><CasesView /></div>}
-            {activeTab === "legal-team" && <div className="animate-in fade-in duration-300 h-full"><LegalTeamView /></div>}
+            {activeTab === "legal-team" && <div className="animate-in fade-in duration-300 h-full"><LegalTeamView openModalExternal={openLawyerModal} setOpenModalExternal={setOpenLawyerModal} /></div>}
             {activeTab === "manual-entry" && <div className="animate-in fade-in duration-300 h-full"><AdminManualEntryView /></div>}
           </div>
         </main>
@@ -203,7 +204,7 @@ const LogoIcon = () => (
 );
 
 // --- Dense Overview Layout ---
-function OverviewContent({ setActiveTab }: { setActiveTab?: any }) {
+function OverviewContent({ setActiveTab, setOpenLawyerModal }: { setActiveTab?: any, setOpenLawyerModal?: any }) {
   const chartData = [
     { m: 'JAN', in: 45, out: 30 }, { m: 'FEB', in: 52, out: 40 },
     { m: 'MAR', in: 38, out: 45 }, { m: 'APR', in: 65, out: 50 },
@@ -367,7 +368,15 @@ function OverviewContent({ setActiveTab }: { setActiveTab?: any }) {
            {/* Quick Action Strip */}
            <div className="grid grid-cols-2 gap-3">
               <ActionButton onClick={() => setActiveTab?.("manual-entry")} icon={<Plus size={14} />} label="New Case" shortcut="C" />
-              <ActionButton icon={<Users size={14} />} label="Add Client" shortcut="U" />
+              <ActionButton 
+                onClick={() => {
+                  setActiveTab?.("legal-team");
+                  setOpenLawyerModal?.(true);
+                }} 
+                icon={<Users size={14} />} 
+                label="Add Lawyer" 
+                shortcut="U" 
+              />
            </div>
 
            {/* Enterprise Activity Feed */}
