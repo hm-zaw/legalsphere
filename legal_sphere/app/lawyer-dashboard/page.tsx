@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
@@ -12,14 +12,11 @@ import {
   FileText,
   LogOut,
   Plus,
-  MoreHorizontal,
   Scale,
-  Clock,
   TrendingUp,
   AlertCircle,
   Phone,
   Mail,
-  MapPin,
   ArrowRight,
   MessageCircle,
 } from "lucide-react";
@@ -44,6 +41,7 @@ import {
 } from "@/components/ui/popover";
 import { Notifications } from "@/components/lawyer_dashboard/notifications";
 import { withRoleProtection, useAuth } from "@/hooks/useAuth";
+import apiClient from "@/lib/api";
 
 function LawyerDashboardPage() {
   const [open, setOpen] = useState(false);
@@ -347,6 +345,39 @@ const LogoIcon = () => (
 import { IncomingAssignments } from "./IncomingAssignments";
 
 function OverviewContent({ setActiveTab }: { setActiveTab?: any }) {
+  const { user } = useAuth();
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [allCases, setAllCases] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchDashboardData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [dashRes, casesRes] = await Promise.all([
+        apiClient.getLawyerDashboard(),
+        apiClient.getLawyerCases("all"),
+      ]);
+      if (dashRes.data) setDashboardData(dashRes.data);
+      if (casesRes.data) setAllCases((casesRes.data as any).cases || []);
+    } catch (err) {
+      console.error("Dashboard fetch error:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
+
+  const summary = dashboardData?.summary || {
+    incomingCases: 0,
+    activeCases: 0,
+    completedCases: 0,
+    totalCases: 0,
+  };
+  const recentCases: any[] = dashboardData?.recentCases || [];
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -358,7 +389,14 @@ function OverviewContent({ setActiveTab }: { setActiveTab?: any }) {
       <IncomingAssignments />
 
       {/* 1. Firm Intelligence Hero */}
-      <FirmIntelligenceHero setActiveTab={setActiveTab} />
+      <FirmIntelligenceHero
+        setActiveTab={setActiveTab}
+        userName={user?.name}
+        incomingCount={summary.incomingCases}
+        activeCount={summary.activeCases}
+        totalCases={summary.totalCases}
+        completedCount={summary.completedCases}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left MAIN Column (8 Cols) */}
@@ -366,82 +404,40 @@ function OverviewContent({ setActiveTab }: { setActiveTab?: any }) {
           {/* Metrics Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             <StatCard
-              title="Billable Hours"
-              value="142.5"
-              unit="hrs"
-              trend="+12% vs last month"
-              icon={<Clock className="text-[#1a2238]" size={18} />}
+              title="Active Matters"
+              value={loading ? "—" : String(summary.activeCases)}
+              unit="cases"
+              trend={`${summary.incomingCases} incoming`}
+              trendColor="text-[#af9164]"
+              icon={<Briefcase size={18} />} 
             />
             <StatCard
-              title="Active Matters"
-              value="24"
-              unit="cases"
-              trend="3 critical updates"
-              trendColor="text-[#af9164]"
-              icon={<Briefcase className="text-[#1a2238]" size={18} />}
+              title="Total Cases"
+              value={loading ? "—" : String(summary.totalCases)}
+              unit="all time"
+              trend={`${summary.completedCases} completed`}
+              icon={<Scale size={18} />}
             />
             <StatCard
               title="Pending Review"
-              value="7"
-              unit="docs"
-              trend="Due by EOD"
-              isAlert
-              icon={<FileText className="text-[#1a2238]" size={18} />}
+              value={loading ? "—" : String(summary.incomingCases)}
+              unit="cases"
+              trend={summary.incomingCases > 0 ? "Action required" : "All clear"}
+              isAlert={summary.incomingCases > 0}
+              icon={<FileText size={18} />} 
             />
           </div>
 
           {/* Priority Matters List */}
-          <PriorityMattersList />
+          <PriorityMattersList cases={allCases} loading={loading} />
         </div>
 
         {/* Right SIDEBAR Column (4 Cols) */}
         <div className="lg:col-span-4 space-y-8">
-          <ClientProfileSnapshot />
+          <ClientProfileSnapshot cases={allCases} loading={loading} />
 
-          {/* Quick Actions / Recent Calls */}
-          <div className="bg-white rounded-xl p-6 shadow-[0_10px_40px_-15px_rgba(0,0,0,0.1)] border border-zinc-200/60">
-            <h3 className="font-serif text-[#1a2238] text-lg mb-4">
-              Recent Correspondence
-            </h3>
-            <div className="space-y-4">
-              <div className="flex items-start gap-3 pb-3 border-b border-zinc-100">
-                <div className="h-8 w-8 rounded-full bg-[#efefec] flex items-center justify-center text-[#1a2238] font-serif text-xs">
-                  RJ
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-[#1a2238]">
-                    Robert Johnson
-                  </p>
-                  <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-1">
-                    Estate Planning • Re: Trust Fund
-                  </p>
-                  <p className="text-xs text-slate-600 line-clamp-2">
-                    "Here are the updated documents for the trust fund
-                    allocation..."
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3 pb-3 border-b border-zinc-100">
-                <div className="h-8 w-8 rounded-full bg-[#1a2238] flex items-center justify-center text-white font-serif text-xs">
-                  SA
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-[#1a2238]">
-                    Sarah Al-Fayed
-                  </p>
-                  <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-1">
-                    Corporate Merger • Re: NDA
-                  </p>
-                  <p className="text-xs text-slate-600 line-clamp-2">
-                    "Can we schedule a call to discuss the new NDA terms?"
-                  </p>
-                </div>
-              </div>
-            </div>
-            <button className="w-full mt-4 py-2 border border-zinc-200 rounded text-xs font-bold text-slate-500 hover:text-[#1a2238] hover:border-[#1a2238] transition-colors uppercase tracking-widest">
-              View All Messages
-            </button>
-          </div>
+          {/* Recent Activity */}
+          <RecentCasesActivity recentCases={recentCases} loading={loading} />
         </div>
       </div>
     </motion.div>
@@ -449,10 +445,27 @@ function OverviewContent({ setActiveTab }: { setActiveTab?: any }) {
 }
 
 // --- 1. Firm Intelligence Hero Component ---
-function FirmIntelligenceHero({ setActiveTab }: { setActiveTab?: any }) {
+function FirmIntelligenceHero({
+  setActiveTab,
+  userName,
+  incomingCount,
+  activeCount,
+  totalCases,
+  completedCount,
+}: {
+  setActiveTab?: any;
+  userName?: string;
+  incomingCount: number;
+  activeCount: number;
+  totalCases: number;
+  completedCount: number;
+}) {
+  const firstName = userName?.split(" ")[0] || "Counselor";
+  const successRate =
+    totalCases > 0 ? Math.round((completedCount / totalCases) * 100) : 0;
+
   return (
     <div className="relative overflow-hidden rounded-2xl bg-[#1a2238] text-white shadow-2xl">
-      {/* Background Texture */}
       <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-soft-light"></div>
       <div className="absolute top-0 right-0 w-2/3 h-full bg-gradient-to-l from-[#af9164]/30 via-transparent to-transparent"></div>
 
@@ -460,33 +473,45 @@ function FirmIntelligenceHero({ setActiveTab }: { setActiveTab?: any }) {
         <div className="space-y-4 max-w-2xl">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-widest text-[#af9164]">
             <span className="h-1.5 w-1.5 rounded-full bg-[#af9164] animate-pulse"></span>
-            Firm Intelligence • Morning Brief
+            Firm Intelligence • Daily Brief
           </div>
           <h1 className="font-serif text-3xl md:text-4xl leading-tight">
-            Good Morning,{" "}
-            <span className="text-[#af9164] italic">Counselor.</span>
+            Welcome back,{" "}
+            <span className="text-[#af9164] italic">{userName}</span>
           </h1>
           <p className="text-slate-300 font-light text-sm md:text-base max-w-lg leading-relaxed">
             You have{" "}
             <span className="text-white font-medium border-b border-[#af9164]">
-              3 court deadlines
+              {activeCount} active {activeCount === 1 ? "case" : "cases"}
             </span>{" "}
-            approaching and{" "}
-            <span className="text-white font-medium border-b border-[#af9164]">
-              2 new client inquiries
-            </span>{" "}
-            pending review.
+            in progress
+            {incomingCount > 0 && (
+              <>
+                {" "}and{" "}
+                <span className="text-white font-medium border-b border-[#af9164]">
+                  {incomingCount} new{" "}
+                  {incomingCount === 1 ? "assignment" : "assignments"}
+                </span>{" "}
+                pending review
+              </>
+            )}
+            .
           </p>
         </div>
 
         <div className="flex items-center gap-4">
           <div className="text-right px-4 border-r border-white/10 hidden sm:block">
-            <span className="block text-2xl font-serif leading-none">98%</span>
+            <span className="block text-2xl font-serif leading-none">
+              {totalCases > 0 ? `${successRate}%` : "—"}
+            </span>
             <span className="text-[9px] uppercase tracking-widest text-slate-400">
-              Success Rate
+              Completion Rate
             </span>
           </div>
-          <button onClick={() => setActiveTab?.("offline")} className="bg-[#af9164] hover:bg-[#9c7f56] text-white px-6 py-3 rounded-lg text-xs font-bold uppercase tracking-widest shadow-lg shadow-[#af9164]/20 transition-all flex items-center gap-2">
+          <button
+            onClick={() => setActiveTab?.("offline")}
+            className="bg-[#af9164] hover:bg-[#9c7f56] text-white px-6 py-3 rounded-lg text-xs font-bold uppercase tracking-widest shadow-lg shadow-[#af9164]/20 transition-all flex items-center gap-2"
+          >
             <Plus size={14} /> New Matter
           </button>
         </div>
@@ -531,7 +556,7 @@ function StatCard({
             "p-2 rounded-full",
             isAlert
               ? "bg-amber-50 text-amber-600"
-              : "bg-slate-50 text-slate-400 group-hover:bg-[#1a2238] group-hover:text-white transition-colors",
+              : "bg-slate-50 text-[#1a2238] group-hover:bg-[#1a2238] group-hover:text-white transition-colors",
           )}
         >
           {icon}
@@ -557,15 +582,68 @@ function StatCard({
   );
 }
 
+// --- Status helpers ---
+function getStatusDisplay(status: string) {
+  const map: Record<string, { label: string; color: string }> = {
+    active: {
+      label: "Active",
+      color: "text-emerald-700 bg-emerald-50 border-emerald-100",
+    },
+    in_progress: {
+      label: "In Progress",
+      color: "text-[#af9164] bg-amber-50/50 border-amber-100",
+    },
+    lawyer_assigned: {
+      label: "Pending",
+      color: "text-[#1a2238] bg-slate-100 border-slate-200",
+    },
+    completed: {
+      label: "Completed",
+      color: "text-purple-700 bg-purple-50 border-purple-100",
+    },
+  };
+  return map[status] || { label: status, color: "text-slate-500 bg-slate-50 border-slate-200" };
+}
+
+function formatRelativeTime(dateStr?: string) {
+  if (!dateStr) return "—";
+  try {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffMs / 86400000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffDays > 0) return `${diffDays}d ago`;
+    if (diffHours > 0) return `${diffHours}h ago`;
+    if (diffMins > 0) return `${diffMins}m ago`;
+    return "Just now";
+  } catch {
+    return "—";
+  }
+}
+
 // --- 3. Priority Matters List (Table) ---
-function PriorityMattersList() {
+function PriorityMattersList({ cases, loading }: { cases: any[]; loading: boolean }) {
+  const router = useRouter();
+  // Show active + in_progress cases first, then most recently updated
+  const priorityCases = [...cases]
+    .sort((a, b) => {
+      const statusOrder: Record<string, number> = { active: 0, in_progress: 1, lawyer_assigned: 2, completed: 3 };
+      const aOrder = statusOrder[a.status] ?? 99;
+      const bOrder = statusOrder[b.status] ?? 99;
+      if (aOrder !== bOrder) return aOrder - bOrder;
+      return new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime();
+    })
+    .slice(0, 5);
+
   return (
     <div className="bg-white rounded-xl shadow-[0_10px_40px_-15px_rgba(0,0,0,0.1)] border border-zinc-200/60 overflow-hidden flex flex-col">
       <div className="px-6 py-5 border-b border-zinc-100 flex justify-between items-center">
         <h3 className="font-serif text-[#1a2238] text-xl">Priority Matters</h3>
-        <button className="text-[10px] font-bold text-[#af9164] uppercase tracking-widest hover:text-[#8e734c] flex items-center gap-1">
-          View All <ArrowRight size={10} />
-        </button>
+        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+          {cases.length} total
+        </span>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-left">
@@ -574,47 +652,80 @@ function PriorityMattersList() {
               <th className="px-6 py-3">Case Title</th>
               <th className="px-6 py-3">Client</th>
               <th className="px-6 py-3">Status</th>
-              <th className="px-6 py-3">Last Activity</th>
+              <th className="px-6 py-3">Last Update</th>
               <th className="px-6 py-3 text-right">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-50">
-            <MatterRow
-              title="Estate of H. Kensington"
-              refId="PRO-2024-001"
-              client="Eleanor Kensington"
-              status="In Review"
-              statusColor="text-emerald-700 bg-emerald-50 border-emerald-100"
-              activity="Doc Verified"
-              time="2h ago"
-            />
-            <MatterRow
-              title="TechFlow Merger vs. State"
-              refId="CORP-2024-089"
-              client="TechFlow Inc."
-              status="Hearing Prep"
-              statusColor="text-[#af9164] bg-amber-50/50 border-amber-100"
-              activity="Brief Drafted"
-              time="5h ago"
-            />
-            <MatterRow
-              title="Vanderbilt Trust Dispute"
-              refId="LIT-2023-112"
-              client="Cornelius Vanderbilt IV"
-              status="Pending Info"
-              statusColor="text-[#1a2238] bg-slate-100 border-slate-200"
-              activity="Client Email"
-              time="1d ago"
-            />
-            <MatterRow
-              title="Global Shipping Liability"
-              refId="MAR-2024-003"
-              client="Oceanic Logistics"
-              status="Discovery"
-              statusColor="text-purple-700 bg-purple-50 border-purple-100"
-              activity="Motion Filed"
-              time="2d ago"
-            />
+            {loading ? (
+              <tr>
+                <td colSpan={5} className="px-6 py-8 text-center text-sm text-slate-400 italic">
+                  Loading cases...
+                </td>
+              </tr>
+            ) : priorityCases.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="px-6 py-8 text-center text-sm text-slate-400 italic">
+                  No cases assigned yet.
+                </td>
+              </tr>
+            ) : (
+              priorityCases.map((c: any) => {
+                const statusInfo = getStatusDisplay(c.status);
+                return (
+                  <tr
+                    key={c.id || c._id}
+                    className="hover:bg-zinc-50/50 transition-colors group cursor-pointer"
+                    onClick={() =>
+                      router.push(
+                        `/lawyer-dashboard?view=case-details&id=${c.id || c._id}`
+                      )
+                    }
+                  >
+                    <td className="px-6 py-4">
+                      <p className="font-bold text-[#1a2238] text-sm font-serif line-clamp-1">
+                        {c.title || "Untitled Case"}
+                      </p>
+                      <p className="text-[10px] text-slate-400 font-mono mt-0.5">
+                        {(c.id || c._id || "").substring(0, 12)}
+                      </p>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <div className="h-6 w-6 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center text-[9px] font-serif">
+                          {(c.client?.fullName || "C").charAt(0)}
+                        </div>
+                        <span className="text-xs text-slate-700 font-medium">
+                          {c.client?.fullName || "Confidential"}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span
+                        className={cn(
+                          "text-[9px] font-bold uppercase tracking-wide px-2 py-1 rounded-full border",
+                          statusInfo.color
+                        )}
+                      >
+                        {statusInfo.label}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] text-slate-400">
+                          {formatRelativeTime(c.updatedAt)}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <button className="p-1.5 text-slate-400 hover:text-[#af9164] transition-colors">
+                        <ArrowRight size={14} />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
           </tbody>
         </table>
       </div>
@@ -622,119 +733,197 @@ function PriorityMattersList() {
   );
 }
 
-function MatterRow({
-  title,
-  refId,
-  client,
-  status,
-  statusColor,
-  activity,
-  time,
-}: any) {
-  return (
-    <tr className="hover:bg-zinc-50/50 transition-colors group">
-      <td className="px-6 py-4">
-        <p className="font-bold text-[#1a2238] text-sm font-serif">{title}</p>
-        <p className="text-[10px] text-slate-400 font-mono mt-0.5">{refId}</p>
-      </td>
-      <td className="px-6 py-4">
-        <div className="flex items-center gap-2">
-          <div className="h-6 w-6 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center text-[9px] font-serif">
-            {client.charAt(0)}
-          </div>
-          <span className="text-xs text-slate-700 font-medium">{client}</span>
-        </div>
-      </td>
-      <td className="px-6 py-4">
-        <span
-          className={cn(
-            "text-[9px] font-bold uppercase tracking-wide px-2 py-1 rounded-full border",
-            statusColor,
-          )}
-        >
-          {status}
-        </span>
-      </td>
-      <td className="px-6 py-4">
-        <div className="flex flex-col">
-          <span className="text-xs text-slate-700 font-medium">{activity}</span>
-          <span className="text-[10px] text-slate-400">{time}</span>
-        </div>
-      </td>
-      <td className="px-6 py-4 text-right">
-        <button className="p-1.5 text-slate-400 hover:text-[#af9164] transition-colors">
-          <MoreHorizontal size={14} />
-        </button>
-      </td>
-    </tr>
+// --- 4. Client Snapshot — shows most recent active client ---
+function ClientProfileSnapshot({ cases, loading }: { cases: any[]; loading: boolean }) {
+  // Pick the most recently updated active case's client
+  const activeCase = cases.find(
+    (c: any) => c.status === "active" || c.status === "in_progress"
   );
-}
+  const client = activeCase?.client;
 
-// --- 4. Client Snapshot (Index Card Style) ---
-function ClientProfileSnapshot() {
+  if (loading) {
+    return (
+      <div className="bg-white p-6 rounded-xl shadow-[0_10px_40px_-15px_rgba(0,0,0,0.1)] border border-zinc-200/60 animate-pulse">
+        <div className="h-14 w-14 rounded-full bg-slate-100 mb-4" />
+        <div className="h-4 w-32 bg-slate-100 rounded mb-2" />
+        <div className="h-3 w-24 bg-slate-100 rounded" />
+      </div>
+    );
+  }
+
+  if (!client) {
+    return (
+      <div className="bg-white p-0 rounded-xl shadow-[0_10px_40px_-15px_rgba(0,0,0,0.1)] border border-zinc-200/60 overflow-hidden">
+        <div className="h-1.5 w-full bg-[#af9164]" />
+        <div className="p-6 text-center">
+          <p className="text-sm text-slate-400 italic font-serif">No active clients</p>
+          <p className="text-[10px] text-slate-400 mt-1">
+            Accept a case to see client details here.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const initials = (client.fullName || "C")
+    .split(" ")
+    .map((n: string) => n[0])
+    .slice(0, 2)
+    .join("");
+
   return (
     <div className="bg-white p-0 rounded-xl shadow-[0_10px_40px_-15px_rgba(0,0,0,0.1)] border border-zinc-200/60 relative overflow-hidden group">
       <div className="h-1.5 w-full bg-[#af9164]"></div>
       <div className="p-6">
         <div className="flex justify-between items-start mb-6">
-          <div className="h-14 w-14 rounded-full bg-slate-100 p-1 border border-zinc-200">
-            <img
-              src="https://i.pravatar.cc/150?u=mason"
-              alt="Client"
-              className="h-full w-full rounded-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
-            />
+          <div className="h-14 w-14 rounded-full bg-[#1a2238] flex items-center justify-center text-[#af9164] text-lg font-serif border border-[#af9164]/30">
+            {initials}
           </div>
           <div className="flex gap-2">
-            <button className="p-2 border border-zinc-100 rounded-full hover:border-[#af9164] hover:text-[#af9164] transition-colors text-slate-400 bg-white shadow-sm">
-              <Phone size={12} />
-            </button>
-            <button className="p-2 border border-zinc-100 rounded-full hover:border-[#af9164] hover:text-[#af9164] transition-colors text-slate-400 bg-white shadow-sm">
-              <Mail size={12} />
-            </button>
+            {client.phone && (
+              <a
+                href={`tel:${client.phone}`}
+                className="p-2 border border-zinc-100 rounded-full hover:border-[#af9164] hover:text-[#af9164] transition-colors text-slate-400 bg-white shadow-sm"
+              >
+                <Phone size={12} />
+              </a>
+            )}
+            {client.email && (
+              <a
+                href={`mailto:${client.email}`}
+                className="p-2 border border-zinc-100 rounded-full hover:border-[#af9164] hover:text-[#af9164] transition-colors text-slate-400 bg-white shadow-sm"
+              >
+                <Mail size={12} />
+              </a>
+            )}
           </div>
         </div>
 
         <div className="space-y-1 mb-6">
-          <h3 className="font-serif text-xl text-[#1a2238]">Mason Walker</h3>
+          <h3 className="font-serif text-xl text-[#1a2238]">
+            {client.fullName || "Unknown Client"}
+          </h3>
           <p className="text-[10px] font-bold uppercase tracking-widest text-[#af9164]">
-            Active Client • VIP
+            Active Client
           </p>
         </div>
 
         <div className="space-y-4">
-          <div className="flex items-center gap-3 p-2 bg-zinc-50 rounded-lg border border-zinc-100">
-            <MapPin size={14} className="text-slate-400 ml-1" />
-            <div className="flex-1">
-              <p className="text-[9px] text-slate-400 uppercase tracking-wide">
-                Location
-              </p>
-              <p className="text-xs font-semibold text-slate-700">
-                New York, NY
-              </p>
+          {client.email && (
+            <div className="flex items-center gap-3 p-2 bg-zinc-50 rounded-lg border border-zinc-100">
+              <Mail size={14} className="text-slate-400 ml-1" />
+              <div className="flex-1">
+                <p className="text-[9px] text-slate-400 uppercase tracking-wide">
+                  Email
+                </p>
+                <p className="text-xs font-semibold text-slate-700 truncate">
+                  {client.email}
+                </p>
+              </div>
             </div>
-          </div>
+          )}
           <div className="flex items-center gap-3 p-2 bg-zinc-50 rounded-lg border border-zinc-100">
             <Briefcase size={14} className="text-slate-400 ml-1" />
             <div className="flex-1">
               <p className="text-[9px] text-slate-400 uppercase tracking-wide">
                 Associated Matter
               </p>
-              <p className="text-xs font-semibold text-slate-700">
-                Walker vs. State (Pending)
+              <p className="text-xs font-semibold text-slate-700 line-clamp-1">
+                {activeCase?.title || "—"} ({activeCase?.status || "—"})
               </p>
             </div>
           </div>
+          {client.phone && (
+            <div className="flex items-center gap-3 p-2 bg-zinc-50 rounded-lg border border-zinc-100">
+              <Phone size={14} className="text-slate-400 ml-1" />
+              <div className="flex-1">
+                <p className="text-[9px] text-slate-400 uppercase tracking-wide">
+                  Phone
+                </p>
+                <p className="text-xs font-semibold text-slate-700">
+                  {client.phone}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
+      </div>
+    </div>
+  );
+}
 
-        <div className="mt-6 pt-6 border-t border-zinc-100">
-          <div className="flex justify-between text-[10px] text-slate-500 mb-2 font-medium uppercase tracking-wide">
-            <span>Profile Completion</span>
-            <span>85%</span>
+// --- 5. Recent Cases Activity (replaces Recent Correspondence) ---
+function RecentCasesActivity({
+  recentCases,
+  loading,
+}: {
+  recentCases: any[];
+  loading: boolean;
+}) {
+  const router = useRouter();
+
+  return (
+    <div className="bg-white rounded-xl p-6 shadow-[0_10px_40px_-15px_rgba(0,0,0,0.1)] border border-zinc-200/60">
+      <h3 className="font-serif text-[#1a2238] text-lg mb-4">
+        Recent Activity
+      </h3>
+      <div className="space-y-4">
+        {loading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="animate-pulse flex items-start gap-3 pb-3 border-b border-zinc-100">
+                <div className="h-8 w-8 rounded-full bg-slate-100" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3 w-28 bg-slate-100 rounded" />
+                  <div className="h-2 w-40 bg-slate-100 rounded" />
+                </div>
+              </div>
+            ))}
           </div>
-          <div className="h-1.5 w-full bg-zinc-100 rounded-full overflow-hidden">
-            <div className="h-full w-[85%] bg-[#1a2238]"></div>
-          </div>
-        </div>
+        ) : recentCases.length === 0 ? (
+          <p className="text-xs text-slate-400 italic text-center py-4">
+            No recent activity.
+          </p>
+        ) : (
+          recentCases.slice(0, 4).map((rc: any) => {
+            const statusInfo = getStatusDisplay(rc.status);
+            return (
+              <div
+                key={rc.id}
+                className="flex items-start gap-3 pb-3 border-b border-zinc-100 cursor-pointer hover:bg-zinc-50/50 -mx-2 px-2 rounded transition-colors"
+                onClick={() =>
+                  router.push(`/lawyer-dashboard?view=case-details&id=${rc.id}`)
+                }
+              >
+                <div className="h-8 w-8 rounded-full bg-[#1a2238] flex items-center justify-center text-[#af9164] font-serif text-xs shrink-0">
+                  {(rc.clientName || "C").charAt(0)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-[#1a2238] truncate">
+                    {rc.title || "Untitled Case"}
+                  </p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-[10px] text-slate-500">
+                      {rc.clientName || "Unknown Client"}
+                    </span>
+                    <span className="w-1 h-1 rounded-full bg-slate-300" />
+                    <span
+                      className={cn(
+                        "text-[9px] font-bold uppercase",
+                        statusInfo.color.split(" ")[0]
+                      )}
+                    >
+                      {statusInfo.label}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-0.5">
+                    {formatRelativeTime(rc.updatedAt)}
+                  </p>
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
     </div>
   );

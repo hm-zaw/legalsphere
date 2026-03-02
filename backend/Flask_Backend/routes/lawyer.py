@@ -494,24 +494,33 @@ def get_lawyer_dashboard():
     try:
         collection = get_db_collection('case_requests')
         
+        # Handle both string and number types for assignedLawyerId
+        lawyer_id = request.user_id
+        if isinstance(lawyer_id, str) and lawyer_id.isdigit():
+            lawyer_id_query = {'assignedLawyerId': {'$in': [lawyer_id, int(lawyer_id)]}}
+        elif isinstance(lawyer_id, int):
+            lawyer_id_query = {'assignedLawyerId': {'$in': [lawyer_id, str(lawyer_id)]}}
+        else:
+            lawyer_id_query = {'assignedLawyerId': lawyer_id}
+        
         # Get case counts by status
         incoming_count = collection.count_documents({
-            'assignedLawyerId': request.user_id,
+            **lawyer_id_query,
             'status': 'lawyer_assigned'
         })
         
         active_count = collection.count_documents({
-            'assignedLawyerId': request.user_id,
+            **lawyer_id_query,
             'status': {'$in': ['active', 'in_progress']}
         })
         
         completed_count = collection.count_documents({
-            'assignedLawyerId': request.user_id,
+            **lawyer_id_query,
             'status': 'completed'
         })
         
         # Get recent cases
-        recent_cases = list(collection.find({'assignedLawyerId': request.user_id})
+        recent_cases = list(collection.find(lawyer_id_query)
                            .sort('updatedAt', -1)
                            .limit(5))
         
@@ -520,11 +529,12 @@ def get_lawyer_dashboard():
             if '_id' in case:
                 case['_id'] = str(case['_id'])
             
+            client = case.get('client', {}) or {}
             formatted_case = {
                 'id': case.get('id', ''),
                 'title': case.get('case', {}).get('title', 'Untitled Case'),
                 'status': case.get('status', 'pending'),
-                'clientName': case.get('client', {}).get('name', 'Unknown'),
+                'clientName': client.get('fullName') or client.get('name', 'Unknown'),
                 'updatedAt': case.get('updatedAt')
             }
             formatted_recent.append(formatted_case)

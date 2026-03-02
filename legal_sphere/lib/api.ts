@@ -324,6 +324,17 @@ class ApiClient {
       `/api/appointments/case/${caseId}`,
     ) as any;
   }
+
+  async getLawyerDashboard(): Promise<ApiResponse<{
+    summary: { incomingCases: number; activeCases: number; completedCases: number; totalCases: number };
+    recentCases: { id: string; title: string; status: string; clientName: string; updatedAt: string }[];
+  }>> {
+    return this.getBackend(`/api/lawyer/dashboard`) as any;
+  }
+
+  async getRecentChats(): Promise<ApiResponse<any>> {
+    return this.getBackend(`/chats`) as any;
+  }
 }
 
 export const apiClient = new ApiClient();
