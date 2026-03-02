@@ -185,9 +185,14 @@ export default function LawyerCasesView() {
         (item.id?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
         (item.client?.fullName?.toLowerCase() || "").includes(searchTerm.toLowerCase());
 
+      // When viewing "active" or "incoming", hide completed/closed cases
+      if (filterStatus === "active" || filterStatus === "incoming") {
+        if (item.status === "completed") return false;
+      }
+
       return matchesSearch;
     });
-  }, [searchTerm, cases]);
+  }, [searchTerm, cases, filterStatus]);
 
   if (!isClient) return null;
 

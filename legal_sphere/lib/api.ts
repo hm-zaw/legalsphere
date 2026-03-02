@@ -335,6 +335,10 @@ class ApiClient {
   async getRecentChats(): Promise<ApiResponse<any>> {
     return this.getBackend(`/chats`) as any;
   }
+
+  async closeCase(caseId: string, closingRemarks: string): Promise<ApiResponse<any>> {
+    return this.post(`/api/lawyer/cases/${caseId}/close`, { closingRemarks }) as any;
+  }
 }
 
 export const apiClient = new ApiClient();

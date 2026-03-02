@@ -72,6 +72,12 @@ def list_messages(chat_id: str):
 def send_message(chat_id: str):
     me = request.user
 
+    # --- Chat-lock guard: block messages on closed chats ---
+    chat_doc = Chat.get_by_id(chat_id)
+    if chat_doc:
+        if chat_doc.get("is_active") is False or chat_doc.get("status") == "closed":
+            return jsonify({"Success": False, "Message": "This matter is closed."}), 403
+
     guard = chat_service.ensure_member(chat_id, me["id"])
     if not guard["ok"]:
         return jsonify({"Success": False, "Message": guard["Message"]}), guard["code"]

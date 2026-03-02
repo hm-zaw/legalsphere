@@ -622,3 +622,116 @@ def create_offline_case():
 
     except Exception as e:
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+
+@lawyer_bp.route('/api/lawyer/cases/<case_id>/close', methods=['POST'])
+@lawyer_token_required
+def close_case(case_id):
+    """Close a case – marks it completed, locks the chat, cancels open appointments,
+    emits a socket event, and publishes a Kafka notification."""
+    try:
+        from flask import current_app
+        data = request.get_json(silent=True) or {}
+        closing_remarks = data.get('closingRemarks', '')
+
+        case_col = get_db_collection('case_requests')
+
+        # Find the case
+        case = case_col.find_one({'id': case_id})
+        if not case:
+            return jsonify({'error': 'Case not found'}), 404
+
+        # Verify this case is assigned to the current lawyer
+        case_lawyer_id = str(case.get('assignedLawyerId', ''))
+        user_id = str(request.user_id)
+
+        if case_lawyer_id != user_id:
+            return jsonify({'error': 'Case not assigned to you'}), 403
+
+        now_iso = datetime.utcnow().isoformat()
+
+        # ── Action 1: Update Case ──────────────────────
+        case_col.update_one(
+            {'_id': case['_id']},
+            {'$set': {
+                'status': 'completed',
+                'caseStage': 'closed',
+                'closedAt': now_iso,
+                'closedBy': request.user_id,
+                'closingRemarks': closing_remarks,
+                'updatedAt': now_iso,
+            }}
+        )
+
+        # ── Action 2: Lock associated chat ─────────────
+        from bson import ObjectId
+        chats_col = get_db_collection('chats')
+
+        # Find chat that links this case's client+lawyer
+        client_id_val = case.get('clientId') or case.get('client', {}).get('id')
+        lawyer_id_val = case.get('assignedLawyerId')
+
+        chat_query_parts = []
+        if client_id_val is not None:
+            chat_query_parts.append({
+                '$or': [
+                    {'client_id': client_id_val},
+                    {'client_id': int(client_id_val) if str(client_id_val).isdigit() else client_id_val},
+                    {'client_id': str(client_id_val)},
+                ]
+            })
+        if lawyer_id_val is not None:
+            chat_query_parts.append({
+                '$or': [
+                    {'lawyer_id': lawyer_id_val},
+                    {'lawyer_id': int(lawyer_id_val) if str(lawyer_id_val).isdigit() else lawyer_id_val},
+                    {'lawyer_id': str(lawyer_id_val)},
+                ]
+            })
+
+        chat_doc = None
+        if chat_query_parts:
+            chat_doc = chats_col.find_one({'$and': chat_query_parts})
+
+        if chat_doc:
+            chats_col.update_one(
+                {'_id': chat_doc['_id']},
+                {'$set': {'is_active': False, 'status': 'closed'}}
+            )
+
+        # ── Action 3: Cancel pending/accepted appointments ──
+        appt_col = get_db_collection('appointments')
+        appt_col.update_many(
+            {'case_id': case_id, 'status': {'$in': ['pending', 'accepted']}},
+            {'$set': {'status': 'canceled', 'updatedAt': now_iso}}
+        )
+
+        # ── Action 4: Socket event ─────────────────────
+        socketio = current_app.extensions.get('socketio')
+        if socketio and chat_doc:
+            chat_oid = str(chat_doc['_id'])
+            socketio.emit('chat_terminated', {'reason': 'case_closed'}, room=f'chat:{chat_oid}')
+
+        # ── Action 5: Kafka event ──────────────────────
+        client_info = case.get('client', {})
+        notification_data = {
+            'event_type': 'case_closed',
+            'clientId': client_info.get('id') or client_info.get('email', ''),
+            'caseId': case_id,
+            'caseTitle': case.get('case', {}).get('title', 'Untitled Case'),
+            'message': f'Your case "{case.get("case", {}).get("title", "Untitled Case")}" has been closed by your lawyer.',
+            'closedBy': request.user_name,
+            'closedAt': now_iso,
+            'closingRemarks': closing_remarks,
+            'timestamp': now_iso,
+        }
+        kafka_service.publish_notification(notification_data)
+
+        return jsonify({
+            'message': 'Case closed successfully',
+            'caseId': case_id,
+            'status': 'completed',
+            'caseStage': 'closed',
+        }), 200
+
+    except Exception as e:
+        return jsonify({'error': f'Internal server error: {str(e)}'}), 500

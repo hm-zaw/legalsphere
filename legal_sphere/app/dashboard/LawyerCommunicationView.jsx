@@ -309,6 +309,7 @@ export default function LawyerCommunicationView({ onNavigate }) {
                     <button className="p-2 text-slate-400 hover:text-[#1a2238] transition-colors">
                       <Video className="w-4 h-4" />
                     </button>
+                    {selectedCase?.status?.toLowerCase() !== "completed" && (
                     <button
                       onClick={() => setIsSchedulingModalOpen(true)}
                       className="p-2 text-slate-400 hover:text-[#1a2238] transition-colors"
@@ -316,6 +317,7 @@ export default function LawyerCommunicationView({ onNavigate }) {
                     >
                       <Calendar className="w-4 h-4" />
                     </button>
+                    )}
                   </div>
                 </div>
               </div>

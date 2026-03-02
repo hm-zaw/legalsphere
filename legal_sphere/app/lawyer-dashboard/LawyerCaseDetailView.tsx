@@ -103,7 +103,8 @@ interface CaseDetail {
     | "pre_trial"
     | "trial"
     | "settlement"
-    | "appeal";
+    | "appeal"
+    | "closed";
   client: Client;
   createdAt: string;
   updatedAt: string;
@@ -114,6 +115,8 @@ interface CaseDetail {
   timeEntries: TimeEntry[];
   notes: Note[];
   activities: Activity[];
+  closedAt?: string;
+  closingRemarks?: string;
 }
 
 // --- Blank Data (No Mocks) ---
@@ -212,7 +215,7 @@ const QuickActionButton = ({
   const variants = {
     default: "bg-white border-slate-200 text-slate-700 hover:border-[#af9164]",
     primary: "bg-[#1a2238] border-[#1a2238] text-white hover:bg-[#2d3a5e]",
-    danger: "bg-red-50 border-red-200 text-red-700 hover:bg-red-100",
+    danger: "bg-[#1a2238] border-[#1a2238] text-[#af9164] hover:bg-[#af9164] hover:text-white hover:border-[#af9164]",
   };
 
   return (
@@ -343,57 +346,6 @@ const OverviewTab = ({
               <Phone className="w-3.5 h-3.5" />
               {caseData.client.phone}
             </a>
-          </div>
-
-          <div className="bg-[#0b0f14] border border-[#253041] shadow-2xl">
-            <div className="px-4 py-3 border-b border-[#253041] flex items-center justify-between">
-              <div className="font-mono text-xs uppercase tracking-[0.22em] text-[#7aa2f7]">
-                CASE_STAGE_KANBAN
-              </div>
-              <div className="font-mono text-[10px] text-[#9aa4b2]">
-                {stageUpdating ? "UPDATING" : String(caseData.caseStage || "discovery")}
-              </div>
-            </div>
-
-            <div className="p-4">
-              <div className="grid grid-cols-6 gap-2">
-                {CASE_STAGES.map((s, idx) => {
-                  const isActive = s.id === (caseData.caseStage || "discovery");
-                  return (
-                    <button
-                      key={s.id}
-                      onClick={() => updateStage(s.id)}
-                      disabled={stageUpdating}
-                      className={cn(
-                        "border px-2 py-2 text-left",
-                        isActive
-                          ? "border-[#7dcfff] bg-[#0f1a24]"
-                          : "border-[#253041] bg-[#070a0f] hover:bg-[#0f1520]",
-                      )}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <span
-                          className={cn(
-                            "font-mono text-[10px] tracking-[0.18em]",
-                            isActive ? "text-[#7dcfff]" : "text-[#9aa4b2]",
-                          )}
-                        >
-                          {String(idx + 1).padStart(2, "0")}
-                        </span>
-                        <span
-                          className={cn(
-                            "font-mono text-[10px] uppercase tracking-[0.14em] truncate",
-                            isActive ? "text-[#e6f1ff]" : "text-[#9aa4b2]",
-                          )}
-                        >
-                          {s.label}
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
           </div>
         </div>
         <button className="flex items-center gap-2 px-3 py-2 bg-[#1a2238] text-white text-[10px] font-bold uppercase tracking-wider rounded-sm hover:bg-[#2d3a5e] transition-colors">
@@ -779,6 +731,32 @@ export default function LawyerCaseDetailView({ caseId }: { caseId?: string }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [stageUpdating, setStageUpdating] = useState(false);
 
+  // --- Close Matter state ---
+  const [showCloseModal, setShowCloseModal] = useState(false);
+  const [closingRemarks, setClosingRemarks] = useState("");
+  const [isClosing, setIsClosing] = useState(false);
+
+  const isCaseClosed = caseData.status === "completed" || caseData.caseStage === "closed";
+
+  const handleCloseMatter = async () => {
+    if (!caseId || !closingRemarks.trim()) return;
+    setIsClosing(true);
+    setError(null);
+    try {
+      const resp = await apiClient.closeCase(caseId, closingRemarks.trim());
+      if (resp.error) {
+        setError(resp.error);
+        return;
+      }
+      setShowCloseModal(false);
+      router.push("/lawyer-dashboard?view=cases");
+    } catch (e: any) {
+      setError(e?.message || String(e));
+    } finally {
+      setIsClosing(false);
+    }
+  };
+
   // In real implementation, fetch case data
   useEffect(() => {
     if (caseId) {
@@ -947,6 +925,8 @@ export default function LawyerCaseDetailView({ caseId }: { caseId?: string }) {
             timeEntries: apiCase?.timeEntries || BLANK_CASE.timeEntries,
             notes: apiCase?.notes || BLANK_CASE.notes,
             activities: synthesizedActivities,
+            closedAt: apiCase?.closedAt,
+            closingRemarks: apiCase?.closingRemarks,
           };
 
           setCaseData(mapped);
@@ -1240,6 +1220,14 @@ export default function LawyerCaseDetailView({ caseId }: { caseId?: string }) {
                 label="Update Status"
                 variant="primary"
               />
+              {!isCaseClosed && (
+                <QuickActionButton
+                  icon={Archive}
+                  label="Close Matter"
+                  variant="danger"
+                  onClick={() => setShowCloseModal(true)}
+                />
+              )}
             </div>
           </div>
 
@@ -1339,6 +1327,104 @@ export default function LawyerCaseDetailView({ caseId }: { caseId?: string }) {
           </p>
         </div>
       </div>
+
+      {/* ═══ CLOSE MATTER – Premium Modal ═══ */}
+      <AnimatePresence>
+        {showCloseModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm"
+            onClick={() => !isClosing && setShowCloseModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 10 }}
+              transition={{ type: "spring", damping: 28, stiffness: 320 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-lg bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-white/20 overflow-hidden"
+            >
+              {/* Header */}
+              <div className="px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-[#1a2238] to-[#2d3a5e]">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-[#af9164]/20 flex items-center justify-center">
+                      <Archive className="w-4.5 h-4.5 text-[#af9164]" />
+                    </div>
+                    <div>
+                      <h3 className="font-serif text-lg text-white leading-tight">Close Matter</h3>
+                      <p className="text-xs text-slate-300/70 mt-0.5">
+                        Case {caseData.id}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => !isClosing && setShowCloseModal(false)}
+                    className="p-1.5 rounded-lg text-slate-300/60 hover:text-white hover:bg-white/10 transition-colors"
+                  >
+                    <XCircle className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Body */}
+              <div className="p-6 space-y-5">
+                <div className="bg-amber-50/80 border border-amber-200/60 rounded-xl px-4 py-3">
+                  <p className="text-sm text-amber-800 leading-relaxed">
+                    <span className="font-semibold">Please note:</span> Closing this matter will archive all conversations, cancel pending appointments, and notify the client. This action cannot be undone.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                    Closing Remarks <span className="text-[#af9164]">*</span>
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={closingRemarks}
+                    onChange={(e) => setClosingRemarks(e.target.value)}
+                    placeholder="Provide a brief summary of the case outcome..."
+                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 placeholder:text-slate-400 text-sm p-4 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-[#af9164]/20 focus:border-[#af9164]/40 transition-all"
+                  />
+                </div>
+
+                {error && (
+                  <div className="text-sm text-red-600 bg-red-50 border border-red-200/60 rounded-xl px-4 py-3">
+                    {error}
+                  </div>
+                )}
+
+                <div className="flex items-center gap-3 pt-1">
+                  <button
+                    disabled={isClosing}
+                    onClick={() => setShowCloseModal(false)}
+                    className="flex-1 py-2.5 text-sm font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded-xl transition-colors disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    disabled={isClosing || !closingRemarks.trim()}
+                    onClick={handleCloseMatter}
+                    className="flex-1 py-2.5 text-sm font-bold rounded-xl bg-[#1a2238] text-white hover:bg-[#2d3a5e] shadow-lg shadow-[#1a2238]/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:shadow-none"
+                  >
+                    {isClosing ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                        Processing...
+                      </span>
+                    ) : "Confirm Closure"}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

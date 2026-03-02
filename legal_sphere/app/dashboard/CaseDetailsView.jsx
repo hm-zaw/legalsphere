@@ -549,6 +549,35 @@ export default function CaseDetailsView({ caseId, onNavigate }) {
           </div>
         </header>
 
+        {/* --- Closed Case Banner --- */}
+        {(caseData?.status === "completed" || caseData?.caseStage === "closed") && (
+          <div className="bg-white/95 backdrop-blur-md border border-emerald-200/60 rounded-2xl shadow-lg px-6 py-5 mx-4 mt-4">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-serif text-lg text-slate-800 leading-tight">
+                  Matter Successfully Closed
+                </h4>
+                <p className="text-sm text-slate-500 mt-1">
+                  {caseData?.closedAt
+                    ? `This case was concluded on ${new Date(caseData.closedAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}.`
+                    : "This case has been concluded."}
+                </p>
+                {caseData?.closingRemarks && (
+                  <div className="mt-3 pt-3 border-t border-slate-100">
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Closing Remarks</p>
+                    <p className="text-sm text-slate-600 leading-relaxed italic">
+                      "{caseData.closingRemarks}"
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* --- Main Paper Sheet Container --- */}
         <div className="bg-white relative flex flex-col min-h-[600px] shadow-2xl" style={{ boxShadow: PAPER_SHADOW }}>
           

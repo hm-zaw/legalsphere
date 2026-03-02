@@ -1,7 +1,8 @@
 const { MongoClient } = require('mongodb');
 
 async function run() {
-  const uri = 'mongodb+srv://htetmyetzaw114:hmzhmz114@cluster0.xn7xbri.mongodb.net/legal_sphere?retryWrites=true&w=majority&appName=LegalSphere';
+  require('dotenv').config({ path: '.env.local' });
+  const uri = process.env.MONGODB_URI;
   const client = new MongoClient(uri);
 
   try {
