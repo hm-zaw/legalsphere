@@ -2,7 +2,7 @@
 
 LegalSphere is a distributed legal management platform designed for modern law organizations, featuring secure document workflows, intelligent case classification, and AI-powered lawyer matching.
 
-## ✨ Features
+## Features
 
 - **Asynchronous Case Submission**: Utilizes Kafka for a non-blocking, message-driven case submission workflow.
 - **AI-Powered Case Classification**: Employs a fine-tuned Facebook Legal BERT model from HuggingFace to automatically classify cases.
@@ -12,47 +12,36 @@ LegalSphere is a distributed legal management platform designed for modern law o
 - **Admin Dashboard**: A comprehensive dashboard for managing cases, users, and system settings.
 - **Client Dashboard**: An intuitive interface for clients to submit new cases and track their progress.
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Frontend**: Next.js 16, React 19, TypeScript, TailwindCSS
 - **Backend**: Flask, Python, Kafka, MongoDB
-- **AI**: HuggingFace Transformers (Vietnamese Legal BERT)
-- **Infrastructure**: MongoDB Atlas, Aiven Kafka (Cloud-Native)
+- **AI**: HuggingFace Transformers (MoritzLaurer/deberta-v3-large-zeroshot-v2.0)
+- **Infrastructure**: MongoDB, Kafka, Supabase (Postgres), Cloudinary
 
-## 🏛️ Architecture
+## Architecture
 
 LegalSphere is built on a distributed, event-driven architecture that ensures scalability and resilience.
 
 1. **Frontend (Next.js)**: The client-facing application that allows users to submit and manage cases.
 2. **Backend (Flask)**: A RESTful API that handles business logic, user authentication, and communication with other services.
-3. **Kafka (Aiven Cloud)**: A distributed messaging system that decouples the frontend from the backend, enabling asynchronous communication.
+3. **Kafka**: A distributed messaging system that decouples the frontend from the backend, enabling asynchronous communication.
 4. **Case Processor**: A background service that consumes case submissions from Kafka, performs AI-powered analysis, and matches cases with lawyers.
-5. **MongoDB (Atlas)**: The primary database for storing case data, user information, and other application state.
+5. **MongoDB**: The primary database for storing case data, notifications, chat, and other application state.
 
-## 🚀 Getting Started (Cloud-Native)
+## Getting Started
 
 ### Prerequisites
 
 - Node.js (v18 or higher)
 - Python (v3.9 or higher)
-- MongoDB Atlas Account (Free Tier)
-- Aiven Account (Free Tier Kafka)
 
-### Cloud Services Setup
+### Required Services
 
-#### 1. MongoDB Atlas Setup
-1. Create a free account at [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
-2. Create a free cluster (M0 sandbox)
-3. Create a database user with password
-4. Add your IP to IP Access List (use `0.0.0.0/0` for development)
-5. Get connection string from **Connect → Drivers**
-
-#### 2. Aiven Kafka Setup
-1. Create a free account at [Aiven](https://aiven.io/)
-2. Create Apache Kafka service (free tier available)
-3. Get Service URI and credentials from **Overview** tab
-4. Note: Default port is usually `25368` for Kafka
-5. Security protocol is typically `SASL_SSL` with `SCRAM-SHA-256`
+- **MongoDB** (local or cloud)
+- **Kafka** (local broker or managed Kafka)
+- **Supabase** (used for user/lawyer data)
+- **Cloudinary** (used for profile images and chat attachments)
 
 ### Installation
 
@@ -63,21 +52,44 @@ LegalSphere is built on a distributed, event-driven architecture that ensures sc
    ```
 
 2. **Set up environment variables**:
-   ```bash
-   cp .env.example .env
-   ```
-   
-   Edit `.env` and fill in your cloud service credentials:
+
+   Create a `.env` file in `backend/Flask_Backend/.env` (this repo does not include a root `.env.example`).
+
+   Minimum variables used by the backend:
    ```env
-   # MongoDB Atlas
-   MONGODB_URI="mongodb+srv://<user>:<password>@<cluster>.mongodb.net/legal_sphere"
-   
-   # Aiven Kafka
-   KAFKA_BOOTSTRAP_SERVERS="<aiven-service-uri>:25368"
-   KAFKA_USERNAME="avnadmin"
-   KAFKA_PASSWORD="<aiven-password>"
-   KAFKA_SECURITY_PROTOCOL="SASL_SSL"
-   KAFKA_SASL_MECHANISM="SCRAM-SHA-256"
+   # Backend
+   FRONTEND_URL=http://localhost:3000
+   JWT_SECRET_KEY=your-secret-key
+   JWT_EXPIRES_HOURS=24
+
+   # MongoDB (used for cases, notifications, chat)
+   MONGODB_URI=mongodb://localhost:27017/legal_sphere
+
+   # Kafka
+   KAFKA_BOOTSTRAP_SERVERS=127.0.0.1:9092
+   KAFKA_CONSUMER_GROUP_ID=notification-processors
+   KAFKA_CASE_NOTIFICATIONS_TOPIC=case-notifications
+   KAFKA_LAWYER_ASSIGNMENTS_TOPIC=lawyer-assignments
+   KAFKA_LAWYER_RESPONSES_TOPIC=lawyer-responses
+   KAFKA_CASE_CONNECTIONS_TOPIC=case-connections
+   KAFKA_ADMIN_REASSIGNMENTS_TOPIC=admin-reassignments
+
+   # If using managed Kafka with TLS/mTLS, configure the protocol.
+   # The backend supports: SSL (mTLS) and SASL_SSL.
+   KAFKA_SECURITY_PROTOCOL=SSL
+   # KAFKA_SECURITY_PROTOCOL=SASL_SSL
+   # KAFKA_SASL_MECHANISM=SCRAM-SHA-256
+   # KAFKA_USERNAME=...
+   # KAFKA_PASSWORD=...
+
+   # Supabase (required for authentication + user/lawyer data)
+   SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+   SUPABASE_KEY=YOUR_SUPABASE_ANON_OR_SERVICE_KEY
+
+   # Cloudinary (required for profile images + file uploads)
+   CLOUD_NAME=your_cloud_name
+   CLOUDINARY_API_KEY=your_key
+   CLOUDINARY_API_SECRET=your_secret
    ```
 
 3. **Install frontend dependencies**:
@@ -92,11 +104,9 @@ LegalSphere is built on a distributed, event-driven architecture that ensures sc
    pip install -r requirements.txt
    ```
 
-5. **Set up Kafka topics** (one-time setup):
-   ```bash
-   cd ../backend/Flask_Backend
-   python kafka_setup.py
-   ```
+5. **Kafka topics**:
+
+   Topics used by the lawyer assignment workflow are documented in `backend/Flask_Backend/KAFKA_WORKFLOW.md`.
 
 ### Running the Application
 
@@ -112,77 +122,56 @@ LegalSphere is built on a distributed, event-driven architecture that ensures sc
    npm run dev
    ```
 
-## 🌐 Application Access
+## Application Access
 
 - **Frontend**: [http://localhost:3000](http://localhost:3000)
 - **Backend API**: [http://localhost:5000](http://localhost:5000)
-- **MongoDB Atlas**: [Atlas Dashboard](https://cloud.mongodb.com/)
-- **Aiven Kafka**: [Aiven Console](https://console.aiven.io/)
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 legalsphere/
 ├── legal_sphere/           # Next.js Frontend
 │   ├── app/               # App router pages
 │   ├── components/        # Reusable React components
-│   ├── lib/              # Utility functions (including Kafka client)
-│   └── hooks/            # Custom React hooks
+│   └── ...
 ├── backend/
 │   └── Flask_Backend/     # Flask Backend
 │       ├── routes/        # API endpoints
-│       ├── db/           # Database models and connections
-│       ├── kafka_config.py    # Kafka configuration
-│       ├── notification_processor.py  # Background consumer
-│       └── kafka_setup.py    # Topic setup script
-├── .env.example          # Environment variables template
+│       ├── db/            # DB adapters (MongoDB + Supabase)
+│       ├── kafka_config.py # Kafka configuration
+│       ├── notification_processor.py # Kafka consumer(s)
+│       ├── lawyer_workflow_processors.py
+│       ├── mongodb_client.py
+│       ├── ca.pem
+│       ├── service.cert
+│       └── service.key
 └── README.md            # This file
 ```
 
-## 🔧 Development Workflow
+## Development Workflow
 
-### Local Development with Cloud Services
+### Local Development
 
-The application is designed to run natively on your machine while connecting to cloud services:
+This repo runs the Next.js frontend and Flask backend locally. Infrastructure dependencies (MongoDB/Kafka/Supabase/Cloudinary) can be local or managed.
 
-1. **No Docker required** - All infrastructure runs in the cloud
-2. **Zero local dependencies** - Just Node.js and Python
-3. **Secure connections** - All communications use SSL/TLS
-4. **Clone and run** - Perfect for team development
+### Notes
 
-### Environment Variables
+- The backend loads environment variables via `python-dotenv` (see `backend/Flask_Backend/config.py`).
+- Kafka TLS/mTLS files are expected at `backend/Flask_Backend/ca.pem`, `service.cert`, `service.key` when `KAFKA_SECURITY_PROTOCOL=SSL`.
 
-Key environment variables for cloud operation:
-
-```env
-# Database
-MONGODB_URI="mongodb+srv://user:pass@cluster.mongodb.net/legal_sphere"
-
-# Kafka
-KAFKA_BOOTSTRAP_SERVERS="kafka-service.aivencloud.com:25368"
-KAFKA_USERNAME="avnadmin"
-KAFKA_PASSWORD="your-password"
-KAFKA_SECURITY_PROTOCOL="SASL_SSL"
-KAFKA_SASL_MECHANISM="SCRAM-SHA-256"
-
-# Application
-FLASK_ENV=development
-NEXT_PUBLIC_API_URL=http://localhost:5000
-```
-
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
 1. **MongoDB Connection Error**:
-   - Verify IP Access List includes your IP or `0.0.0.0/0`
-   - Check username/password in connection string
-   - Ensure database user has read/write permissions
+   - Check `MONGODB_URI`
+   - Ensure MongoDB is reachable from the backend
 
 2. **Kafka Connection Error**:
-   - Verify service URI and port are correct
-   - Check SASL credentials (username/password)
-   - Ensure security protocol matches Aiven configuration
+   - Verify `KAFKA_BOOTSTRAP_SERVERS`
+   - If using SSL/mTLS, confirm `ca.pem`, `service.cert`, `service.key` are present
+   - If using `SASL_SSL`, confirm `KAFKA_USERNAME` / `KAFKA_PASSWORD`
 
 3. **Frontend Build Issues**:
    - Clear node_modules: `rm -rf node_modules && npm install`
@@ -192,6 +181,10 @@ NEXT_PUBLIC_API_URL=http://localhost:5000
    - Activate Python virtual environment
    - Install requirements: `pip install -r requirements.txt`
 
+5. **Supabase / Cloudinary Errors**:
+   - Ensure `SUPABASE_URL` and `SUPABASE_KEY` are set
+   - Ensure `CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` are set
+
 ### Debug Mode
 
 Enable debug logging by setting:
@@ -200,7 +193,7 @@ FLASK_DEBUG=True
 LOG_LEVEL=DEBUG
 ```
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/amazing-feature`
@@ -208,13 +201,13 @@ LOG_LEVEL=DEBUG
 4. Push to the branch: `git push origin feature/amazing-feature`
 5. Open a Pull Request
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🆘 Support
+## Support
 
 For support and questions:
 - Create an issue in this repository
 - Check the troubleshooting section above
-- Review the `.env.example` file for configuration options
+- Review the environment variable list in the Getting Started section
