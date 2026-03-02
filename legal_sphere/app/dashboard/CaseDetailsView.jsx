@@ -30,6 +30,15 @@ const LEGAL_NAVY = "#1a2238";
 const ACCENT_GOLD = "#af9164";
 const PAPER_SHADOW = "0 10px 40px -15px rgba(0,0,0,0.1)";
 
+const CASE_STAGES = [
+  { id: "discovery", label: "DISCOVERY" },
+  { id: "pleadings", label: "PLEADINGS" },
+  { id: "pre_trial", label: "PRE-TRIAL" },
+  { id: "trial", label: "TRIAL" },
+  { id: "settlement", label: "SETTLEMENT" },
+  { id: "appeal", label: "APPEAL" },
+];
+
 // --- Data ---
 const tasks = [
   {
@@ -319,6 +328,9 @@ export default function CaseDetailsView({ caseId, onNavigate }) {
   const [viewMode, setViewMode] = useState("Timeline");
   const [caseData, setCaseData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [courtEvents, setCourtEvents] = useState([]);
+  const [eventsLoading, setEventsLoading] = useState(false);
+  const [eventsError, setEventsError] = useState(null);
   
   const days = ["MON 20", "TUE 21", "WED 22", "THU 23", "FRI 24", "SAT 25", "SUN 26"];
 
@@ -340,6 +352,35 @@ export default function CaseDetailsView({ caseId, onNavigate }) {
         fetchData();
     }
   }, [caseId]);
+
+  useEffect(() => {
+    if (!caseId) return;
+    setEventsLoading(true);
+    setEventsError(null);
+    (async () => {
+      try {
+        const res = await apiClient.getCaseCourtEvents(caseId);
+        if (res.error) {
+          setEventsError(res.error);
+          setCourtEvents([]);
+          return;
+        }
+        const events = res?.data?.events || res?.data?.events || [];
+        setCourtEvents(Array.isArray(events) ? events : []);
+      } catch (e) {
+        setEventsError(e?.message || String(e));
+        setCourtEvents([]);
+      } finally {
+        setEventsLoading(false);
+      }
+    })();
+  }, [caseId]);
+
+  const currentStage = String(caseData?.caseStage || "discovery");
+  const currentStageIndex = Math.max(
+    0,
+    CASE_STAGES.findIndex((s) => s.id === currentStage),
+  );
 
   return (
     <div
@@ -383,6 +424,69 @@ export default function CaseDetailsView({ caseId, onNavigate }) {
           </div>
         </header>
 
+        <section className="bg-[#0b0f14] border border-[#253041] shadow-2xl">
+          <div className="px-6 py-4 border-b border-[#253041] flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#7aa2f7]">
+                CASE_STAGE_PIPELINE
+              </span>
+              <span className="font-mono text-[10px] text-[#9aa4b2]">
+                {currentStage}
+              </span>
+            </div>
+            <span className="font-mono text-[10px] text-[#9aa4b2]">READ-ONLY</span>
+          </div>
+
+          <div className="px-6 py-5">
+            <div className="grid grid-cols-6 gap-2">
+              {CASE_STAGES.map((s, idx) => {
+                const isActive = idx === currentStageIndex;
+                const isDone = idx < currentStageIndex;
+                return (
+                  <div
+                    key={s.id}
+                    className={cn(
+                      "border px-2 py-2",
+                      isActive
+                        ? "border-[#7dcfff] bg-[#0f1a24]"
+                        : isDone
+                          ? "border-[#2bff88] bg-[#07160d]"
+                          : "border-[#253041] bg-[#070a0f]",
+                    )}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span
+                        className={cn(
+                          "font-mono text-[10px] tracking-[0.18em]",
+                          isActive
+                            ? "text-[#7dcfff]"
+                            : isDone
+                              ? "text-[#2bff88]"
+                              : "text-[#9aa4b2]",
+                        )}
+                      >
+                        {String(idx + 1).padStart(2, "0")}
+                      </span>
+                      <span
+                        className={cn(
+                          "font-mono text-[10px] uppercase tracking-[0.14em] truncate",
+                          isActive
+                            ? "text-[#e6f1ff]"
+                            : isDone
+                              ? "text-[#c7ffe0]"
+                              : "text-[#9aa4b2]",
+                        )}
+                      >
+                        {s.label}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
         {/* --- Main Paper Sheet Container --- */}
         <div className="bg-white relative flex flex-col min-h-[600px] shadow-2xl" style={{ boxShadow: PAPER_SHADOW }}>
           
@@ -424,6 +528,59 @@ export default function CaseDetailsView({ caseId, onNavigate }) {
           {viewMode === "List" && <ListView tasks={tasks} />}
 
         </div>
+
+        <section className="bg-[#0b0f14] border border-[#253041] shadow-2xl">
+          <div className="px-6 py-4 border-b border-[#253041] flex items-center justify-between">
+            <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#ff9e64]">
+              COURT_DATES
+            </span>
+            <span className="font-mono text-[10px] text-[#9aa4b2]">
+              {eventsLoading ? "SYNCING" : `${courtEvents.length} EVENTS`}
+            </span>
+          </div>
+          <div className="px-6 py-4">
+            {eventsError && (
+              <div className="font-mono text-xs text-red-400 border border-red-900/50 bg-red-950/20 px-3 py-2">
+                {eventsError}
+              </div>
+            )}
+
+            <div className="border border-[#253041]">
+              <div className="grid grid-cols-[140px_120px_1fr_160px] gap-3 px-3 py-2 border-b border-[#253041] bg-[#070a0f]">
+                <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#9aa4b2]">SCHEDULED_AT</div>
+                <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#9aa4b2]">TYPE</div>
+                <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#9aa4b2]">TITLE</div>
+                <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#9aa4b2]">LOCATION</div>
+              </div>
+
+              <div className="divide-y divide-[#141b25]">
+                {eventsLoading && (
+                  <div className="px-3 py-3 font-mono text-xs text-[#9aa4b2]">Loading…</div>
+                )}
+                {!eventsLoading && courtEvents.length === 0 && (
+                  <div className="px-3 py-3 font-mono text-xs text-[#9aa4b2]">No court events scheduled.</div>
+                )}
+
+                {courtEvents.map((ev) => (
+                  <div key={ev.id} className="grid grid-cols-[140px_120px_1fr_160px] gap-3 px-3 py-3 bg-[#0b0f14] hover:bg-[#0f1520]">
+                    <div className="font-mono text-xs text-[#e6f1ff]">
+                      {String(ev.scheduled_at || "").slice(0, 16).replace('T', ' ')}
+                    </div>
+                    <div className="font-mono text-xs text-[#ff9e64] uppercase">
+                      {ev.event_type}
+                    </div>
+                    <div className="font-mono text-xs text-[#c0caf5]">
+                      {ev.title}
+                    </div>
+                    <div className="font-mono text-xs text-[#9aa4b2] truncate">
+                      {ev.location || "-"}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
         
         <div className="text-center pb-8">
             <p className="text-[10px] text-slate-400 uppercase tracking-widest">LegalSphere Case File #57 • Confidential</p>

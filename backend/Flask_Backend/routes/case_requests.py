@@ -6,7 +6,21 @@ import jwt
 from functools import wraps
 from mongodb_client import get_db_collection
 
+from kafka_config import kafka_service
+from db.court_events import CourtEvent
+from .lawyer import lawyer_token_required
+
 case_requests_bp = Blueprint('case_requests', __name__)
+
+
+ALLOWED_CASE_STAGES = {
+    'discovery',
+    'pleadings',
+    'pre_trial',
+    'trial',
+    'settlement',
+    'appeal',
+}
 
 
 def token_required(f):
@@ -64,6 +78,12 @@ def create_case_request():
             'status': 'pending_submission',
             'source': 'web_form'
         })
+
+        if 'caseStage' in case_data and case_data['caseStage'] is not None:
+            if case_data['caseStage'] not in ALLOWED_CASE_STAGES:
+                return jsonify({'error': 'Invalid caseStage'}), 400
+        else:
+            case_data['caseStage'] = 'discovery'
         
         # Append proxy_filer if it exists
         if 'proxy_filer' in case_data and case_data['proxy_filer']:
@@ -84,6 +104,93 @@ def create_case_request():
 
     except Exception as e:
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+
+
+@case_requests_bp.route('/api/lawyer/cases/<case_id>/stage', methods=['PATCH'])
+@lawyer_token_required
+def update_case_stage(case_id):
+    try:
+        payload = request.get_json() or {}
+        new_stage = payload.get('caseStage')
+
+        if new_stage not in ALLOWED_CASE_STAGES:
+            return jsonify({'error': 'Invalid caseStage'}), 400
+
+        collection = get_db_collection('case_requests')
+
+        case = collection.find_one({'id': case_id})
+        if not case:
+            from bson import ObjectId
+            try:
+                case = collection.find_one({'_id': ObjectId(case_id)})
+            except Exception:
+                case = None
+
+        if not case:
+            return jsonify({'error': 'Case not found'}), 404
+
+        case_lawyer_id = str(case.get('assignedLawyerId', ''))
+        user_id = str(getattr(request, 'user_id', ''))
+        if case_lawyer_id != user_id:
+            return jsonify({'error': 'Case not assigned to you'}), 403
+
+        now_iso = datetime.utcnow().isoformat()
+        collection.update_one(
+            {'_id': case['_id']},
+            {'$set': {'caseStage': new_stage, 'updatedAt': now_iso}}
+        )
+
+        try:
+            client_id = (case.get('client', {}) or {}).get('email')
+            case_title = case.get('case', {}).get('title', 'Untitled Case')
+
+            notification_payload = {
+                'clientId': client_id,
+                'caseId': case.get('id') or str(case.get('_id')),
+                'notificationType': 'case_stage_updated',
+                'title': 'Case Stage Updated',
+                'message': f'Your case "{case_title}" moved to stage: {new_stage}.',
+                'metadata': {
+                    'caseStage': new_stage,
+                    'updatedByLawyerId': user_id,
+                    'updatedByLawyerName': getattr(request, 'user_name', None),
+                    'updatedAt': now_iso,
+                },
+                'timestamp': now_iso,
+                'user_id': client_id,
+            }
+            kafka_service.publish_notification(notification_payload)
+        except Exception:
+            pass
+
+        return jsonify({'success': True, 'caseId': case.get('id') or str(case.get('_id')), 'caseStage': new_stage}), 200
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': f'Internal server error: {str(e)}'}), 500
+
+
+@case_requests_bp.route('/api/cases/<case_id>/court-events', methods=['GET'])
+@token_required
+def get_case_court_events(case_id):
+    try:
+        if getattr(request, 'user_role', None) != 'client':
+            return jsonify({'error': 'Client access required'}), 403
+
+        case_col = get_db_collection('case_requests')
+        case = case_col.find_one({'id': case_id})
+        if not case:
+            return jsonify({'error': 'Case not found'}), 404
+
+        if (case.get('client', {}) or {}).get('email') != getattr(request, 'user_email', None):
+            return jsonify({'error': 'Access denied'}), 403
+
+        events = CourtEvent.list_by_case_id(case_id)
+        serialized = [CourtEvent.serialize_for_response(ev) for ev in events]
+
+        return jsonify({'success': True, 'events': serialized, 'count': len(serialized)}), 200
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': f'Internal server error: {str(e)}'}), 500
 
 
 @case_requests_bp.route('/api/case-requests/<case_id>', methods=['GET'])
@@ -150,57 +257,9 @@ def list_case_requests():
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
 
-@case_requests_bp.route('/api/lawyer/cases', methods=['GET'])
-def get_lawyer_cases():
-    """Get cases assigned to a lawyer"""
-    try:
-        lawyer_id = request.args.get('lawyerId')
-        status = request.args.get('status')
-
-        collection = get_db_collection('case_requests')
-
-        # Build query
-        query = {}
-        if lawyer_id:
-            try:
-                lawyer_id_int = int(lawyer_id)
-                query['assignedLawyerId'] = {'$in': [lawyer_id, lawyer_id_int, str(lawyer_id)]}
-            except ValueError:
-                query['assignedLawyerId'] = lawyer_id
-
-        if status:
-            if status == 'incoming':
-                query['status'] = 'lawyer_assigned'
-            elif status == 'active':
-                query['status'] = 'active'
-            else:
-                query['status'] = status
-
-        cases = list(collection.find(query).sort('updatedAt', -1))
-
-        formatted_cases = []
-        for case in cases:
-            if '_id' in case:
-                case['_id'] = str(case['_id'])
-
-            formatted_case = {
-                'id': case.get('id', ''),
-                '_id': case.get('_id'),
-                'title': case.get('case', {}).get('title', 'Untitled Case'),
-                'description': case.get('case', {}).get('description', ''),
-                'status': _format_status(case.get('status', 'pending')),
-                'rawStatus': case.get('status'),
-                'client': case.get('client', {}),
-                'createdAt': case.get('createdAt'),
-                'updatedAt': case.get('updatedAt'),
-                'documents': case.get('documents', [])
-            }
-            formatted_cases.append(formatted_case)
-
-        return jsonify({'cases': formatted_cases}), 200
-
-    except Exception as e:
-        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+## NOTE: The `/api/lawyer/cases` GET route was removed from this file.
+## It conflicted with the authenticated version in lawyer.py which properly
+## extracts lawyer ID from JWT and handles status='all' correctly.
 
 
 @case_requests_bp.route('/api/my-cases', methods=['GET'])

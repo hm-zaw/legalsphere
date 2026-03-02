@@ -34,6 +34,39 @@ export interface CasesResponse {
   };
 }
 
+export type CaseStage =
+  | "discovery"
+  | "pleadings"
+  | "pre_trial"
+  | "trial"
+  | "settlement"
+  | "appeal";
+
+export interface CourtEvent {
+  id: string;
+  case_id: string;
+  lawyer_id: string;
+  client_id: string;
+  title: string;
+  event_type: "hearing" | "trial_date" | "deadline";
+  scheduled_at: string;
+  location: string;
+  notes: string;
+}
+
+export interface LawyerCalendarEvent {
+  source: "appointment" | "court_event";
+  id: string;
+  case_id?: string;
+  client_id?: string;
+  lawyer_id?: string;
+  title: string;
+  event_type: string;
+  scheduled_at: string;
+  location?: string;
+  notes?: string;
+}
+
 class ApiClient {
   private getAuthHeaders(): Record<string, string> {
     const headers: Record<string, string> = {
@@ -43,13 +76,44 @@ class ApiClient {
     // Try to get token from localStorage (client-side only)
     if (typeof window !== "undefined") {
       const token =
-        localStorage.getItem("userToken") || localStorage.getItem("adminToken");
+        localStorage.getItem("userToken") ||
+        localStorage.getItem("adminToken") ||
+        localStorage.getItem("lawyerToken") ||
+        localStorage.getItem("token");
       if (token) {
         headers["Authorization"] = `Bearer ${token}`;
       }
     }
 
     return headers;
+  }
+
+  private async getBackend<T>(endpoint: string): Promise<ApiResponse<T>> {
+    try {
+      const url = `${API_BASE_URL}${endpoint}`;
+      const response = await fetch(url, {
+        method: "GET",
+        headers: this.getAuthHeaders(),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return {
+          error:
+            data.error ||
+            data.Message ||
+            `HTTP error! status: ${response.status}`,
+        };
+      }
+
+      return { data };
+    } catch (error) {
+      return {
+        error:
+          error instanceof Error ? error.message : "An unknown error occurred",
+      };
+    }
   }
 
   async get<T>(endpoint: string): Promise<ApiResponse<T>> {
@@ -62,6 +126,36 @@ class ApiClient {
         method: "GET",
         headers: this.getAuthHeaders(),
       });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return {
+          error:
+            data.error ||
+            data.Message ||
+            `HTTP error! status: ${response.status}`,
+        };
+      }
+
+      return { data };
+    } catch (error) {
+      return {
+        error:
+          error instanceof Error ? error.message : "An unknown error occurred",
+      };
+    }
+  }
+
+  async patch<T>(endpoint: string, body: any): Promise<ApiResponse<T>> {
+    try {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`,
+        {
+          method: "PATCH",
+          headers: this.getAuthHeaders(),
+          body: JSON.stringify(body),
+        }
+      );
 
       const data = await response.json();
 
@@ -187,6 +281,42 @@ class ApiClient {
 
   async submitCase(caseData: any): Promise<ApiResponse<any>> {
     return this.post<any>("/api/case-requests", caseData);
+  }
+
+  async getCaseCourtEvents(caseId: string): Promise<ApiResponse<{ events: CourtEvent[] }>> {
+    return this.getBackend<{ success: boolean; events: CourtEvent[]; count: number }>(
+      `/api/cases/${caseId}/court-events`,
+    ) as any;
+  }
+
+  async updateCaseStage(caseId: string, caseStage: CaseStage): Promise<ApiResponse<any>> {
+    return this.patch(`/api/lawyer/cases/${caseId}/stage`, { caseStage });
+  }
+
+  async getLawyerCalendar(start_date: string, end_date: string): Promise<ApiResponse<{ events: LawyerCalendarEvent[] }>> {
+    const params = new URLSearchParams({ start_date, end_date });
+    return this.getBackend<{ success: boolean; events: LawyerCalendarEvent[] }>(
+      `/api/lawyer/calendar?${params.toString()}`,
+    ) as any;
+  }
+
+  async createCourtEvent(payload: {
+    case_id: string;
+    client_id: string;
+    title: string;
+    event_type: "hearing" | "trial_date" | "deadline";
+    scheduled_at: string;
+    location?: string;
+    notes?: string;
+  }): Promise<ApiResponse<{ event: CourtEvent }>> {
+    return this.post(`/api/lawyer/court-events`, payload) as any;
+  }
+
+  async getLawyerCases(status = 'active'): Promise<ApiResponse<{ cases: Case[] }>> {
+    const params = new URLSearchParams({ status });
+    return this.getBackend<{ cases: Case[] }>(
+      `/api/lawyer/cases?${params.toString()}`,
+    ) as any;
   }
 }
 

@@ -97,6 +97,13 @@ interface CaseDetail {
   status: string;
   category: string;
   priority: "low" | "medium" | "high" | "urgent";
+  caseStage?:
+    | "discovery"
+    | "pleadings"
+    | "pre_trial"
+    | "trial"
+    | "settlement"
+    | "appeal";
   client: Client;
   createdAt: string;
   updatedAt: string;
@@ -117,6 +124,7 @@ const BLANK_CASE: CaseDetail = {
   status: "pending",
   category: "General",
   priority: "medium",
+  caseStage: "discovery",
   client: {
     id: "CLI-000",
     fullName: "Unknown Client",
@@ -292,7 +300,17 @@ const TabButton = ({
 
 // --- Tab Content Components ---
 
-const OverviewTab = ({ caseData }: { caseData: CaseDetail }) => (
+const OverviewTab = ({ 
+  caseData, 
+  stageUpdating, 
+  CASE_STAGES, 
+  updateStage 
+}: { 
+  caseData: CaseDetail;
+  stageUpdating: boolean;
+  CASE_STAGES: { id: NonNullable<CaseDetail["caseStage"]>; label: string }[];
+  updateStage: (stage: NonNullable<CaseDetail["caseStage"]>) => void;
+}) => (
   <div className="space-y-6">
     {/* Client Info Card */}
     <div className="bg-white border border-slate-200 rounded-sm p-6">
@@ -325,6 +343,57 @@ const OverviewTab = ({ caseData }: { caseData: CaseDetail }) => (
               <Phone className="w-3.5 h-3.5" />
               {caseData.client.phone}
             </a>
+          </div>
+
+          <div className="bg-[#0b0f14] border border-[#253041] shadow-2xl">
+            <div className="px-4 py-3 border-b border-[#253041] flex items-center justify-between">
+              <div className="font-mono text-xs uppercase tracking-[0.22em] text-[#7aa2f7]">
+                CASE_STAGE_KANBAN
+              </div>
+              <div className="font-mono text-[10px] text-[#9aa4b2]">
+                {stageUpdating ? "UPDATING" : String(caseData.caseStage || "discovery")}
+              </div>
+            </div>
+
+            <div className="p-4">
+              <div className="grid grid-cols-6 gap-2">
+                {CASE_STAGES.map((s, idx) => {
+                  const isActive = s.id === (caseData.caseStage || "discovery");
+                  return (
+                    <button
+                      key={s.id}
+                      onClick={() => updateStage(s.id)}
+                      disabled={stageUpdating}
+                      className={cn(
+                        "border px-2 py-2 text-left",
+                        isActive
+                          ? "border-[#7dcfff] bg-[#0f1a24]"
+                          : "border-[#253041] bg-[#070a0f] hover:bg-[#0f1520]",
+                      )}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span
+                          className={cn(
+                            "font-mono text-[10px] tracking-[0.18em]",
+                            isActive ? "text-[#7dcfff]" : "text-[#9aa4b2]",
+                          )}
+                        >
+                          {String(idx + 1).padStart(2, "0")}
+                        </span>
+                        <span
+                          className={cn(
+                            "font-mono text-[10px] uppercase tracking-[0.14em] truncate",
+                            isActive ? "text-[#e6f1ff]" : "text-[#9aa4b2]",
+                          )}
+                        >
+                          {s.label}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
         <button className="flex items-center gap-2 px-3 py-2 bg-[#1a2238] text-white text-[10px] font-bold uppercase tracking-wider rounded-sm hover:bg-[#2d3a5e] transition-colors">
@@ -708,6 +777,7 @@ export default function LawyerCaseDetailView({ caseId }: { caseId?: string }) {
   const [uploadingDoc, setUploadingDoc] = useState(false);
   const [uploaderNames, setUploaderNames] = useState<Record<string, string>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [stageUpdating, setStageUpdating] = useState(false);
 
   // In real implementation, fetch case data
   useEffect(() => {
@@ -827,6 +897,11 @@ export default function LawyerCaseDetailView({ caseId }: { caseId?: string }) {
               apiCase?.case?.description ||
               apiCase?.description ||
               BLANK_CASE.description,
+            caseStage:
+              (apiCase?.caseStage as any) ||
+              (apiCase?.case_stage as any) ||
+              (apiCase?.case?.caseStage as any) ||
+              "discovery",
             status:
               (apiCase?.status && String(apiCase.status).toLowerCase()) ||
               (apiCase?.rawStatus as string) ||
@@ -883,6 +958,33 @@ export default function LawyerCaseDetailView({ caseId }: { caseId?: string }) {
       })();
     }
   }, [caseId]);
+
+  const CASE_STAGES: { id: NonNullable<CaseDetail["caseStage"]>; label: string }[] = [
+    { id: "discovery", label: "DISCOVERY" },
+    { id: "pleadings", label: "PLEADINGS" },
+    { id: "pre_trial", label: "PRE-TRIAL" },
+    { id: "trial", label: "TRIAL" },
+    { id: "settlement", label: "SETTLEMENT" },
+    { id: "appeal", label: "APPEAL" },
+  ];
+
+  const updateStage = async (nextStage: NonNullable<CaseDetail["caseStage"]>) => {
+    if (!caseId) return;
+    setStageUpdating(true);
+    setError(null);
+    try {
+      const resp = await apiClient.updateCaseStage(caseId, nextStage as any);
+      if (resp.error) {
+        setError(resp.error);
+        return;
+      }
+      setCaseData((prev) => ({ ...prev, caseStage: nextStage }));
+    } catch (e: any) {
+      setError(e?.message || String(e));
+    } finally {
+      setStageUpdating(false);
+    }
+  };
 
   // Fetch uploader names for documents with numeric IDs
   useEffect(() => {
@@ -983,9 +1085,16 @@ export default function LawyerCaseDetailView({ caseId }: { caseId?: string }) {
         throw new Error(`Upload failed for ${file.name}`);
       }
 
+      // Determine the case ID and ensure it exists to satisfy TypeScript
+      const targetCaseId = caseData.id || caseId;
+
+      if (!targetCaseId) {
+        throw new Error("Case ID is missing. Cannot upload document.");
+      }
+
       // Step 3: Save document metadata to backend
       const docData = {
-        caseId: caseData._id || caseId,
+        caseId: targetCaseId,
         document: {
           key,
           name: file.name,
@@ -996,19 +1105,21 @@ export default function LawyerCaseDetailView({ caseId }: { caseId?: string }) {
         },
       };
 
-      const resp = await apiClient.post(`/api/cases/${caseData._id || caseId}/documents`, docData);
+      const resp = await apiClient.post(`/api/cases/${targetCaseId}/documents`, docData);
 
       if (resp.error) {
         throw new Error(resp.error || "Failed to save document to case");
       }
 
       // Refresh case data to show new document
-      const caseResp = await apiClient.getCaseDetails(caseData._id || caseId);
+      const caseResp = await apiClient.getCaseDetails(targetCaseId);
+      
+      // ADD THIS BLOCK: Update the state so the UI re-renders with the new document
       if (!caseResp.error && caseResp.data) {
         const apiCase: any = caseResp.data;
-        setCaseData(prev => ({
+        setCaseData((prev) => ({
           ...prev,
-          documents: apiCase.documents || []
+          documents: apiCase.documents || [],
         }));
       }
 
@@ -1109,7 +1220,7 @@ export default function LawyerCaseDetailView({ caseId }: { caseId?: string }) {
               <QuickActionButton 
                 icon={MessageSquare} 
                 label="Message Client" 
-                onClick={() => router.push(`/lawyer-dashboard/communication?caseId=${caseData._id}`)}
+                onClick={() => router.push(`/lawyer-dashboard/communication?caseId=${caseData.id}`)} // Changed _id to id
               />
               <QuickActionButton 
                 icon={Upload} 
@@ -1197,7 +1308,14 @@ export default function LawyerCaseDetailView({ caseId }: { caseId?: string }) {
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.2 }}
           >
-            {activeTab === "overview" && <OverviewTab caseData={caseData} />}
+            {activeTab === "overview" && (
+              <OverviewTab 
+                caseData={caseData} 
+                stageUpdating={stageUpdating}
+                CASE_STAGES={CASE_STAGES}
+                updateStage={updateStage}
+              />
+            )}
             {activeTab === "documents" && (
               <DocumentsTab documents={caseData.documents} uploaderNames={uploaderNames} />
             )}

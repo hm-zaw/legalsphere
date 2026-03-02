@@ -27,6 +27,8 @@ def lawyer_token_required(f):
             secret_key = os.getenv('JWT_SECRET_KEY', 'your-secret-key')
             decoded = jwt.decode(token, secret_key, algorithms=['HS256'])
             
+            print(f"DEBUG: Decoded JWT token: {decoded}")
+            
             # Verify lawyer role
             if decoded.get('role') != 'lawyer':
                 return jsonify({"Error": "Lawyer access required"}), 403
@@ -74,8 +76,19 @@ def get_lawyer_assignments():
         
         # Build query for lawyer-specific cases
         # Handle both string and number types for assignedLawyerId
-        lawyer_id = str(request.user_id)
-        query = {'assignedLawyerId': {'$in': [lawyer_id, int(lawyer_id) if lawyer_id.isdigit() else lawyer_id]}}
+        lawyer_id = request.user_id  # Keep original type from JWT
+        print(f"DEBUG: lawyer_id from JWT: {lawyer_id}, type: {type(lawyer_id)}")
+        
+        # Try both string and integer versions
+        if isinstance(lawyer_id, str):
+            if lawyer_id.isdigit():
+                lawyer_id_int = int(lawyer_id)
+                query = {'assignedLawyerId': {'$in': [lawyer_id, lawyer_id_int]}}
+            else:
+                query = {'assignedLawyerId': lawyer_id}
+        else:
+            # It's already a number
+            query = {'assignedLawyerId': {'$in': [lawyer_id, str(lawyer_id)]}}
         
         print(f"DEBUG: MongoDB Query: {query}")
         
@@ -89,7 +102,9 @@ def get_lawyer_assignments():
         elif status == 'all':
             # Return all cases assigned to lawyer regardless of status
             query['status'] = {'$in': ['lawyer_assigned', 'active', 'in_progress', 'completed']}
-        # If no status specified, default to incoming (lawyer_assigned)
+        else:
+            # If no status specified, default to incoming (lawyer_assigned)
+            query['status'] = 'lawyer_assigned'
         
         print(f"DEBUG: Final Query: {query}")
         
@@ -572,6 +587,7 @@ def create_offline_case():
             'client': data['client'], # Store nested client data exactly as typical workflow dictates
             'case': data['case'],
             'status': 'active', # CRITICAL: Bypass assign workflow entirely
+            'caseStage': 'discovery',
             'source': 'lawyer_offline_acquisition',
             'assignedLawyerId': lawyer_id,
             'createdAt': now_iso,

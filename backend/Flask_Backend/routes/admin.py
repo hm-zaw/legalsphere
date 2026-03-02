@@ -736,6 +736,7 @@ def manual_case_entry():
             'client': data['client'],
             'case': data['case'],
             'status': 'Pending_Classification',
+            'caseStage': 'discovery',
             'source': source,
             'createdAt': now_iso,
             'updatedAt': now_iso,
