@@ -17,6 +17,8 @@ import {
   Download,
   Search,
   RefreshCw,
+  AlertCircle,
+  Hourglass
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -60,9 +62,14 @@ export default function CasesView() {
   const [expandedLawyerId, setExpandedLawyerId] = useState("");
   const [showLawyerDetails, setShowLawyerDetails] = useState(false);
 
-  // Local UI controls
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+
+  // Review Reassignment State
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [reviewApp, setReviewApp] = useState(null);
+  const [reviewNotes, setReviewNotes] = useState("");
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
   // --- REAL DATA FETCHING LOGIC ---
   useEffect(() => {
@@ -384,6 +391,38 @@ export default function CasesView() {
     }
   }
 
+  function handleReviewReassignment(app) {
+    setReviewApp(app);
+    setReviewNotes("");
+    setReviewModalOpen(true);
+  }
+
+  async function submitReassignmentReview(approved) {
+    if (!reviewApp) return;
+    setIsSubmittingReview(true);
+    try {
+      const res = await fetch(`/api/admin/case-requests/${reviewApp.id || reviewApp._id}/resolve-change`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ approved, adminNotes: reviewNotes }),
+      });
+      if (!res.ok) throw new Error("Failed to submit review");
+      
+      setReviewModalOpen(false);
+      
+      // Auto-refresh cases list
+      const refreshRes = await fetch("/api/admin/case-requests?limit=10");
+      const data = await refreshRes.json();
+      if (refreshRes.ok) {
+        setApps(Array.isArray(data?.items) ? data.items : []);
+      }
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  }
+
   const panelAnimClass = useMemo(
     () =>
       drawerAnim === "expand"
@@ -568,7 +607,7 @@ export default function CasesView() {
 
                     <div className="p-8 flex flex-col h-full relative overflow-hidden border border-t-0 border-slate-100 hover:border-slate-200 transition-colors">
                       <div className="flex justify-between items-start mb-4 z-10">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <div
                             className={cn(
                               "text-[8px] font-bold uppercase tracking-[0.2em] px-2.5 py-1.5 border transition-colors",
@@ -579,6 +618,11 @@ export default function CasesView() {
                           >
                             {a.status || "Pending"}
                           </div>
+                          {a.reassignmentRequest?.status === "pending" && (
+                            <div className="text-[8px] font-bold uppercase tracking-[0.2em] px-2.5 py-1.5 border transition-colors text-amber-600 border-amber-200 bg-amber-50 flex items-center gap-1.5 rounded-sm">
+                              <AlertCircle className="w-3 h-3" /> Requested Change
+                            </div>
+                          )}
                         </div>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -587,6 +631,14 @@ export default function CasesView() {
                             </button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-48">
+                            {a.reassignmentRequest?.status === "pending" && (
+                              <DropdownMenuItem
+                                onClick={() => handleReviewReassignment(a)}
+                                className="cursor-pointer text-xs font-medium text-amber-600 bg-amber-50 hover:bg-amber-100 focus:bg-amber-100 mb-1"
+                              >
+                                ⚠ Review Change Request
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem
                               onClick={() =>
                                 handleClassify(String(a.id || a._id))
@@ -1188,6 +1240,64 @@ export default function CasesView() {
             document.body,
           )
         : null}
+
+      {/* Review Reassignment Modal */}
+      {reviewModalOpen && reviewApp && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-lg border border-slate-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
+                <AlertCircle className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <h3 className="font-serif text-xl text-slate-900 leading-tight">Review Reassignment Request</h3>
+                <p className="text-sm text-slate-500">Case ID: {String(reviewApp.id || reviewApp._id).substring(0, 8)}</p>
+              </div>
+            </div>
+            
+            <div className="bg-slate-50 rounded-xl p-4 mb-4 border border-slate-100">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Client's Reason</span>
+              <p className="text-sm text-slate-700 mt-1 italic">"{reviewApp.reassignmentRequest?.reason || "No reason provided."}"</p>
+            </div>
+            
+            <div className="mb-6">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-600 mb-2 block">Admin Notes (Optional)</label>
+              <textarea
+                className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:border-[#af9164] transition-colors resize-none"
+                rows="3"
+                placeholder="Internal notes regarding this decision..."
+                value={reviewNotes}
+                onChange={(e) => setReviewNotes(e.target.value)}
+              />
+            </div>
+            
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setReviewModalOpen(false)}
+                disabled={isSubmittingReview}
+                className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => submitReassignmentReview(false)}
+                disabled={isSubmittingReview}
+                className="px-4 py-2 bg-red-50 text-red-600 text-sm font-bold uppercase tracking-wider rounded-lg hover:bg-red-100 transition-colors"
+              >
+                Deny
+              </button>
+              <button
+                onClick={() => submitReassignmentReview(true)}
+                disabled={isSubmittingReview}
+                className="px-6 py-2 bg-[#1a2238] text-white text-sm font-bold uppercase tracking-wider rounded-lg shadow-md hover:bg-[#af9164] transition-colors"
+              >
+                Approve Change
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {/* Inline styles for bounce animation and theme isolation */}
       <style>{`

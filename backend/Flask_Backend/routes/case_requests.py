@@ -600,3 +600,75 @@ def get_user_by_id(user_id):
         
     except Exception as e:
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+
+
+@case_requests_bp.route('/api/client/cases/<case_id>/request-change', methods=['POST'])
+@token_required
+def client_request_lawyer_change(case_id):
+    """Client requests a change of lawyer"""
+    try:
+        # Check client auth
+        if getattr(request, 'user_role', None) != 'client':
+            return jsonify({'error': 'Client access required'}), 403
+
+        payload = request.get_json() or {}
+        reason = payload.get('reason')
+
+        if not reason:
+            return jsonify({'error': 'Reason is required'}), 400
+
+        collection = get_db_collection('case_requests')
+        
+        # Try to find case
+        from bson import ObjectId
+        try:
+            case = collection.find_one({'_id': ObjectId(case_id)})
+        except:
+            case = collection.find_one({'id': case_id})
+            
+        if not case:
+            return jsonify({'error': 'Case not found'}), 404
+
+        # Validate case belongs to the calling client
+        client_email = (case.get('client', {}) or {}).get('email')
+        if client_email != getattr(request, 'user_email', None):
+            return jsonify({'error': 'Access denied'}), 403
+
+        now_iso = datetime.utcnow().isoformat()
+        
+        # Update case document
+        collection.update_one(
+            {'_id': case['_id']},
+            {
+                '$set': {
+                    'reassignmentRequest': {
+                        'requestedAt': now_iso,
+                        'reason': reason,
+                        'status': 'pending'
+                    },
+                    'updatedAt': now_iso
+                }
+            }
+        )
+
+        # Publish Kafka notification to admin
+        try:
+            notification_data = {
+                'event_type': 'reassignment_requested',
+                'timestamp': now_iso,
+                'data': {
+                    'caseId': str(case.get('_id')),
+                    'clientEmail': client_email,
+                    'reason': reason
+                }
+            }
+            # Use publish_admin_reassignment as the admin notifications channel
+            kafka_service.publish_admin_reassignment(notification_data)
+        except Exception as kafka_e:
+            import logging
+            logging.error(f"Kafka error in client_request_lawyer_change: {kafka_e}")
+
+        return jsonify({'message': 'Lawyer change request submitted', 'status': 'pending'}), 200
+
+    except Exception as e:
+        return jsonify({'error': f'Internal server error: {str(e)}'}), 500

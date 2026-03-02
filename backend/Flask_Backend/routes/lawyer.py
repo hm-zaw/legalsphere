@@ -235,6 +235,30 @@ def accept_case(case_id):
         
         kafka_service.publish_case_connection(connection_data)
         
+        # Phase 3 Data Handoff Logic
+        court_events_col = get_db_collection('court_events')
+        court_events_col.update_many(
+            {"case_id": case_id}, 
+            {"$set": {"lawyer_id": request.user_id}}
+        )
+        
+        appointments_col = get_db_collection('appointments')
+        appointments_col.update_many(
+            {"case_id": case_id, "status": "pending"}, 
+            {"$set": {"status": "canceled"}}
+        )
+        
+        client_id_val = case.get('clientId') or case.get('client', {}).get('id')
+        if client_id_val:
+            chats_col = get_db_collection('chats')
+            chats_col.insert_one({
+                'case_id': case_id,
+                'lawyer_id': request.user_id,
+                'client_id': client_id_val,
+                'is_active': True,
+                'created_at': datetime.utcnow().isoformat()
+            })
+
         # Phase 2: Automated Billing Injection - Initial Retainer
         add_charge(case_id, "Initial Retainer Fee", FEE_RETAINER, "initial_retainer")
         

@@ -446,6 +446,12 @@ export default function CaseDetailsView({ caseId, onNavigate }) {
   const [appointmentsLoading, setAppointmentsLoading] = useState(false);
   const [weekOffset, setWeekOffset] = useState(0);
 
+  // Lawyer change request state
+  const [isChangeModalOpen, setIsChangeModalOpen] = useState(false);
+  const [changeReason, setChangeReason] = useState("");
+  const [isSubmittingChange, setIsSubmittingChange] = useState(false);
+  const [changeError, setChangeError] = useState("");
+
   const days = useMemo(() => buildDaysForWeek(weekOffset), [weekOffset]);
   const weekLabel = useMemo(() => formatWeekLabel(weekOffset), [weekOffset]);
   const { start: weekStart, end: weekEnd } = useMemo(() => getWeekRange(weekOffset), [weekOffset]);
@@ -468,6 +474,31 @@ export default function CaseDetailsView({ caseId, onNavigate }) {
         fetchData();
     }
   }, [caseId]);
+
+  const handleRequestChange = async () => {
+    if (!changeReason.trim()) {
+      setChangeError("Please provide a reason for the change request.");
+      return;
+    }
+    setIsSubmittingChange(true);
+    setChangeError("");
+    try {
+      const res = await apiClient.requestLawyerChange(caseId, { reason: changeReason });
+      if (res.error) {
+        setChangeError(res.error);
+      } else {
+        setIsChangeModalOpen(false);
+        setChangeReason("");
+        // Reload data
+        const refresh = await apiClient.getCaseDetails(caseId);
+        if (refresh.data) setCaseData(refresh.data);
+      }
+    } catch (e) {
+      setChangeError(e?.message || "Something went wrong.");
+    } finally {
+      setIsSubmittingChange(false);
+    }
+  };
 
   useEffect(() => {
     if (!caseId) return;
@@ -593,7 +624,15 @@ export default function CaseDetailsView({ caseId, onNavigate }) {
                   {caseData?.case?.description || "Legal proceedings regarding breach of contract seeking damages and resolution pursuant to Article 4.2 of the corporate bylaws."}
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap justify-end">
+                {caseData?.assignedLawyer && caseData?.reassignmentRequest?.status !== "pending" && (
+                  <button 
+                    onClick={() => setIsChangeModalOpen(true)}
+                    className="hidden sm:flex items-center gap-2 px-4 py-2 bg-transparent border border-slate-200 text-slate-500 text-xs font-bold uppercase tracking-wider hover:border-[#1a2238] hover:text-[#1a2238] transition-colors rounded-sm shadow-sm"
+                  >
+                    <User className="w-3.5 h-3.5" /> Request Change
+                  </button>
+                )}
                 <button className="hidden sm:flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 text-xs font-bold uppercase tracking-wider hover:border-[#af9164] hover:text-[#af9164] transition-colors shadow-sm">
                   <FileText className="w-3.5 h-3.5" /> Documents
                 </button>
@@ -604,12 +643,31 @@ export default function CaseDetailsView({ caseId, onNavigate }) {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 pt-2">
-              <MetadataField icon={Gavel} label="Current Status" value={caseData?.status || "Active Litigation"} subValue="On Track" />
+              <MetadataField icon={Gavel} label="Current Status" value={caseData?.status === "pending_admin_review" ? "Pending Review" : caseData?.status || "Active Litigation"} subValue="On Track" />
               <MetadataField icon={User} label="Lead Counsel" value={caseData?.assignedLawyer?.name || "Assigning..."} subValue={caseData?.assignedLawyer?.name ? "Assigned" : "Pending Assignment"} />
               <MetadataField icon={Tag} label="Classification" value={caseData?.case?.category || "Civil Litigation"} subValue="Contract" />
               <MetadataField icon={Users} label="Legal Team" value={caseData?.assignedLawyer?.name ? `${caseData.assignedLawyer.name.split(' ').slice(-1).join(', ')}, M. Chen` : "Team Formation"} subValue={caseData?.assignedLawyer?.name ? "Active" : "In Progress"} />
           </div>
         </header>
+
+        {/* --- Pending Reassignment Banner --- */}
+        {caseData?.reassignmentRequest?.status === "pending" && (
+          <div className="bg-amber-50/90 backdrop-blur-md border border-amber-200/60 rounded-2xl shadow-lg px-6 py-5 mx-4 mt-4">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+                <AlertCircle className="w-5 h-5 text-amber-700" />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-serif text-lg text-amber-900 leading-tight">
+                  Reassignment Request Pending Admin Review
+                </h4>
+                <p className="text-sm text-amber-800/80 mt-1">
+                  Your request to change your legal representation is currently being reviewed by our administration team.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* --- Closed Case Banner --- */}
         {(caseData?.status === "completed" || caseData?.caseStage === "closed") && (
@@ -710,6 +768,48 @@ export default function CaseDetailsView({ caseId, onNavigate }) {
             <p className="text-[10px] text-slate-400 uppercase tracking-widest">LegalSphere Case File #57 • Confidential</p>
         </div>
       </div>
+
+      {/* --- Request Lawyer Change Modal --- */}
+      {isChangeModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+          <div className="bg-white/95 backdrop-blur-md border border-white/20 rounded-2xl shadow-2xl p-6 w-full max-w-md">
+            <h3 className="font-serif text-2xl text-[#1a2238] mb-2">Request Representation Change</h3>
+            <p className="text-sm text-slate-500 mb-6">
+              Please provide the reason for requesting a new lawyer. Our admin team will review your request promptly.
+            </p>
+            <textarea
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#af9164] transition-all resize-none mb-4"
+              rows="4"
+              placeholder="Why do you wish to change your assigned representation?"
+              value={changeReason}
+              onChange={(e) => setChangeReason(e.target.value)}
+            />
+            {changeError && (
+              <div className="text-red-500 text-xs mb-4 font-medium">{changeError}</div>
+            )}
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setIsChangeModalOpen(false);
+                  setChangeError("");
+                }}
+                className="px-4 py-2 text-sm text-slate-600 font-bold uppercase tracking-wider hover:text-slate-800 transition-colors"
+                disabled={isSubmittingChange}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRequestChange}
+                disabled={isSubmittingChange}
+                className="px-6 py-2 bg-[#1a2238] text-white text-sm font-bold uppercase tracking-wider rounded-xl shadow-md hover:bg-[#af9164] hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSubmittingChange ? "Submitting..." : "Submit Request"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

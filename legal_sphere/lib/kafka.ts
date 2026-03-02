@@ -6,7 +6,7 @@ type CaseNotificationMessage = {
   data: {
     clientId: string;
     caseId: string;
-    notificationType: "case_rejected" | "case_assigned" | "case_updated";
+    notificationType: "case_rejected" | "case_assigned" | "case_updated" | "lawyer_removed" | "reassignment_approved" | "reassignment_denied";
     title: string;
     message: string;
     metadata?: unknown;
