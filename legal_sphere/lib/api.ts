@@ -318,6 +318,12 @@ class ApiClient {
       `/api/lawyer/cases?${params.toString()}`,
     ) as any;
   }
+
+  async getCaseAppointments(caseId: string): Promise<ApiResponse<{ appointments: any[] }>> {
+    return this.getBackend<{ success: boolean; appointments: any[]; count: number }>(
+      `/api/appointments/case/${caseId}`,
+    ) as any;
+  }
 }
 
 export const apiClient = new ApiClient();
