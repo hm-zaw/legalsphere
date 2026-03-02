@@ -6,6 +6,7 @@ import uuid
 from functools import wraps
 from mongodb_client import get_db_collection
 from kafka_config import kafka_service
+from service.billing_service import add_charge, FEE_RETAINER, FEE_VIRTUAL_APPT
 
 lawyer_bp = Blueprint('lawyer', __name__)
 
@@ -233,6 +234,9 @@ def accept_case(case_id):
         }
         
         kafka_service.publish_case_connection(connection_data)
+        
+        # Phase 2: Automated Billing Injection - Initial Retainer
+        add_charge(case_id, "Initial Retainer Fee", FEE_RETAINER, "initial_retainer")
         
         return jsonify({
             'message': 'Case accepted successfully',
@@ -486,6 +490,30 @@ def get_lawyer_case_details(case_id):
         
     except Exception as e:
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+
+@lawyer_bp.route('/api/lawyer/cases/<case_id>/billing', methods=['POST'])
+@lawyer_token_required
+def add_manual_billing(case_id):
+    """Add a manual billing charge to a case"""
+    data = request.get_json()
+    if not data or 'amount' not in data or 'description' not in data:
+        return jsonify({'error': 'Amount and description required'}), 400
+    
+    amount = data.get('amount')
+    description = data.get('description')
+    
+    charge = add_charge(case_id, description, amount, "manual_fee")
+    if charge:
+        # Also return updated ledger for frontend
+        collection = get_db_collection('case_requests')
+        case = collection.find_one({'id': case_id})
+        return jsonify({
+            'message': 'Charge added successfully', 
+            'charge': charge,
+            'billing_ledger': case.get('billing_ledger', [])
+        }), 200
+    
+    return jsonify({'error': 'Failed to add charge'}), 500
 
 @lawyer_bp.route('/api/lawyer/dashboard', methods=['GET'])
 @lawyer_token_required

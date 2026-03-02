@@ -373,6 +373,68 @@ const ListView = ({ tasks }) => (
   </div>
 );
 
+const FinancialsView = ({ ledger }) => {
+  const total = (ledger || []).reduce((acc, curr) => acc + (curr.amount || 0), 0);
+  
+  return (
+    <div className="flex-1 bg-[#efefec] p-6 min-h-[600px]">
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-6">
+          <h2 className="font-serif text-2xl text-[#1a2238] mb-2">Statement of Account</h2>
+          <p className="text-sm text-slate-500 font-light">
+            Comprehensive ledger of all billable events and expenses.
+          </p>
+        </div>
+        
+        <div className="border border-[#1a2238]/10 rounded-2xl overflow-hidden shadow-2xl bg-white/95 backdrop-blur-md">
+          <div className="grid grid-cols-[1.5fr_2fr_1fr] md:grid-cols-[1.5fr_3fr_1fr] gap-4 px-6 py-4 bg-[#1a2238] text-white text-xs font-bold uppercase tracking-widest border-b border-white/20">
+            <div>Date</div>
+            <div>Description</div>
+            <div className="text-right">Amount</div>
+          </div>
+          
+          <div className="divide-y divide-slate-100/80">
+            {(!ledger || ledger.length === 0) ? (
+              <div className="px-6 py-8 text-center text-sm text-slate-400 italic">
+                No financial records found for this case.
+              </div>
+            ) : (
+              ledger.map((item, idx) => (
+                <div key={item.id || idx} className="grid grid-cols-[1.5fr_2fr_1fr] md:grid-cols-[1.5fr_3fr_1fr] gap-4 px-6 py-4 items-center hover:bg-slate-50/50 transition-colors">
+                  <div className="text-sm text-slate-500 font-mono">
+                    {new Date(item.date).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
+                  </div>
+                  <div className="font-serif text-slate-800 text-[15px]">
+                    {item.description}
+                  </div>
+                  <div className="text-right font-mono text-[15px] font-medium text-[#1a2238]">
+                    {new Intl.NumberFormat('en-US').format(item.amount || 0)} MMK
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          
+          <div className="grid grid-cols-[1.5fr_2fr_1fr] md:grid-cols-[1.5fr_3fr_1fr] gap-4 px-6 py-5 bg-[#af9164] text-white">
+            <div className="col-span-2 md:col-span-2 flex items-center justify-end font-serif text-lg md:text-xl font-medium">
+              Total Outstanding Balance
+            </div>
+            <div className="text-right font-mono text-lg md:text-xl font-bold bg-[#1a2238]/20 px-3 py-1.5 rounded-xl backdrop-blur-sm self-center border border-white/20">
+              {new Intl.NumberFormat('en-US').format(total)} MMK
+            </div>
+          </div>
+        </div>
+        
+        <div className="mt-8 text-center max-w-2xl mx-auto">
+          <p className="text-[13px] text-[#1a2238]/70 bg-white/50 px-6 py-4 rounded-xl border border-white shadow-sm inline-block font-medium backdrop-blur-md">
+            Payment for the outstanding balance will be collected via cash or bank transfer during your next in-person visit to our office.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function CaseDetailsView({ caseId, onNavigate }) {
   const [viewMode, setViewMode] = useState("Timeline");
   const [caseData, setCaseData] = useState(null);
@@ -583,13 +645,13 @@ export default function CaseDetailsView({ caseId, onNavigate }) {
           
           {/* Toolbar */}
           <div className="px-6 py-4 flex flex-col md:flex-row justify-between items-center border-b border-slate-100 gap-4">
-            <div className="flex items-center gap-6 border-b border-slate-200 md:border-none w-full md:w-auto pb-2 md:pb-0">
-              {["Kanban", "List", "Timeline"].map((view) => (
+            <div className="flex items-center gap-6 border-b border-slate-200 md:border-none w-full md:w-auto pb-2 md:pb-0 scrollbar-hide overflow-x-auto">
+              {["Timeline", "Kanban", "List", "Statement of Account"].map((view) => (
                 <button
                   key={view}
                   onClick={() => setViewMode(view)}
                   className={cn(
-                      "text-xs font-bold uppercase tracking-widest transition-all",
+                      "text-xs font-bold uppercase tracking-widest transition-all whitespace-nowrap",
                       view === viewMode ? "text-[#1a2238] border-b-2 border-[#1a2238] pb-1 md:pb-0 md:border-none" : "text-slate-400 hover:text-slate-600"
                   )}
                 >
@@ -626,6 +688,8 @@ export default function CaseDetailsView({ caseId, onNavigate }) {
                 <p className="text-xs text-slate-400 uppercase tracking-widest">Loading events…</p>
               </div>
             </div>
+          ) : viewMode === "Statement of Account" ? (
+            <FinancialsView ledger={caseData?.billing_ledger || []} />
           ) : viewMode === "Timeline" ? (
             tasks.length === 0 ? (
               <div className="flex-1 flex items-center justify-center min-h-[400px]">

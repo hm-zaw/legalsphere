@@ -339,6 +339,10 @@ class ApiClient {
   async closeCase(caseId: string, closingRemarks: string): Promise<ApiResponse<any>> {
     return this.post(`/api/lawyer/cases/${caseId}/close`, { closingRemarks }) as any;
   }
+
+  async addManualBilling(caseId: string, payload: { amount: number; description: string }): Promise<ApiResponse<any>> {
+    return this.post(`/api/lawyer/cases/${caseId}/billing`, payload) as any;
+  }
 }
 
 export const apiClient = new ApiClient();

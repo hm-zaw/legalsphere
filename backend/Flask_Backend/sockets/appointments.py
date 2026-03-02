@@ -237,6 +237,19 @@ def register_appointment_socket_events(socketio):
                 success = Appointment.accept_appointment(appointment_id, agreed_time)
 
                 if success:
+                    # Phase 2: Automated Billing Injection - Auto Appointment
+                    existing_apt = Appointment.get_by_id(appointment_id)
+                    loc_type = existing_apt.get('location_type', 'virtual') if existing_apt else 'virtual'
+                    
+                    try:
+                        from service.billing_service import add_charge, FEE_VIRTUAL_APPT, FEE_IN_PERSON_APPT
+                        if loc_type == 'virtual':
+                            add_charge(case_id, "Virtual Appointment Fee", FEE_VIRTUAL_APPT, "auto_appointment")
+                        elif loc_type == 'in-person':
+                            add_charge(case_id, "In-Person Appointment Fee", FEE_IN_PERSON_APPT, "auto_appointment")
+                    except Exception as e:
+                        logger.error(f"Failed to add appointment charge: {e}")
+
                     # Publish to Kafka for background processing
                     kafka_message = {
                         "event_type": "appointment_scheduled",

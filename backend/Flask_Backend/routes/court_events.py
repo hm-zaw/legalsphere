@@ -5,7 +5,7 @@ from kafka_config import kafka_service
 from mongodb_client import get_db_collection
 from db.court_events import CourtEvent
 from .lawyer import lawyer_token_required
-
+from service.billing_service import add_charge, FEE_COURT_HEARING
 
 court_events_bp = Blueprint('court_events', __name__)
 
@@ -69,6 +69,10 @@ def create_court_event():
             kafka_service.publish_notification(notification_payload)
         except Exception:
             pass
+
+        # Phase 2: Automated Billing Injection - Court Hearing
+        if case_id:
+            add_charge(str(case_id), "Court Hearing Fee", FEE_COURT_HEARING, "auto_court")
 
         return jsonify({'success': True, 'event': CourtEvent.serialize_for_response(doc)}), 201
 

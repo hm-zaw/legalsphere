@@ -117,6 +117,7 @@ interface CaseDetail {
   activities: Activity[];
   closedAt?: string;
   closingRemarks?: string;
+  billing_ledger?: { id: string; date: string; description: string; amount: number; type: string; }[];
 }
 
 // --- Blank Data (No Mocks) ---
@@ -141,6 +142,7 @@ const BLANK_CASE: CaseDetail = {
   timeEntries: [],
   notes: [],
   activities: [],
+  billing_ledger: [],
 };
 
 
@@ -717,6 +719,172 @@ const NotesTab = ({
   );
 };
 
+const BillingTab = ({
+  ledger,
+  onAddCharge,
+  loading,
+}: {
+  ledger: { id: string; date: string; description: string; amount: number; type: string; }[];
+  onAddCharge: (amount: number, description: string) => Promise<void>;
+  loading: boolean;
+}) => {
+  const [showModal, setShowModal] = useState(false);
+  const [amount, setAmount] = useState("");
+  const [description, setDescription] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const total = (ledger || []).reduce((acc, curr) => acc + (curr.amount || 0), 0);
+
+  const handleSubmit = async () => {
+    if (!amount || !description.trim()) return;
+    setSubmitting(true);
+    try {
+      await onAddCharge(parseInt(amount.replace(/,/g, ''), 10), description.trim());
+      setAmount("");
+      setDescription("");
+      setShowModal(false);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">
+            Billing & Expenses
+          </h3>
+          <p className="text-sm text-slate-500 font-light mt-1">
+            Comprehensive ledger of all billable events and expenses.
+          </p>
+        </div>
+        <button
+          onClick={() => setShowModal(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#1a2238] to-[#2d3a5e] text-white text-xs font-bold uppercase tracking-wider rounded-xl hover:from-[#2d3a5e] hover:to-[#1a2238] transition-all shadow-lg shadow-[#1a2238]/20"
+        >
+          <Plus className="w-4 h-4" />
+          Add Custom Charge
+        </button>
+      </div>
+
+      <div className="bg-white/95 backdrop-blur-md border border-[#1a2238]/10 rounded-2xl overflow-hidden shadow-2xl">
+        {/* Table Header */}
+        <div className="grid grid-cols-[1.5fr_2fr_1fr] md:grid-cols-[1.5fr_3fr_1fr] gap-4 px-6 py-4 bg-[#1a2238] text-white text-xs font-bold uppercase tracking-widest border-b border-white/20">
+          <div>Date</div>
+          <div>Description</div>
+          <div className="text-right">Amount</div>
+        </div>
+        
+        {/* Table Body */}
+        <div className="divide-y divide-slate-100/80">
+          {(!ledger || ledger.length === 0) ? (
+            <div className="px-6 py-8 text-center text-sm text-slate-400 italic">
+              No financial records found for this case.
+            </div>
+          ) : (
+            ledger.map((item, idx) => (
+              <div key={item.id || idx} className="grid grid-cols-[1.5fr_2fr_1fr] md:grid-cols-[1.5fr_3fr_1fr] gap-4 px-6 py-4 items-center hover:bg-slate-50/50 transition-colors">
+                <div className="text-sm text-slate-500 font-mono">
+                  {new Date(item.date).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
+                </div>
+                <div className="font-serif text-slate-800 text-[15px]">
+                  {item.description}
+                </div>
+                <div className="text-right font-mono text-[15px] font-medium text-[#1a2238]">
+                  {new Intl.NumberFormat('en-US').format(item.amount || 0)} MMK
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Table Footer */}
+        <div className="grid grid-cols-[1.5fr_2fr_1fr] md:grid-cols-[1.5fr_3fr_1fr] gap-4 px-6 py-5 bg-[#af9164] text-white">
+          <div className="col-span-2 md:col-span-2 flex items-center justify-end font-serif text-lg md:text-xl font-medium">
+            Total Outstanding Balance
+          </div>
+          <div className="text-right font-mono text-lg md:text-xl font-bold bg-[#1a2238]/20 px-3 py-1.5 rounded-xl backdrop-blur-sm self-center border border-white/20">
+            {new Intl.NumberFormat('en-US').format(total)} MMK
+          </div>
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {showModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 10 }}
+              className="w-full max-w-md bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-white/20 overflow-hidden"
+            >
+              <div className="px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-[#1a2238] to-[#2d3a5e] flex justify-between items-center">
+                <h3 className="font-serif text-lg text-white">Add Custom Charge</h3>
+                <button
+                  onClick={() => !submitting && setShowModal(false)}
+                  className="text-slate-300 hover:text-white transition-colors"
+                >
+                  <XCircle className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                    Description <span className="text-[#af9164]">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="e.g. Document Filing Fee"
+                    className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#af9164]/20 focus:border-[#af9164]/40 transition-all font-serif"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                    Amount (MMK) <span className="text-[#af9164]">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="Amount in MMK"
+                    className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#af9164]/20 focus:border-[#af9164]/40 transition-all font-mono"
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    onClick={() => setShowModal(false)}
+                    className="flex-1 py-2.5 text-sm font-medium text-slate-500 hover:bg-slate-50 rounded-xl transition-colors"
+                    disabled={submitting}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSubmit}
+                    disabled={submitting || !amount || !description}
+                    className="flex-1 py-2.5 text-sm font-bold rounded-xl bg-[#1a2238] text-white hover:bg-[#2d3a5e] disabled:opacity-50 transition-all"
+                  >
+                    {submitting ? "Adding..." : "Add Charge"}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
 // --- Main Component ---
 
 export default function LawyerCaseDetailView({ caseId }: { caseId?: string }) {
@@ -927,6 +1095,7 @@ export default function LawyerCaseDetailView({ caseId }: { caseId?: string }) {
             activities: synthesizedActivities,
             closedAt: apiCase?.closedAt,
             closingRemarks: apiCase?.closingRemarks,
+            billing_ledger: apiCase?.billing_ledger || [],
           };
 
           setCaseData(mapped);
@@ -1138,10 +1307,30 @@ export default function LawyerCaseDetailView({ caseId }: { caseId?: string }) {
     }
   };
 
+  const handleAddCharge = async (amount: number, description: string) => {
+    if (!caseId) return;
+    try {
+      const resp = await apiClient.addManualBilling(caseId, { amount, description });
+      if (resp.error) {
+        setError(resp.error);
+        return;
+      }
+      if (resp.data?.charge) {
+        setCaseData(prev => ({ 
+          ...prev, 
+          billing_ledger: resp.data.billing_ledger || [...(prev.billing_ledger || []), resp.data.charge] 
+        }));
+      }
+    } catch (e: any) {
+      setError(e?.message || String(e));
+    }
+  };
+
   const tabs = [
     { id: "overview", label: "Overview", count: undefined },
     { id: "documents", label: "Documents", count: caseData.documents.length },
     { id: "time", label: "Time Tracking", count: caseData.timeEntries.length },
+    { id: "billing", label: "Billing & Expenses", count: caseData.billing_ledger?.length || 0 },
     { id: "notes", label: "Notes", count: caseData.notes?.length || 0 },
     { id: "activity", label: "Activity", count: caseData.activities.length },
   ];
@@ -1309,6 +1498,9 @@ export default function LawyerCaseDetailView({ caseId }: { caseId?: string }) {
             )}
             {activeTab === "time" && (
               <TimeTrackingTab entries={caseData.timeEntries} />
+            )}
+            {activeTab === "billing" && (
+              <BillingTab ledger={caseData.billing_ledger || []} onAddCharge={handleAddCharge} loading={false} />
             )}
             {activeTab === "notes" && (
               <NotesTab notes={caseData.notes} onAddNote={handleAddNote} />
